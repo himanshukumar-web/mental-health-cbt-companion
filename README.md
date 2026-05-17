@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Sera Banner](./assets/sera-banner.png)
+ Sera Banner
 <img width="1774" height="887" alt="sera-banner" src="https://github.com/user-attachments/assets/4b173ec8-ac91-4add-928b-f603364de606" />
 
 # 🧠 Sera — Live Agentic AI CBT Companion
