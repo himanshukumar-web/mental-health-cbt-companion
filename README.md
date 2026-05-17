@@ -3,6 +3,7 @@
 <div align="center">
 
 ![Sera Banner](./assets/sera-banner.png)
+<img width="1774" height="887" alt="sera-banner" src="https://github.com/user-attachments/assets/4b173ec8-ac91-4add-928b-f603364de606" />
 
 # 🧠 Sera — Live Agentic AI CBT Companion
 
@@ -43,14 +44,16 @@ Designed to provide a **safe, private, and real-time mental wellness experience*
 README.md ke same folder me screenshot upload karo
 naam rakho: landing-page.png
 ```
+<img width="1294" height="942" alt="landing-page png" src="https://github.com/user-attachments/assets/f8c7f3f8-c7e8-4f83-b413-89eed77809cb" />
 
-![Landing Page](./landing-page.png)
+
 
 ---
 
 ## 💬 AI CBT Chat Interface
 
-![Chat Interface](./chat-interface.png)
+
+<img width="1296" height="945" alt="chat-interface png" src="https://github.com/user-attachments/assets/7ae9587b-fae9-45f1-b572-387fc8da383a" />
 
 ---
 
