@@ -129,7 +129,7 @@ When high-risk emotional signals are detected:
 
 
 ```
-User (Next.js) ──WebSocket──► FastAPI ──► LangGraph Pipeline
+     User (Next.js) ──WebSocket──► FastAPI ──► LangGraph Pipeline
                                               │
                                    ┌──────────┴──────────┐
                                    ▼                     ▼
