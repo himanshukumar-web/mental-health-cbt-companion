@@ -38,12 +38,7 @@ Designed to provide a **safe, private, and real-time mental wellness experience*
 
 ## 🏠 Landing Page
 
-> Add your screenshot here:
 
-```txt
-README.md ke same folder me screenshot upload karo
-naam rakho: landing-page.png
-```
 <img width="1294" height="942" alt="landing-page png" src="https://github.com/user-attachments/assets/f8c7f3f8-c7e8-4f83-b413-89eed77809cb" />
 
 
