@@ -1,6 +1,8 @@
 from typing import AsyncIterator
 import anthropic
+from groq import AsyncGroq
 from app.config import settings
+
 
 SYSTEM_PROMPT = """
 You are Sera, a compassionate AI CBT mental wellness companion.
@@ -49,25 +51,29 @@ DISTRESS_ADDENDUM = (
 )
 
 
-def _get_client() -> tuple[anthropic.AsyncAnthropic, str]:
+def _get_client():
     """
-    Return (client, model_name).
-    Auto-detect OpenRouter key (sk-or-*)
+    Return (client, model_name)
+    Supports Groq + OpenRouter + Anthropic
     """
+
     key = settings.anthropic_api_key
 
-    if key.startswith("sk-or-"):
-        # OpenRouter
+    # GROQ (Recommended)
+    if key.startswith("gsk_"):
+        client = AsyncGroq(api_key=key)
+        model = "llama-3.3-70b-versatile"
+
+    # OpenRouter
+    elif key.startswith("sk-or-"):
         client = anthropic.AsyncAnthropic(
             api_key=key,
             base_url="https://openrouter.ai/api/v1",
         )
+        model = "meta-llama/llama-3.3-70b-instruct:free"
 
-        # FREE Llama model
-        model="llama-3.3-70b-versatile"
-
+    # Anthropic Claude
     else:
-        # Anthropic Claude
         client = anthropic.AsyncAnthropic(api_key=key)
         model = "claude-sonnet-4-20250514"
 
@@ -85,15 +91,42 @@ async def stream_response(
     client, model = _get_client()
 
     system = SYSTEM_PROMPT
+
     if threat_level == "distress":
         system += DISTRESS_ADDENDUM
 
-    async with client.messages.stream(
-        model=model,
-        max_tokens=1000,
-        system=system,
-        messages=messages,
-    ) as stream:
+    # ==========================
+    # GROQ STREAMING
+    # ==========================
+    if settings.anthropic_api_key.startswith("gsk_"):
 
-        async for text in stream.text_stream:
-            yield text
+        stream = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system},
+                *messages,
+            ],
+            temperature=0.7,
+            max_tokens=500,
+            stream=True,
+        )
+
+        async for chunk in stream:
+            if chunk.choices:
+                content = chunk.choices[0].delta.content
+                if content:
+                    yield content
+
+    # ==========================
+    # ANTHROPIC / OPENROUTER
+    # ==========================
+    else:
+        async with client.messages.stream(
+            model=model,
+            max_tokens=1000,
+            system=system,
+            messages=messages,
+        ) as stream:
+
+            async for text in stream.text_stream:
+                yield text
