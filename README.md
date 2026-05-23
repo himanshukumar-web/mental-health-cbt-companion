@@ -30,6 +30,8 @@ Designed to provide a **safe, private, and real-time mental wellness experience*
 👨‍💻 **Developer:** Himanshu Kumar
 🔗 **LinkedIn:** [https://www.linkedin.com/in/himanshu-kumar-813626327](https://www.linkedin.com/in/himanshu-kumar-813626327)
 
+🚀 ***Deploy link*** : https://frontend-drab-alpha-72.vercel.app/
+ 
 </div>
 
 ---
