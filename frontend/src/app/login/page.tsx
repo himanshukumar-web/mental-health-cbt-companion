@@ -20,7 +20,7 @@ function Leaf({ x, y, size, opacity, rotate }: {
       width: size, height: size, opacity,
       transform: `rotate(${rotate}deg)`,
       borderRadius: "50% 0 50% 0",
-      background: "linear-gradient(135deg, #6ee7b7, #34d399)",
+      background: "linear-gradient(135deg, rgba(34,197,94,0.4), rgba(22,163,74,0.3))",
       pointerEvents: "none",
     }} />
   );
@@ -35,17 +35,17 @@ function InputField({ label, type, value, onChange, placeholder, icon }: {
   const [show, setShow] = useState(false);
   return (
     <div style={{ marginBottom: 16 }}>
-      <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "#6b7280", marginBottom: 6, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+      <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "#8b95a7", marginBottom: 6, letterSpacing: "0.04em", textTransform: "uppercase" }}>
         {label}
       </label>
       <div style={{
         display: "flex", alignItems: "center",
-        border: focused ? "1.5px solid #34d399" : "1px solid #e5e7eb",
+        border: focused ? "1.5px solid #22c55e" : "1px solid rgba(255,255,255,0.10)",
         borderRadius: 12, overflow: "hidden",
-        background: focused ? "#f0fdf8" : "#fafafa",
+        background: focused ? "rgba(34,197,94,0.06)" : "rgba(255,255,255,0.04)",
         transition: "all 0.2s",
       }}>
-        <span style={{ padding: "0 12px", color: focused ? "#059669" : "#9ca3af", fontSize: 16 }}>{icon}</span>
+        <span style={{ padding: "0 12px", color: focused ? "#22c55e" : "#4b5563", fontSize: 16 }}>{icon}</span>
         <input
           type={type === "password" && show ? "text" : type}
           value={value}
@@ -56,13 +56,13 @@ function InputField({ label, type, value, onChange, placeholder, icon }: {
           style={{
             flex: 1, padding: "12px 0", fontSize: 14,
             border: "none", background: "transparent", outline: "none",
-            color: "#111827", fontFamily: "inherit",
+            color: "#e8edf5", fontFamily: "inherit",
           }}
         />
         {type === "password" && (
           <button onClick={() => setShow(s => !s)} style={{
             padding: "0 12px", background: "none", border: "none",
-            cursor: "pointer", color: "#9ca3af", fontSize: 14,
+            cursor: "pointer", color: "#8b95a7", fontSize: 14,
           }}>
             {show ? "Hide" : "Show"}
           </button>
@@ -93,12 +93,12 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
   return (
     <div>
       <div style={{ marginBottom: 28 }}>
-        <h2 style={{ fontSize: 22, fontWeight: 600, color: "#111827", margin: "0 0 6px" }}>Welcome back</h2>
-        <p style={{ fontSize: 14, color: "#6b7280", margin: 0 }}>Continue your journey with Sera</p>
+        <h2 style={{ fontSize: 22, fontWeight: 600, color: "#e8edf5", margin: "0 0 6px" }}>Welcome back</h2>
+        <p style={{ fontSize: 14, color: "#8b95a7", margin: 0 }}>Continue your journey with Sera</p>
       </div>
 
       {error && (
-        <div style={{ padding: "10px 14px", borderRadius: 10, marginBottom: 16, background: "#fef2f2", border: "1px solid #fecaca", fontSize: 13, color: "#dc2626" }}>
+        <div style={{ padding: "10px 14px", borderRadius: 10, marginBottom: 16, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", fontSize: 13, color: "#fca5a5" }}>
           ⚠ {error}
         </div>
       )}
@@ -107,7 +107,7 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
       <InputField label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" icon="🔒" />
 
       <div style={{ textAlign: "right", marginBottom: 20 }}>
-        <button style={{ background: "none", border: "none", fontSize: 13, color: "#059669", cursor: "pointer", fontFamily: "inherit" }}>
+        <button style={{ background: "none", border: "none", fontSize: 13, color: "#22c55e", cursor: "pointer", fontFamily: "inherit" }}>
           Forgot password?
         </button>
       </div>
@@ -118,11 +118,12 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
         disabled={loading || done}
         style={{
           width: "100%", padding: "13px", borderRadius: 12, border: "none",
-          background: done ? "#d1fae5" : loading ? "#6ee7b7" : "linear-gradient(135deg, #34d399, #059669)",
-          color: done ? "#065f46" : "white",
+          background: done ? "rgba(34,197,94,0.2)" : loading ? "rgba(34,197,94,0.4)" : "linear-gradient(135deg, #22c55e, #16a34a)",
+          color: done ? "#86efac" : "white",
           fontSize: 15, fontWeight: 600, cursor: loading || done ? "default" : "pointer",
           fontFamily: "inherit", transition: "all 0.3s",
           display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          boxShadow: done || loading ? "none" : "0 4px 24px rgba(34,197,94,0.25)",
         }}
       >
         {done ? "✓ Signed in — redirecting..." : loading ? (
@@ -134,15 +135,15 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
       </button>
 
       <div style={{ marginTop: 20, display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
-        <span style={{ fontSize: 12, color: "#9ca3af" }}>or</span>
-        <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
+        <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+        <span style={{ fontSize: 12, color: "#4b5563" }}>or</span>
+        <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
       </div>
 
       <button style={{
         width: "100%", marginTop: 16, padding: "12px", borderRadius: 12,
-        border: "1px solid #e5e7eb", background: "white",
-        fontSize: 14, color: "#374151", cursor: "pointer",
+        border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)",
+        fontSize: 14, color: "#e8edf5", cursor: "pointer",
         fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
         transition: "background 0.2s",
       }}>
@@ -155,9 +156,9 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
         Continue with Google
       </button>
 
-      <p style={{ textAlign: "center", marginTop: 24, fontSize: 14, color: "#6b7280" }}>
+      <p style={{ textAlign: "center", marginTop: 24, fontSize: 14, color: "#8b95a7" }}>
         New here?{" "}
-        <button onClick={onSwitch} style={{ background: "none", border: "none", color: "#059669", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", fontSize: 14 }}>
+        <button onClick={onSwitch} style={{ background: "none", border: "none", color: "#22c55e", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", fontSize: 14 }}>
           Create an account
         </button>
       </p>
@@ -178,7 +179,7 @@ function SignupForm({ onSwitch }: { onSwitch: () => void }) {
   const valid = !!(name && email && password.length >= 6 && agreed);
 
   const strength = password.length === 0 ? 0 : password.length < 6 ? 1 : password.length < 10 ? 2 : 3;
-  const strengthColor = ["#e5e7eb", "#ef4444", "#f59e0b", "#22c55e"][strength];
+  const strengthColor = ["#4b5563", "#ef4444", "#f59e0b", "#22c55e"][strength];
   const strengthLabel = ["", "Weak", "Fair", "Strong"][strength];
 
   const handleSignup = async () => {
@@ -194,15 +195,16 @@ function SignupForm({ onSwitch }: { onSwitch: () => void }) {
     return (
       <div style={{ textAlign: "center", padding: "40px 0" }}>
         <div style={{ fontSize: 48, marginBottom: 20 }}>📬</div>
-        <h3 style={{ fontSize: 20, fontWeight: 600, color: "#111827", marginBottom: 12 }}>Check your email</h3>
-        <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.7, marginBottom: 24 }}>
-          We sent a confirmation link to <strong>{email}</strong>.<br />
+        <h3 style={{ fontSize: 20, fontWeight: 600, color: "#e8edf5", marginBottom: 12 }}>Check your email</h3>
+        <p style={{ fontSize: 14, color: "#8b95a7", lineHeight: 1.7, marginBottom: 24 }}>
+          We sent a confirmation link to <strong style={{ color: "#e8edf5" }}>{email}</strong>.<br />
           Click it to activate your account, then sign in.
         </p>
         <button onClick={onSwitch} style={{
           padding: "10px 24px", borderRadius: 10, border: "none",
-          background: "linear-gradient(135deg,#34d399,#059669)",
+          background: "linear-gradient(135deg,#22c55e,#16a34a)",
           color: "white", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "inherit",
+          boxShadow: "0 4px 24px rgba(34,197,94,0.25)",
         }}>
           Go to Sign in →
         </button>
@@ -213,12 +215,12 @@ function SignupForm({ onSwitch }: { onSwitch: () => void }) {
   return (
     <div>
       <div style={{ marginBottom: 28 }}>
-        <h2 style={{ fontSize: 22, fontWeight: 600, color: "#111827", margin: "0 0 6px" }}>Start your journey</h2>
-        <p style={{ fontSize: 14, color: "#6b7280", margin: 0 }}>Free, private, and always available</p>
+        <h2 style={{ fontSize: 22, fontWeight: 600, color: "#e8edf5", margin: "0 0 6px" }}>Start your journey</h2>
+        <p style={{ fontSize: 14, color: "#8b95a7", margin: 0 }}>Free, private, and always available</p>
       </div>
 
       {error && (
-        <div style={{ padding: "10px 14px", borderRadius: 10, marginBottom: 16, background: "#fef2f2", border: "1px solid #fecaca", fontSize: 13, color: "#dc2626" }}>
+        <div style={{ padding: "10px 14px", borderRadius: 10, marginBottom: 16, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", fontSize: 13, color: "#fca5a5" }}>
           ⚠ {error}
         </div>
       )}
@@ -227,23 +229,23 @@ function SignupForm({ onSwitch }: { onSwitch: () => void }) {
       <InputField label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" icon="✉" />
 
       <div style={{ marginBottom: 16 }}>
-        <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "#6b7280", marginBottom: 6, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "#8b95a7", marginBottom: 6, letterSpacing: "0.04em", textTransform: "uppercase" }}>
           Password
         </label>
-        <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden", background: "#fafafa" }}>
+        <div style={{ border: "1px solid rgba(255,255,255,0.10)", borderRadius: 12, overflow: "hidden", background: "rgba(255,255,255,0.04)" }}>
           <input
             id="signup-password"
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
             placeholder="Min. 6 characters"
-            style={{ width: "100%", padding: "12px 14px", fontSize: 14, border: "none", background: "transparent", outline: "none", color: "#111827", fontFamily: "inherit", boxSizing: "border-box" }}
+            style={{ width: "100%", padding: "12px 14px", fontSize: 14, border: "none", background: "transparent", outline: "none", color: "#e8edf5", fontFamily: "inherit", boxSizing: "border-box" }}
           />
         </div>
         {password.length > 0 && (
           <div style={{ marginTop: 8, display: "flex", gap: 4, alignItems: "center" }}>
             {[1, 2, 3].map(i => (
-              <div key={i} style={{ flex: 1, height: 3, borderRadius: 4, background: i <= strength ? strengthColor : "#e5e7eb", transition: "background 0.3s" }} />
+              <div key={i} style={{ flex: 1, height: 3, borderRadius: 4, background: i <= strength ? strengthColor : "rgba(255,255,255,0.08)", transition: "background 0.3s" }} />
             ))}
             <span style={{ fontSize: 11, color: strengthColor, marginLeft: 6, fontWeight: 500, minWidth: 36 }}>{strengthLabel}</span>
           </div>
@@ -255,15 +257,15 @@ function SignupForm({ onSwitch }: { onSwitch: () => void }) {
           onClick={() => setAgreed(a => !a)}
           style={{
             width: 18, height: 18, borderRadius: 5, flexShrink: 0, marginTop: 1,
-            border: agreed ? "none" : "1.5px solid #d1d5db",
-            background: agreed ? "#059669" : "white",
+            border: agreed ? "none" : "1.5px solid rgba(255,255,255,0.15)",
+            background: agreed ? "#22c55e" : "transparent",
             display: "flex", alignItems: "center", justifyContent: "center",
             transition: "all 0.2s", cursor: "pointer",
           }}
         >
           {agreed && <span style={{ color: "white", fontSize: 11, fontWeight: 700 }}>✓</span>}
         </div>
-        <span style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
+        <span style={{ fontSize: 13, color: "#8b95a7", lineHeight: 1.5 }}>
           I understand Sera is a supportive tool, not a replacement for professional mental health care.
         </span>
       </label>
@@ -274,11 +276,12 @@ function SignupForm({ onSwitch }: { onSwitch: () => void }) {
         disabled={!valid || loading}
         style={{
           width: "100%", padding: "13px", borderRadius: 12, border: "none",
-          background: !valid ? "#e5e7eb" : loading ? "#6ee7b7" : "linear-gradient(135deg, #34d399, #059669)",
-          color: !valid ? "#9ca3af" : "white",
+          background: !valid ? "rgba(255,255,255,0.06)" : loading ? "rgba(34,197,94,0.4)" : "linear-gradient(135deg, #22c55e, #16a34a)",
+          color: !valid ? "#4b5563" : "white",
           fontSize: 15, fontWeight: 600, cursor: valid && !loading ? "pointer" : "default",
           fontFamily: "inherit", transition: "all 0.3s",
           display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          boxShadow: valid && !loading ? "0 4px 24px rgba(34,197,94,0.25)" : "none",
         }}
       >
         {loading ? (
@@ -289,9 +292,9 @@ function SignupForm({ onSwitch }: { onSwitch: () => void }) {
         ) : "Create account"}
       </button>
 
-      <p style={{ textAlign: "center", marginTop: 24, fontSize: 14, color: "#6b7280" }}>
+      <p style={{ textAlign: "center", marginTop: 24, fontSize: 14, color: "#8b95a7" }}>
         Already have an account?{" "}
-        <button onClick={onSwitch} style={{ background: "none", border: "none", color: "#059669", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", fontSize: 14 }}>
+        <button onClick={onSwitch} style={{ background: "none", border: "none", color: "#22c55e", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", fontSize: 14 }}>
           Sign in
         </button>
       </p>
@@ -327,7 +330,7 @@ function AuthPageInner() {
   return (
     <div style={{
       minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-      background: "linear-gradient(160deg, #f0fdf9 0%, #ecfdf5 50%, #f9fafb 100%)",
+      background: "linear-gradient(160deg, #0b0f1a 0%, #111827 50%, #0b0f1a 100%)",
       padding: 20, fontFamily: "'system-ui', sans-serif", position: "relative", overflow: "hidden",
     }}>
       <style>{`
@@ -336,12 +339,17 @@ function AuthPageInner() {
         @keyframes float     { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
       `}</style>
 
+      {/* Ambient glow orbs */}
+      <div style={{ position: "absolute", top: "10%", left: "15%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(34,197,94,0.06) 0%, transparent 70%)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", bottom: "10%", right: "10%", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(59,130,246,0.04) 0%, transparent 70%)", pointerEvents: "none" }} />
+
       {leaves.map((l, i) => <Leaf key={i} {...l} />)}
 
       <div style={{
         display: "flex", width: "100%", maxWidth: 880,
         borderRadius: 24, overflow: "hidden",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04)",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.3)",
+        border: "0.5px solid rgba(255,255,255,0.06)",
         animation: "fadeSlide 0.5s ease",
       }}>
         {/* Left green panel */}
@@ -400,10 +408,10 @@ function AuthPageInner() {
           </p>
         </div>
 
-        {/* Right form panel */}
-        <div style={{ flex: 1, background: "white", padding: "48px 40px", overflowY: "auto" }}>
+        {/* Right form panel — DARK */}
+        <div style={{ flex: 1, background: "#111827", padding: "48px 40px", overflowY: "auto" }}>
           {/* Tab switcher */}
-          <div style={{ display: "flex", marginBottom: 32, gap: 4, background: "#f3f4f6", borderRadius: 10, padding: 4 }}>
+          <div style={{ display: "flex", marginBottom: 32, gap: 4, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 4 }}>
             {(["login", "signup"] as const).map(m => (
               <button
                 key={m}
@@ -411,11 +419,11 @@ function AuthPageInner() {
                 onClick={() => setMode(m)}
                 style={{
                   flex: 1, padding: "8px", borderRadius: 8, border: "none",
-                  background: mode === m ? "white" : "transparent",
-                  color: mode === m ? "#111827" : "#9ca3af",
+                  background: mode === m ? "rgba(255,255,255,0.08)" : "transparent",
+                  color: mode === m ? "#e8edf5" : "#4b5563",
                   fontSize: 13, fontWeight: mode === m ? 600 : 400,
                   cursor: "pointer", fontFamily: "inherit",
-                  boxShadow: mode === m ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                  boxShadow: mode === m ? "0 1px 4px rgba(0,0,0,0.3)" : "none",
                   transition: "all 0.2s",
                 }}
               >
