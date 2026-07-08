@@ -312,6 +312,17 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* Home link at the very top of sidebar navigation options, above Dashboard */}
+        <Link href="/" style={{
+          display: "flex", alignItems: "center", gap: 12,
+          padding: "12px 14px", borderRadius: 10,
+          color: "var(--text-secondary)", fontSize: 14,
+          marginBottom: 4, transition: "all 0.2s",
+        }}>
+          <span style={{ fontSize: 18 }}>🏠</span>
+          Home
+        </Link>
+
         {/* Nav items */}
         {[
           { id: "dashboard" as const, icon: "📊", label: "Dashboard" },
@@ -346,16 +357,6 @@ export default function AdminDashboard() {
         }}>
           <span style={{ fontSize: 18 }}>🌿</span>
           Sera AI Chat
-        </Link>
-
-        <Link href="/" style={{
-          display: "flex", alignItems: "center", gap: 12,
-          padding: "12px 14px", borderRadius: 10,
-          color: "var(--text-secondary)", fontSize: 14,
-          marginBottom: 4, transition: "all 0.2s",
-        }}>
-          <span style={{ fontSize: 18 }}>🏠</span>
-          Landing Page
         </Link>
 
         {/* Spacer */}

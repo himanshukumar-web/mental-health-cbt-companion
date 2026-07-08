@@ -196,6 +196,22 @@ export default function ChatWindow({
           </div>
         )}
 
+        {/* Chat with Doctor Option */}
+        <div style={{ borderTop: "0.5px solid var(--border-tertiary)", paddingTop: 12, marginBottom: 12 }}>
+          <button
+            onClick={() => router.push("/appointments/my?tab=chat")}
+            style={{
+              width: "100%", padding: "8px 10px", borderRadius: 8,
+              background: "rgba(59,130,246,0.12)", border: "0.5px solid rgba(59,130,246,0.3)",
+              color: "#93c5fd", fontSize: 11, fontWeight: 600, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              transition: "all 0.2s"
+            }}
+          >
+            💬 Chat with Doctor
+          </button>
+        </div>
+
         {/* User + Connection */}
         <div style={{ marginTop: "auto" }}>
           {/* Signed-in user */}

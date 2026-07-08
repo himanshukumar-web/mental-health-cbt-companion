@@ -264,7 +264,7 @@ async def get_user_appointments(user_id: str) -> list[dict]:
         try:
             result = (
                 db.table("appointments")
-                .select("*, doctors(full_name, specialization)")
+                .select("*, doctors(full_name, specialization, user_id)")
                 .eq("patient_id", user_id)
                 .order("date", desc=True)
                 .execute()
@@ -278,10 +278,10 @@ async def get_user_appointments(user_id: str) -> list[dict]:
     res = []
     for appt in MOCK_APPOINTMENTS:
         if appt["patient_id"] == user_id:
-            doc_details = {"full_name": "Doctor", "specialization": "Therapist"}
+            doc_details = {"full_name": "Doctor", "specialization": "Therapist", "user_id": None}
             for d in MOCK_DOCTORS:
                 if d["id"] == appt["doctor_id"]:
-                    doc_details = {"full_name": d["full_name"], "specialization": d["specialization"]}
+                    doc_details = {"full_name": d["full_name"], "specialization": d["specialization"], "user_id": d["user_id"]}
                     break
             appt_copy = appt.copy()
             appt_copy["doctors"] = doc_details

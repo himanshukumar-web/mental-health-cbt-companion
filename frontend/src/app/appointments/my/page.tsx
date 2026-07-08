@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -20,6 +20,7 @@ interface Appointment {
   doctors?: {
     full_name: string;
     specialization: string;
+    user_id: string;
   };
 }
 
@@ -58,12 +59,16 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export default function MyAppointmentsPage() {
+function MyAppointmentsPageInner() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") || "all";
+  const initialDoctorUserId = searchParams.get("doctorUserId");
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingData, setLoadingData] = useState(true);
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState(initialTab);
 
   // Chat states
   const [chatPartners, setChatPartners] = useState<ChatPartner[]>([]);
@@ -92,7 +97,7 @@ export default function MyAppointmentsPage() {
     })();
   }, [user]);
 
-  // Load chat partners
+  // Load chat partners and handle query parameter select
   useEffect(() => {
     if (!user || filter !== "chat") return;
     const loadPartners = async () => {
@@ -100,7 +105,14 @@ export default function MyAppointmentsPage() {
         const res = await fetch(`${API_URL}/messages/partners/${user.id}`);
         if (res.ok) {
           const data = await res.json();
-          setChatPartners(data.partners || []);
+          const partners = data.partners || [];
+          setChatPartners(partners);
+          
+          // Auto select from query params
+          if (initialDoctorUserId && partners.length > 0) {
+            const match = partners.find((p: ChatPartner) => p.user_id === initialDoctorUserId);
+            if (match) setSelectedPartner(match);
+          }
         }
       } catch (e) {
         console.error("Failed to load chat partners:", e);
@@ -109,7 +121,7 @@ export default function MyAppointmentsPage() {
     loadPartners();
     const t = setInterval(loadPartners, 4000);
     return () => clearInterval(t);
-  }, [user, filter]);
+  }, [user, filter, initialDoctorUserId]);
 
   // Load messages
   useEffect(() => {
@@ -183,14 +195,6 @@ export default function MyAppointmentsPage() {
     { id: "cancelled", label: "Cancelled", count: appointments.filter(a => a.status === "cancelled").length },
     { id: "chat", label: "💬 Live Chat with Doctor", count: chatPartners.length },
   ];
-
-  if (loading) {
-    return (
-      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-primary)" }}>
-        <div style={{ width: 36, height: 36, borderRadius: "50%", border: "3px solid rgba(34,197,94,0.3)", borderTopColor: "#22c55e", animation: "spin 0.8s linear infinite" }} />
-      </div>
-    );
-  }
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: "0 24px 60px" }}>
@@ -480,6 +484,24 @@ export default function MyAppointmentsPage() {
                               }}
                             >Cancel Appointment</button>
                           )}
+                          {appt.doctors?.user_id && (
+                            <button
+                              onClick={() => {
+                                setFilter("chat");
+                                setSelectedPartner({
+                                  user_id: appt.doctors!.user_id,
+                                  name: appt.doctors!.full_name,
+                                  role: "doctor"
+                                });
+                              }}
+                              style={{
+                                padding: "6px 14px", borderRadius: 8, border: "none",
+                                background: "rgba(34,197,94,0.15)", color: "#86efac",
+                                fontSize: 12, fontWeight: 500, cursor: "pointer",
+                                transition: "all 0.2s", marginTop: 6, width: "100%", textAlign: "center"
+                              }}
+                            >💬 Chat with Doctor</button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -491,5 +513,17 @@ export default function MyAppointmentsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function MyAppointmentsPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-primary)" }}>
+        <div style={{ width: 36, height: 36, borderRadius: "50%", border: "3px solid rgba(34,197,94,0.3)", borderTopColor: "#22c55e", animation: "spin 0.8s linear infinite" }} />
+      </div>
+    }>
+      <MyAppointmentsPageInner />
+    </Suspense>
   );
 }

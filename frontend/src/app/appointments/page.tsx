@@ -9,6 +9,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface Doctor {
   id: string;
+  user_id: string;
   full_name: string;
   specialization: string;
   bio: string;
@@ -276,14 +277,11 @@ export default function BookAppointmentPage() {
                   const isHovered = hoveredDoctor === doc.id;
                   const isSelected = selectedDoctor?.id === doc.id;
                   return (
-                    <button
+                    <div
                       key={doc.id}
-                      onClick={() => { setSelectedDoctor(doc); setStep(2); }}
                       onMouseEnter={() => setHoveredDoctor(doc.id)}
                       onMouseLeave={() => setHoveredDoctor(null)}
                       style={{
-                        padding: 0, border: "none", background: "none",
-                        textAlign: "left", cursor: "pointer",
                         animation: `fadeIn 0.4s ease ${i * 0.08}s both`,
                       }}
                     >
@@ -295,6 +293,7 @@ export default function BookAppointmentPage() {
                         transition: "all 0.3s",
                         transform: isHovered ? "translateY(-3px)" : "translateY(0)",
                         boxShadow: isHovered ? "0 12px 36px rgba(0,0,0,0.3)" : "none",
+                        display: "flex", flexDirection: "column", height: "100%"
                       }}>
                         <div style={{
                           width: 52, height: 52, borderRadius: 14,
@@ -309,18 +308,47 @@ export default function BookAppointmentPage() {
                           Dr. {doc.full_name}
                         </h3>
                         <div style={{
-                          display: "inline-block", padding: "3px 10px", borderRadius: 6,
+                          display: "inline-block", alignSelf: "flex-start", padding: "3px 10px", borderRadius: 6,
                           background: "rgba(34,197,94,0.1)", color: "#86efac",
                           fontSize: 11, fontWeight: 500, marginBottom: 12,
                         }}>{doc.specialization}</div>
-                        <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 14 }}>
+                        <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 14, flex: 1 }}>
                           {doc.bio || "Experienced mental health professional specializing in cognitive behavioral therapy."}
                         </p>
-                        <div style={{ fontSize: 12, color: "var(--text-tertiary)", display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ fontSize: 12, color: "var(--text-tertiary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
                           ⭐ {doc.experience_years}+ years experience
                         </div>
+                        
+                        {/* Direct action buttons */}
+                        <div style={{ display: "flex", gap: 10, width: "100%" }}>
+                          <button
+                            onClick={() => { setSelectedDoctor(doc); setStep(2); }}
+                            style={{
+                              flex: 1, padding: "10px", borderRadius: 10, border: "none",
+                              background: "linear-gradient(135deg, #22c55e, #16a34a)",
+                              color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                              boxShadow: "0 2px 10px rgba(34,197,94,0.2)", textAlign: "center"
+                            }}
+                          >
+                            📅 Book
+                          </button>
+                          
+                          <Link
+                            href={`/appointments/my?tab=chat&doctorUserId=${doc.user_id}`}
+                            style={{
+                              flex: 1, padding: "10px", borderRadius: 10,
+                              border: "0.5px solid var(--border-secondary)",
+                              background: "rgba(255,255,255,0.04)",
+                              color: "var(--text-secondary)", fontSize: 13, fontWeight: 500,
+                              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                              gap: 4
+                            }}
+                          >
+                            💬 Chat
+                          </Link>
+                        </div>
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>

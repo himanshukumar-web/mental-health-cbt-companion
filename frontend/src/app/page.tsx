@@ -114,6 +114,14 @@ export default function LandingPage() {
                     📋 My Appointments
                   </Link>
 
+                  <Link href="/appointments/my?tab=chat" id="nav-doctor-chat" style={{
+                    padding: "7px 14px", borderRadius: 10,
+                    background: "rgba(59,130,246,0.12)", border: "0.5px solid rgba(59,130,246,0.3)",
+                    color: "#93c5fd", fontSize: 12, fontWeight: 500,
+                  }}>
+                    💬 Doctor Chat
+                  </Link>
+
                   {/* Admin dashboard link for doctors */}
                   {userRole === "admin" && (
                     <Link href="/admin" id="nav-admin-dashboard" style={{
@@ -238,15 +246,26 @@ export default function LandingPage() {
             </button>
 
             {user ? (
-              <Link href="/appointments" style={{
-                padding: "15px 28px", borderRadius: 14,
-                border: "0.5px solid rgba(34,197,94,0.3)",
-                background: "rgba(34,197,94,0.08)", color: "#86efac",
-                fontSize: 15, fontWeight: 500,
-                display: "flex", alignItems: "center", gap: 8,
-              }}>
-                📅 Book Appointment
-              </Link>
+              <div style={{ display: "flex", gap: 10 }}>
+                <Link href="/appointments" style={{
+                  padding: "15px 28px", borderRadius: 14,
+                  border: "0.5px solid rgba(34,197,94,0.3)",
+                  background: "rgba(34,197,94,0.08)", color: "#86efac",
+                  fontSize: 15, fontWeight: 500,
+                  display: "flex", alignItems: "center", gap: 8,
+                }}>
+                  📅 Book Appointment
+                </Link>
+                <Link href="/appointments/my?tab=chat" style={{
+                  padding: "15px 28px", borderRadius: 14,
+                  border: "0.5px solid rgba(59,130,246,0.3)",
+                  background: "rgba(59,130,246,0.08)", color: "#93c5fd",
+                  fontSize: 15, fontWeight: 500,
+                  display: "flex", alignItems: "center", gap: 8,
+                }}>
+                  💬 Chat with Doctor
+                </Link>
+              </div>
             ) : (
               <Link href="/signup" style={{
                 padding: "15px 28px", borderRadius: 14,
