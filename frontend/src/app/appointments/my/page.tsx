@@ -189,7 +189,7 @@ function MyAppointmentsPageInner() {
 
   const filters = [
     { id: "all", label: "📅 Booked Sessions", count: appointments.length },
-    { id: "chat", label: "💬 Live Chat with Doctor", count: chatPartners.length },
+    { id: "chat", label: "💬 Chat with Doctor", count: chatPartners.length },
   ];
 
   return (
