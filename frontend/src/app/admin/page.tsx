@@ -102,7 +102,7 @@ export default function AdminDashboard() {
   const [doctor, setDoctor] = useState<DoctorProfile | null>(null);
   const [stats, setStats] = useState<Stats>({ total_patients: 0, today_appointments: 0, completed: 0, pending: 0 });
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "appointments" | "chat">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "appointments" | "chat" | "profile">("dashboard");
   const [loadingData, setLoadingData] = useState(true);
 
   // Chat states
@@ -328,6 +328,7 @@ export default function AdminDashboard() {
           { id: "dashboard" as const, icon: "📊", label: "Dashboard" },
           { id: "appointments" as const, icon: "📅", label: "Appointments" },
           { id: "chat" as const, icon: "💬", label: "Live Chat" },
+          { id: "profile" as const, icon: "👤", label: "Edit Profile" },
         ].map((item) => (
           <button
             key={item.id}
@@ -535,6 +536,14 @@ export default function AdminDashboard() {
             onSend={handleSendMessage}
             sending={sendingMsg}
             userId={user.id}
+          />
+        )}
+
+        {activeTab === "profile" && (
+          <AdminProfileEditView
+            doctor={doctor}
+            setDoctor={setDoctor}
+            user={user}
           />
         )}
       </main>
@@ -860,6 +869,194 @@ function AdminChatView({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+
+// ── Admin Profile Edit View ──────────────────────────────────────────────
+
+interface AdminProfileEditViewProps {
+  doctor: DoctorProfile | null;
+  setDoctor: (doc: DoctorProfile | null) => void;
+  user: any;
+}
+
+function AdminProfileEditView({ doctor, setDoctor, user }: AdminProfileEditViewProps) {
+  const [fullName, setFullName] = useState(doctor?.full_name || "");
+  const [specialization, setSpecialization] = useState(doctor?.specialization || "");
+  const [bio, setBio] = useState(doctor?.bio || "");
+  const [experienceYears, setExperienceYears] = useState(doctor?.experience_years || 0);
+  const [available, setAvailable] = useState(doctor?.available ?? true);
+  
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Sync if doctor loads late
+  useEffect(() => {
+    if (doctor) {
+      setFullName(doctor.full_name);
+      setSpecialization(doctor.specialization);
+      setBio(doctor.bio);
+      setExperienceYears(doctor.experience_years);
+      setAvailable(doctor.available);
+    }
+  }, [doctor]);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fullName.trim() || !specialization.trim()) {
+      setMessage({ type: "error", text: "Name and Specialization are required." });
+      return;
+    }
+    
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch(`${API_URL}/doctors/user/${user.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_name: fullName.trim(),
+          specialization: specialization.trim(),
+          bio: bio.trim(),
+          experience_years: Number(experienceYears),
+          available: available
+        })
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        setDoctor(updated);
+        setMessage({ type: "success", text: "Profile updated successfully! 🎉" });
+      } else {
+        setMessage({ type: "error", text: "Failed to update profile. Please try again." });
+      }
+    } catch (err) {
+      console.error(err);
+      setMessage({ type: "error", text: "Network error occurred." });
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ animation: "fadeIn 0.4s ease", maxWidth: 600 }}>
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={{
+          fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 700,
+          color: "var(--text-primary)", marginBottom: 8,
+        }}>Edit Profile 👤</h1>
+        <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
+          Update your qualifications, specialization, and availability
+        </p>
+      </div>
+
+      <form onSubmit={handleSave} style={{
+        padding: "28px", borderRadius: 20,
+        background: "var(--bg-glass)", backdropFilter: "blur(12px)",
+        border: "0.5px solid var(--border-secondary)",
+        display: "flex", flexDirection: "column", gap: 20
+      }}>
+        {message && (
+          <div style={{
+            padding: "12px 16px", borderRadius: 10,
+            background: message.type === "success" ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
+            border: message.type === "success" ? "0.5px solid rgba(34,197,94,0.3)" : "0.5px solid rgba(239,68,68,0.3)",
+            color: message.type === "success" ? "#86efac" : "#fca5a5",
+            fontSize: 14
+          }}>
+            {message.text}
+          </div>
+        )}
+
+        <div>
+          <label style={{ display: "block", fontSize: 13, color: "var(--text-secondary)", marginBottom: 6 }}>Full Name</label>
+          <input
+            type="text"
+            value={fullName}
+            onChange={e => setFullName(e.target.value)}
+            style={{
+              width: "100%", padding: "12px 14px", borderRadius: 10,
+              border: "0.5px solid var(--border-secondary)",
+              background: "var(--bg-secondary)", color: "var(--text-primary)",
+              fontSize: 14, fontFamily: "inherit", boxSizing: "border-box"
+            }}
+          />
+        </div>
+
+        <div>
+          <label style={{ display: "block", fontSize: 13, color: "var(--text-secondary)", marginBottom: 6 }}>
+            Specialization / Qualification (e.g. Anxiety Therapist, Clinical Psychologist)
+          </label>
+          <input
+            type="text"
+            value={specialization}
+            onChange={e => setSpecialization(e.target.value)}
+            style={{
+              width: "100%", padding: "12px 14px", borderRadius: 10,
+              border: "0.5px solid var(--border-secondary)",
+              background: "var(--bg-secondary)", color: "var(--text-primary)",
+              fontSize: 14, fontFamily: "inherit", boxSizing: "border-box"
+            }}
+          />
+        </div>
+
+        <div>
+          <label style={{ display: "block", fontSize: 13, color: "var(--text-secondary)", marginBottom: 6 }}>Experience (Years)</label>
+          <input
+            type="number"
+            value={experienceYears}
+            onChange={e => setExperienceYears(Number(e.target.value))}
+            style={{
+              width: "100%", padding: "12px 14px", borderRadius: 10,
+              border: "0.5px solid var(--border-secondary)",
+              background: "var(--bg-secondary)", color: "var(--text-primary)",
+              fontSize: 14, fontFamily: "inherit", boxSizing: "border-box"
+            }}
+          />
+        </div>
+
+        <div>
+          <label style={{ display: "block", fontSize: 13, color: "var(--text-secondary)", marginBottom: 6 }}>Bio / Description</label>
+          <textarea
+            value={bio}
+            onChange={e => setBio(e.target.value)}
+            rows={4}
+            style={{
+              width: "100%", padding: "12px 14px", borderRadius: 10,
+              border: "0.5px solid var(--border-secondary)",
+              background: "var(--bg-secondary)", color: "var(--text-primary)",
+              fontSize: 14, fontFamily: "inherit", lineHeight: 1.6, boxSizing: "border-box",
+              resize: "vertical"
+            }}
+          />
+        </div>
+
+        <label style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer" }}>
+          <input
+            type="checkbox"
+            checked={available}
+            onChange={e => setAvailable(e.target.checked)}
+            style={{ width: 18, height: 18, accentColor: "#f59e0b", cursor: "pointer" }}
+          />
+          <span style={{ fontSize: 14, color: "var(--text-primary)" }}>Available for Booking</span>
+        </label>
+
+        <button
+          type="submit"
+          disabled={saving}
+          style={{
+            padding: "14px", borderRadius: 12, border: "none",
+            background: saving ? "rgba(245,158,11,0.4)" : "linear-gradient(135deg, #f59e0b, #d97706)",
+            color: "white", fontSize: 15, fontWeight: 600, cursor: saving ? "default" : "pointer",
+            boxShadow: saving ? "none" : "0 4px 20px rgba(245,158,11,0.3)",
+            transition: "all 0.2s"
+          }}
+        >
+          {saving ? "Saving..." : "Save Profile"}
+        </button>
+      </form>
     </div>
   );
 }

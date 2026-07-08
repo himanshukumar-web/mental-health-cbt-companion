@@ -202,11 +202,58 @@ async def get_doctor_by_id(doctor_id: str) -> dict | None:
         except Exception:
             pass
 
-    # Fallback to Mock Store
     for d in MOCK_DOCTORS:
         if d["id"] == doctor_id:
             return d
     return None
+
+
+async def update_doctor_profile(
+    user_id: str,
+    full_name: str,
+    specialization: str,
+    bio: str,
+    experience_years: int,
+    available: bool = True
+) -> dict | None:
+    """Update an existing doctor profile."""
+    db = get_supabase()
+    if db:
+        try:
+            result = db.table("doctors").update({
+                "full_name": full_name,
+                "specialization": specialization,
+                "bio": bio,
+                "experience_years": experience_years,
+                "available": available,
+            }).eq("user_id", user_id).execute()
+            if result.data:
+                return result.data[0]
+        except Exception:
+            pass
+
+    # Fallback to Mock Store
+    for doc in MOCK_DOCTORS:
+        if doc["user_id"] == user_id:
+            doc["full_name"] = full_name
+            doc["specialization"] = specialization
+            doc["bio"] = bio
+            doc["experience_years"] = experience_years
+            doc["available"] = available
+            return doc
+
+    new_doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "full_name": full_name,
+        "specialization": specialization,
+        "bio": bio,
+        "experience_years": experience_years,
+        "available": available,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    MOCK_DOCTORS.append(new_doc)
+    return new_doc
 
 
 # ── Appointment CRUD ───────────────────────────────────────────────────────────

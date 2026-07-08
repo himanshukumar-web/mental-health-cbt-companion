@@ -57,6 +57,14 @@ class DoctorCreate(BaseModel):
     experience_years: int = 0
 
 
+class DoctorUpdate(BaseModel):
+    full_name: str
+    specialization: str
+    bio: str
+    experience_years: int
+    available: bool
+
+
 class AppointmentCreate(BaseModel):
     doctor_id: str
     patient_id: str
@@ -136,6 +144,22 @@ async def create_doctor(body: DoctorCreate):
     )
     if not doctor:
         raise HTTPException(status_code=500, detail="Failed to create doctor profile")
+    return doctor
+
+
+@app.put("/doctors/user/{user_id}")
+async def update_doctor_profile(user_id: str, body: DoctorUpdate):
+    """Update doctor profile details."""
+    doctor = await crud.update_doctor_profile(
+        user_id=user_id,
+        full_name=body.full_name,
+        specialization=body.specialization,
+        bio=body.bio,
+        experience_years=body.experience_years,
+        available=body.available,
+    )
+    if not doctor:
+        raise HTTPException(status_code=500, detail="Failed to update doctor profile")
     return doctor
 
 

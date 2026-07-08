@@ -185,14 +185,10 @@ function MyAppointmentsPageInner() {
     setSendingMsg(false);
   };
 
-  const filtered = filter === "all" ? appointments : appointments.filter(a => a.status === filter);
+  const filtered = appointments;
 
   const filters = [
-    { id: "all", label: "All", count: appointments.length },
-    { id: "pending", label: "Pending", count: appointments.filter(a => a.status === "pending").length },
-    { id: "confirmed", label: "Confirmed", count: appointments.filter(a => a.status === "confirmed").length },
-    { id: "completed", label: "Completed", count: appointments.filter(a => a.status === "completed").length },
-    { id: "cancelled", label: "Cancelled", count: appointments.filter(a => a.status === "cancelled").length },
+    { id: "all", label: "📅 Booked Sessions", count: appointments.length },
     { id: "chat", label: "💬 Live Chat with Doctor", count: chatPartners.length },
   ];
 
@@ -431,7 +427,6 @@ function MyAppointmentsPageInner() {
                       border: "0.5px solid var(--border-secondary)",
                       animation: `fadeIn 0.3s ease ${i * 0.04}s both`,
                       transition: "all 0.2s",
-                      opacity: appt.status === "cancelled" ? 0.6 : 1,
                     }}>
                       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
                         <div style={{ display: "flex", gap: 16 }}>
@@ -457,7 +452,7 @@ function MyAppointmentsPageInner() {
                               <span style={{ fontSize: 13, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 5 }}>
                                 🕐 {appt.time_slot}
                               </span>
-                              {isPast && appt.status !== "completed" && appt.status !== "cancelled" && (
+                              {isPast && (
                                 <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 6, background: "rgba(239,68,68,0.1)" }}>
                                   Past date
                                 </span>
@@ -472,18 +467,6 @@ function MyAppointmentsPageInner() {
                         </div>
 
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
-                          <StatusBadge status={appt.status} />
-                          {(appt.status === "pending" || appt.status === "confirmed") && !isPast && (
-                            <button
-                              onClick={() => handleCancel(appt.id)}
-                              style={{
-                                padding: "6px 14px", borderRadius: 8, border: "none",
-                                background: "rgba(239,68,68,0.1)", color: "#fca5a5",
-                                fontSize: 12, fontWeight: 500, cursor: "pointer",
-                                transition: "all 0.2s",
-                              }}
-                            >Cancel Appointment</button>
-                          )}
                           {appt.doctors?.user_id && (
                             <button
                               onClick={() => {
@@ -495,10 +478,10 @@ function MyAppointmentsPageInner() {
                                 });
                               }}
                               style={{
-                                padding: "6px 14px", borderRadius: 8, border: "none",
+                                padding: "8px 16px", borderRadius: 10, border: "none",
                                 background: "rgba(34,197,94,0.15)", color: "#86efac",
-                                fontSize: 12, fontWeight: 500, cursor: "pointer",
-                                transition: "all 0.2s", marginTop: 6, width: "100%", textAlign: "center"
+                                fontSize: 13, fontWeight: 500, cursor: "pointer",
+                                transition: "all 0.2s"
                               }}
                             >💬 Chat with Doctor</button>
                           )}
