@@ -323,30 +323,63 @@ function MyAppointmentsPageInner() {
                   
                   {/* Message feed */}
                   <div style={{ flex: 1, padding: "16px 20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
-                    {chatMessages.map(m => {
-                      const isOwn = m.sender_id === user?.id;
-                      return (
-                        <div
-                          key={m.id}
-                          style={{
-                            alignSelf: isOwn ? "flex-end" : "flex-start",
-                            maxWidth: "70%",
-                            padding: "10px 14px",
-                            borderRadius: isOwn ? "14px 14px 0 14px" : "14px 14px 14px 0",
-                            background: isOwn ? "rgba(34,197,94,0.15)" : "var(--bg-secondary)",
-                            border: isOwn ? "0.5px solid rgba(34,197,94,0.3)" : "0.5px solid var(--border-secondary)",
-                            color: "var(--text-primary)",
-                            fontSize: 13,
-                            lineHeight: 1.5
-                          }}
-                        >
-                          <div>{m.content}</div>
-                          <div style={{ fontSize: 9, color: "var(--text-tertiary)", marginTop: 4, textAlign: isOwn ? "right" : "left" }}>
-                            {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {(() => {
+                      let lastDateStr = "";
+                      return chatMessages.map(m => {
+                        const isOwn = m.sender_id === user?.id;
+                        const msgDate = new Date(m.timestamp);
+                        const dateStr = msgDate.toLocaleDateString("en-IN", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                        const showDateSeparator = dateStr !== lastDateStr;
+                        lastDateStr = dateStr;
+
+                        return (
+                          <div key={m.id} style={{ display: "flex", flexDirection: "column", width: "100%", gap: 6 }}>
+                            {showDateSeparator && (
+                              <div style={{
+                                alignSelf: "center",
+                                margin: "18px 0 8px",
+                                padding: "4px 12px",
+                                borderRadius: 20,
+                                background: "rgba(255, 255, 255, 0.05)",
+                                border: "0.5px solid var(--border-secondary)",
+                                color: "var(--text-tertiary)",
+                                fontSize: 10,
+                                fontWeight: 500,
+                                letterSpacing: "0.03em"
+                              }}>
+                                {dateStr}
+                              </div>
+                            )}
+                            <div
+                              style={{
+                                alignSelf: isOwn ? "flex-end" : "flex-start",
+                                maxWidth: "70%",
+                                padding: "10px 14px",
+                                borderRadius: isOwn ? "14px 14px 0 14px" : "14px 14px 14px 0",
+                                background: isOwn ? "rgba(34,197,94,0.15)" : "var(--bg-secondary)",
+                                border: isOwn ? "0.5px solid rgba(34,197,94,0.3)" : "0.5px solid var(--border-secondary)",
+                                color: "var(--text-primary)",
+                                fontSize: 13,
+                                lineHeight: 1.5
+                              }}
+                            >
+                              <div style={{
+                                fontSize: 9,
+                                fontWeight: 600,
+                                color: isOwn ? "#86efac" : "#93c5fd",
+                                marginBottom: 3
+                              }}>
+                                {isOwn ? "You" : `Dr. ${selectedPartner.name}`}
+                              </div>
+                              <div>{m.content}</div>
+                              <div style={{ fontSize: 9, color: "var(--text-tertiary)", marginTop: 4, textAlign: isOwn ? "right" : "left" }}>
+                                {msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      });
+                    })()}
                     <div id="patient-chat-end" />
                   </div>
 

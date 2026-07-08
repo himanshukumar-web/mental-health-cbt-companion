@@ -1,29 +1,341 @@
 from datetime import datetime, timezone
 import uuid
+import sqlite3
+import os
 from app.database.client import get_supabase
 from app.utils.security import encrypt_message, decrypt_message
 from app.config import settings
 
-
-# ── In-Memory Datastore Fallback ──────────────────────────────────────────────
+# ── SQLite Datastore Fallback ──────────────────────────────────────────────────
 # Used automatically if the Supabase tables do not exist yet.
-MOCK_DOCTORS = [
-    {
-        "id": "11111111-1111-1111-1111-111111111111",
-        "user_id": "00000000-0000-0000-0000-000000000000",
-        "full_name": "Himanshu Kumar",
-        "specialization": "Senior CBT Therapist & Anxiety Specialist",
-        "bio": "Experienced mental health professional specializing in cognitive behavioral therapy, anxiety management, and thought challenging.",
-        "experience_years": 8,
-        "available": True,
-        "avatar_url": None,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
-]
+DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "local_fallback.db")
 
-MOCK_APPOINTMENTS = []
-MOCK_DIRECT_MESSAGES = []
+def init_sqlite():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    # Create doctors table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS doctors (
+        id TEXT PRIMARY KEY,
+        user_id TEXT UNIQUE,
+        full_name TEXT NOT NULL,
+        specialization TEXT DEFAULT 'General CBT Therapist',
+        bio TEXT,
+        experience_years INTEGER DEFAULT 0,
+        available BOOLEAN DEFAULT 1,
+        created_at TEXT
+    )
+    """)
+    # Create appointments table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS appointments (
+        id TEXT PRIMARY KEY,
+        doctor_id TEXT NOT NULL,
+        patient_id TEXT,
+        patient_name TEXT NOT NULL,
+        patient_email TEXT NOT NULL,
+        date TEXT NOT NULL,
+        time_slot TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        notes TEXT,
+        created_at TEXT,
+        FOREIGN KEY(doctor_id) REFERENCES doctors(id)
+    )
+    """)
+    # Create direct_messages table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS direct_messages (
+        id TEXT PRIMARY KEY,
+        sender_id TEXT NOT NULL,
+        receiver_id TEXT NOT NULL,
+        content TEXT NOT NULL,
+        timestamp TEXT
+    )
+    """)
+    
+    # Initialize with default doctor if empty
+    cursor.execute("SELECT COUNT(*) FROM doctors")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("""
+        INSERT INTO doctors (id, user_id, full_name, specialization, bio, experience_years, available, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            "11111111-1111-1111-1111-111111111111",
+            "00000000-0000-0000-0000-000000000000",
+            "Himanshu Kumar",
+            "Senior CBT Therapist & Anxiety Specialist",
+            "Experienced mental health professional specializing in cognitive behavioral therapy, anxiety management, and thought challenging.",
+            8,
+            1,
+            datetime.now(timezone.utc).isoformat()
+        ))
+        
+    conn.commit()
+    conn.close()
 
+# Run initialization
+init_sqlite()
+
+
+def sqlite_create_doctor(user_id, full_name, specialization, bio, experience_years, available=True):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    doc_id = str(uuid.uuid4())
+    created_at = datetime.now(timezone.utc).isoformat()
+    try:
+        cursor.execute("""
+        INSERT INTO doctors (id, user_id, full_name, specialization, bio, experience_years, available, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+            full_name=excluded.full_name,
+            specialization=excluded.specialization,
+            bio=excluded.bio,
+            experience_years=excluded.experience_years,
+            available=excluded.available
+        """, (doc_id, user_id, full_name, specialization, bio, experience_years, 1 if available else 0, created_at))
+        conn.commit()
+        cursor.execute("SELECT id, user_id, full_name, specialization, bio, experience_years, available, created_at FROM doctors WHERE user_id=?", (user_id,))
+        row = cursor.fetchone()
+        return {
+            "id": row[0], "user_id": row[1], "full_name": row[2], "specialization": row[3],
+            "bio": row[4], "experience_years": row[5], "available": bool(row[6]), "created_at": row[7]
+        }
+    except Exception as e:
+        print("SQLite error:", e)
+        return None
+    finally:
+        conn.close()
+
+
+def sqlite_get_doctors(available_only=True):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        if available_only:
+            cursor.execute("SELECT id, user_id, full_name, specialization, bio, experience_years, available, created_at FROM doctors WHERE available=1 ORDER BY full_name")
+        else:
+            cursor.execute("SELECT id, user_id, full_name, specialization, bio, experience_years, available, created_at FROM doctors ORDER BY full_name")
+        rows = cursor.fetchall()
+        return [{
+            "id": r[0], "user_id": r[1], "full_name": r[2], "specialization": r[3],
+            "bio": r[4], "experience_years": r[5], "available": bool(r[6]), "created_at": r[7]
+        } for r in rows]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+def sqlite_get_doctor_by_user_id(user_id):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id, user_id, full_name, specialization, bio, experience_years, available, created_at FROM doctors WHERE user_id=?", (user_id,))
+        row = cursor.fetchone()
+        if row:
+            return {
+                "id": row[0], "user_id": row[1], "full_name": row[2], "specialization": row[3],
+                "bio": row[4], "experience_years": row[5], "available": bool(row[6]), "created_at": row[7]
+            }
+        return None
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
+def sqlite_get_doctor_by_id(doctor_id):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id, user_id, full_name, specialization, bio, experience_years, available, created_at FROM doctors WHERE id=?", (doctor_id,))
+        row = cursor.fetchone()
+        if row:
+            return {
+                "id": row[0], "user_id": row[1], "full_name": row[2], "specialization": row[3],
+                "bio": row[4], "experience_years": row[5], "available": bool(row[6]), "created_at": row[7]
+            }
+        return None
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
+def sqlite_create_appointment(doctor_id, patient_id, patient_name, patient_email, date, time_slot, notes=""):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    appt_id = str(uuid.uuid4())
+    created_at = datetime.now(timezone.utc).isoformat()
+    try:
+        cursor.execute("""
+        INSERT INTO appointments (id, doctor_id, patient_id, patient_name, patient_email, date, time_slot, status, notes, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+        """, (appt_id, doctor_id, patient_id, patient_name, patient_email, date, time_slot, notes, created_at))
+        conn.commit()
+        return {
+            "id": appt_id, "doctor_id": doctor_id, "patient_id": patient_id, "patient_name": patient_name,
+            "patient_email": patient_email, "date": date, "time_slot": time_slot, "status": "pending",
+            "notes": notes, "created_at": created_at
+        }
+    except Exception as e:
+        print("SQLite appt create error:", e)
+        return None
+    finally:
+        conn.close()
+
+
+def sqlite_get_user_appointments(user_id):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id, doctor_id, patient_id, patient_name, patient_email, date, time_slot, status, notes, created_at FROM appointments WHERE patient_id=? ORDER BY date DESC", (user_id,))
+        rows = cursor.fetchall()
+        res = []
+        for r in rows:
+            cursor.execute("SELECT full_name, specialization, user_id FROM doctors WHERE id=?", (r[1],))
+            doc_row = cursor.fetchone()
+            doc_details = {"full_name": "Doctor", "specialization": "Therapist", "user_id": None}
+            if doc_row:
+                doc_details = {"full_name": doc_row[0], "specialization": doc_row[1], "user_id": doc_row[2]}
+            
+            res.append({
+                "id": r[0], "doctor_id": r[1], "patient_id": r[2], "patient_name": r[3],
+                "patient_email": r[4], "date": r[5], "time_slot": r[6], "status": r[7],
+                "notes": r[8], "created_at": r[9], "doctors": doc_details
+            })
+        return res
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+def sqlite_get_doctor_appointments(doctor_id, status=None):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        if status:
+            cursor.execute("SELECT id, doctor_id, patient_id, patient_name, patient_email, date, time_slot, status, notes, created_at FROM appointments WHERE doctor_id=? AND status=? ORDER BY date DESC", (doctor_id, status))
+        else:
+            cursor.execute("SELECT id, doctor_id, patient_id, patient_name, patient_email, date, time_slot, status, notes, created_at FROM appointments WHERE doctor_id=? ORDER BY date DESC", (doctor_id,))
+        rows = cursor.fetchall()
+        return [{
+            "id": r[0], "doctor_id": r[1], "patient_id": r[2], "patient_name": r[3],
+            "patient_email": r[4], "date": r[5], "time_slot": r[6], "status": r[7],
+            "notes": r[8], "created_at": r[9]
+        } for r in rows]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+def sqlite_update_appointment_status(appointment_id, status):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE appointments SET status=? WHERE id=?", (status, appointment_id))
+        conn.commit()
+        return True
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
+
+def sqlite_create_direct_message(sender_id, receiver_id, content):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    msg_id = str(uuid.uuid4())
+    timestamp = datetime.now(timezone.utc).isoformat()
+    try:
+        cursor.execute("""
+        INSERT INTO direct_messages (id, sender_id, receiver_id, content, timestamp)
+        VALUES (?, ?, ?, ?, ?)
+        """, (msg_id, sender_id, receiver_id, content, timestamp))
+        conn.commit()
+        return {
+            "id": msg_id, "sender_id": sender_id, "receiver_id": receiver_id,
+            "content": content, "timestamp": timestamp
+        }
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
+def sqlite_get_direct_messages(user1_id, user2_id, limit=50):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        SELECT id, sender_id, receiver_id, content, timestamp FROM direct_messages
+        WHERE (sender_id=? AND receiver_id=?) OR (sender_id=? AND receiver_id=?)
+        ORDER BY timestamp ASC
+        """, (user1_id, user2_id, user2_id, user1_id))
+        rows = cursor.fetchall()
+        msgs = [{
+            "id": r[0], "sender_id": r[1], "receiver_id": r[2],
+            "content": r[3], "timestamp": r[4]
+        } for r in rows]
+        return msgs[-limit:]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+def sqlite_get_chat_partners(user_id):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    partners = set()
+    try:
+        cursor.execute("SELECT receiver_id FROM direct_messages WHERE sender_id=?", (user_id,))
+        for r in cursor.fetchall(): partners.add(r[0])
+        cursor.execute("SELECT sender_id FROM direct_messages WHERE receiver_id=?", (user_id,))
+        for r in cursor.fetchall(): partners.add(r[0])
+        
+        cursor.execute("SELECT doctor_id FROM appointments WHERE patient_id=?", (user_id,))
+        for r in cursor.fetchall():
+            cursor.execute("SELECT user_id FROM doctors WHERE id=?", (r[0],))
+            doc = cursor.fetchone()
+            if doc: partners.add(doc[0])
+            
+        cursor.execute("SELECT id FROM doctors WHERE user_id=?", (user_id,))
+        doc = cursor.fetchone()
+        if doc:
+            cursor.execute("SELECT patient_id FROM appointments WHERE doctor_id=?", (doc[0],))
+            for r in cursor.fetchall():
+                if r[0]: partners.add(r[0])
+                
+        res = []
+        for p_id in partners:
+            cursor.execute("SELECT full_name FROM doctors WHERE user_id=?", (p_id,))
+            doc_row = cursor.fetchone()
+            name = "User"
+            role = "patient"
+            if doc_row:
+                name = doc_row[0]
+                role = "doctor"
+            else:
+                cursor.execute("SELECT patient_name FROM appointments WHERE patient_id=? LIMIT 1", (p_id,))
+                appt_row = cursor.fetchone()
+                if appt_row: name = appt_row[0]
+            
+            res.append({
+                "user_id": p_id,
+                "name": name,
+                "role": role
+            })
+        return res
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+# ── Core API Handlers ─────────────────────────────────────────────────────────
 
 async def create_session(session_id: str, mood_score: int | None = None) -> bool:
     """Create a new session row. Returns True on success."""
@@ -118,27 +430,8 @@ async def create_doctor(
         except Exception:
             pass
 
-    # Fallback to Mock Store
-    for doc in MOCK_DOCTORS:
-        if doc["user_id"] == user_id:
-            doc["full_name"] = full_name
-            doc["specialization"] = specialization
-            doc["bio"] = bio
-            doc["experience_years"] = experience_years
-            return doc
-
-    new_doc = {
-        "id": str(uuid.uuid4()),
-        "user_id": user_id,
-        "full_name": full_name,
-        "specialization": specialization,
-        "bio": bio,
-        "experience_years": experience_years,
-        "available": True,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
-    MOCK_DOCTORS.append(new_doc)
-    return new_doc
+    # Fallback to local SQLite Database
+    return sqlite_create_doctor(user_id, full_name, specialization, bio, experience_years)
 
 
 async def get_doctors(available_only: bool = True) -> list[dict]:
@@ -155,10 +448,8 @@ async def get_doctors(available_only: bool = True) -> list[dict]:
         except Exception:
             pass
 
-    # Fallback to Mock Store
-    if available_only:
-        return [d for d in MOCK_DOCTORS if d["available"]]
-    return MOCK_DOCTORS
+    # Fallback to local SQLite Database
+    return sqlite_get_doctors(available_only)
 
 
 async def get_doctor_by_user_id(user_id: str) -> dict | None:
@@ -178,11 +469,8 @@ async def get_doctor_by_user_id(user_id: str) -> dict | None:
         except Exception:
             pass
 
-    # Fallback to Mock Store
-    for d in MOCK_DOCTORS:
-        if d["user_id"] == user_id:
-            return d
-    return None
+    # Fallback to local SQLite Database
+    return sqlite_get_doctor_by_user_id(user_id)
 
 
 async def get_doctor_by_id(doctor_id: str) -> dict | None:
@@ -202,10 +490,8 @@ async def get_doctor_by_id(doctor_id: str) -> dict | None:
         except Exception:
             pass
 
-    for d in MOCK_DOCTORS:
-        if d["id"] == doctor_id:
-            return d
-    return None
+    # Fallback to local SQLite Database
+    return sqlite_get_doctor_by_id(doctor_id)
 
 
 async def update_doctor_profile(
@@ -232,28 +518,8 @@ async def update_doctor_profile(
         except Exception:
             pass
 
-    # Fallback to Mock Store
-    for doc in MOCK_DOCTORS:
-        if doc["user_id"] == user_id:
-            doc["full_name"] = full_name
-            doc["specialization"] = specialization
-            doc["bio"] = bio
-            doc["experience_years"] = experience_years
-            doc["available"] = available
-            return doc
-
-    new_doc = {
-        "id": str(uuid.uuid4()),
-        "user_id": user_id,
-        "full_name": full_name,
-        "specialization": specialization,
-        "bio": bio,
-        "experience_years": experience_years,
-        "available": available,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
-    MOCK_DOCTORS.append(new_doc)
-    return new_doc
+    # Fallback to local SQLite Database
+    return sqlite_create_doctor(user_id, full_name, specialization, bio, experience_years, available)
 
 
 # ── Appointment CRUD ───────────────────────────────────────────────────────────
@@ -287,21 +553,8 @@ async def create_appointment(
         except Exception:
             pass
 
-    # Fallback to Mock Store
-    new_appt = {
-        "id": str(uuid.uuid4()),
-        "doctor_id": doctor_id,
-        "patient_id": patient_id,
-        "patient_name": patient_name,
-        "patient_email": patient_email,
-        "date": date,
-        "time_slot": time_slot,
-        "status": "pending",
-        "notes": notes,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
-    MOCK_APPOINTMENTS.append(new_appt)
-    return new_appt
+    # Fallback to local SQLite Database
+    return sqlite_create_appointment(doctor_id, patient_id, patient_name, patient_email, date, time_slot, notes)
 
 
 async def get_user_appointments(user_id: str) -> list[dict]:
@@ -321,19 +574,8 @@ async def get_user_appointments(user_id: str) -> list[dict]:
         except Exception:
             pass
 
-    # Fallback to Mock Store
-    res = []
-    for appt in MOCK_APPOINTMENTS:
-        if appt["patient_id"] == user_id:
-            doc_details = {"full_name": "Doctor", "specialization": "Therapist", "user_id": None}
-            for d in MOCK_DOCTORS:
-                if d["id"] == appt["doctor_id"]:
-                    doc_details = {"full_name": d["full_name"], "specialization": d["specialization"], "user_id": d["user_id"]}
-                    break
-            appt_copy = appt.copy()
-            appt_copy["doctors"] = doc_details
-            res.append(appt_copy)
-    return sorted(res, key=lambda x: x["date"], reverse=True)
+    # Fallback to local SQLite Database
+    return sqlite_get_user_appointments(user_id)
 
 
 async def get_doctor_appointments(doctor_id: str, status: str | None = None) -> list[dict]:
@@ -354,13 +596,8 @@ async def get_doctor_appointments(doctor_id: str, status: str | None = None) -> 
         except Exception:
             pass
 
-    # Fallback to Mock Store
-    res = []
-    for appt in MOCK_APPOINTMENTS:
-        if appt["doctor_id"] == doctor_id:
-            if not status or appt["status"] == status:
-                res.append(appt)
-    return sorted(res, key=lambda x: x["date"], reverse=True)
+    # Fallback to local SQLite Database
+    return sqlite_get_doctor_appointments(doctor_id, status)
 
 
 async def update_appointment_status(appointment_id: str, status: str) -> bool:
@@ -375,12 +612,8 @@ async def update_appointment_status(appointment_id: str, status: str) -> bool:
         except Exception:
             pass
 
-    # Fallback to Mock Store
-    for appt in MOCK_APPOINTMENTS:
-        if appt["id"] == appointment_id:
-            appt["status"] = status
-            return True
-    return False
+    # Fallback to local SQLite Database
+    return sqlite_update_appointment_status(appointment_id, status)
 
 
 async def get_admin_stats(doctor_id: str) -> dict:
@@ -410,9 +643,9 @@ async def get_admin_stats(doctor_id: str) -> dict:
         except Exception:
             pass
 
-    # Fallback to Mock Store
+    # Fallback to local SQLite Database
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    doc_appts = [a for a in MOCK_APPOINTMENTS if a["doctor_id"] == doctor_id]
+    doc_appts = sqlite_get_doctor_appointments(doctor_id)
     unique_patients = len(set(a["patient_id"] for a in doc_appts if a.get("patient_id")))
     today_appts = len([a for a in doc_appts if a["date"] == today])
     completed = len([a for a in doc_appts if a["status"] == "completed"])
@@ -443,16 +676,8 @@ async def create_direct_message(sender_id: str, receiver_id: str, content: str) 
         except Exception:
             pass
 
-    # Fallback to Mock Store
-    new_msg = {
-        "id": str(uuid.uuid4()),
-        "sender_id": sender_id,
-        "receiver_id": receiver_id,
-        "content": content,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
-    MOCK_DIRECT_MESSAGES.append(new_msg)
-    return new_msg
+    # Fallback to local SQLite Database
+    return sqlite_create_direct_message(sender_id, receiver_id, content)
 
 
 async def get_direct_messages(user1_id: str, user2_id: str, limit: int = 50) -> list[dict]:
@@ -473,40 +698,22 @@ async def get_direct_messages(user1_id: str, user2_id: str, limit: int = 50) -> 
         except Exception:
             pass
 
-    # Fallback to Mock Store
-    res = []
-    for msg in MOCK_DIRECT_MESSAGES:
-        u1, u2 = msg["sender_id"], msg["receiver_id"]
-        if (u1 == user1_id and u2 == user2_id) or (u1 == user2_id and u2 == user1_id):
-            res.append(msg)
-    res.sort(key=lambda x: x["timestamp"])
-    return res[-limit:]
+    # Fallback to local SQLite Database
+    return sqlite_get_direct_messages(user1_id, user2_id, limit)
 
 
 async def get_chat_partners(user_id: str) -> list[dict]:
     """Get list of users who have chatted with the current user."""
-    partners = set()
     db = get_supabase()
-
     if db:
         try:
             sent = db.table("direct_messages").select("receiver_id").eq("sender_id", user_id).execute()
             rcvd = db.table("direct_messages").select("sender_id").eq("receiver_id", user_id).execute()
+            partners = set()
             for r in sent.data or []: partners.add(r["receiver_id"])
             for r in rcvd.data or []: partners.add(r["sender_id"])
-        except Exception:
-            pass
-
-    # Add from mock messages
-    for msg in MOCK_DIRECT_MESSAGES:
-        if msg["sender_id"] == user_id:
-            partners.add(msg["receiver_id"])
-        elif msg["receiver_id"] == user_id:
-            partners.add(msg["sender_id"])
-
-    # Add patient/doctor IDs from appointments to make them easily discoverable
-    if db:
-        try:
+            
+            # Fetch names
             appts_patient = db.table("appointments").select("doctor_id, doctors(user_id, full_name)").eq("patient_id", user_id).execute()
             for a in appts_patient.data or []:
                 if a.get("doctors") and a["doctors"].get("user_id"):
@@ -518,49 +725,23 @@ async def get_chat_partners(user_id: str) -> list[dict]:
                 for a in appts_doc.data or []:
                     if a.get("patient_id"):
                         partners.add(a["patient_id"])
+                        
+            result_partners = []
+            for p_id in partners:
+                name = "User"
+                role = "patient"
+                doc_query = db.table("doctors").select("full_name").eq("user_id", p_id).execute()
+                if doc_query.data:
+                    name = doc_query.data[0]["full_name"]
+                    role = "doctor"
+                else:
+                    appt_query = db.table("appointments").select("patient_name").eq("patient_id", p_id).limit(1).execute()
+                    if appt_query.data:
+                        name = appt_query.data[0]["patient_name"]
+                result_partners.append({"user_id": p_id, "name": name, "role": role})
+            return result_partners
         except Exception:
             pass
 
-    # Add from mock appointments
-    for a in MOCK_APPOINTMENTS:
-        for doc in MOCK_DOCTORS:
-            if doc["user_id"] == user_id and a["doctor_id"] == doc["id"]:
-                if a.get("patient_id"):
-                    partners.add(a["patient_id"])
-        if a["patient_id"] == user_id:
-            for doc in MOCK_DOCTORS:
-                if doc["id"] == a["doctor_id"]:
-                    partners.add(doc["user_id"])
-
-    result_partners = []
-
-    for p_id in partners:
-        name = "User"
-        role = "patient"
-        
-        for doc in MOCK_DOCTORS:
-            if doc["user_id"] == p_id:
-                name = doc["full_name"]
-                role = "doctor"
-                break
-        
-        if role == "patient":
-            for a in MOCK_APPOINTMENTS:
-                if a.get("patient_id") == p_id:
-                    name = a["patient_name"]
-                    break
-            if name == "User" and db:
-                try:
-                    appt = db.table("appointments").select("patient_name").eq("patient_id", p_id).limit(1).execute()
-                    if appt.data:
-                        name = appt.data[0]["patient_name"]
-                except Exception:
-                    pass
-
-        result_partners.append({
-            "user_id": p_id,
-            "name": name,
-            "role": role
-        })
-        
-    return result_partners
+    # Fallback to local SQLite Database
+    return sqlite_get_chat_partners(user_id)

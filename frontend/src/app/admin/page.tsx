@@ -794,37 +794,68 @@ function AdminChatView({
                 <div style={{ margin: "auto", color: "var(--text-tertiary)", fontSize: 13 }}>
                   No messages yet. Send a message to start the conversation!
                 </div>
-              ) : (
-                messages.map(m => {
+              ) : (() => {
+                let lastDateStr = "";
+                return messages.map(m => {
                   const isOwn = m.sender_id === userId;
+                  const msgDate = new Date(m.timestamp);
+                  const dateStr = msgDate.toLocaleDateString("en-IN", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                  const showDateSeparator = dateStr !== lastDateStr;
+                  lastDateStr = dateStr;
+
                   return (
-                    <div
-                      key={m.id}
-                      style={{
-                        alignSelf: isOwn ? "flex-end" : "flex-start",
-                        maxWidth: "70%",
-                        padding: "12px 16px",
-                        borderRadius: isOwn ? "16px 16px 0 16px" : "16px 16px 16px 0",
-                        background: isOwn ? "rgba(245,158,11,0.16)" : "var(--bg-secondary)",
-                        border: isOwn ? "0.5px solid rgba(245,158,11,0.3)" : "0.5px solid var(--border-secondary)",
-                        color: "var(--text-primary)",
-                        fontSize: 14,
-                        lineHeight: 1.5,
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                        animation: "fadeIn 0.3s ease"
-                      }}
-                    >
-                      <div>{m.content}</div>
-                      <div style={{
-                        fontSize: 10, color: "var(--text-tertiary)", marginTop: 4,
-                        textAlign: isOwn ? "right" : "left"
-                      }}>
-                        {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <div key={m.id} style={{ display: "flex", flexDirection: "column", width: "100%", gap: 6 }}>
+                      {showDateSeparator && (
+                        <div style={{
+                          alignSelf: "center",
+                          margin: "20px 0 10px",
+                          padding: "6px 16px",
+                          borderRadius: 20,
+                          background: "rgba(255, 255, 255, 0.05)",
+                          border: "0.5px solid var(--border-secondary)",
+                          color: "var(--text-tertiary)",
+                          fontSize: 11,
+                          fontWeight: 500,
+                          letterSpacing: "0.03em"
+                        }}>
+                          {dateStr}
+                        </div>
+                      )}
+                      <div
+                        style={{
+                          alignSelf: isOwn ? "flex-end" : "flex-start",
+                          maxWidth: "70%",
+                          padding: "12px 16px",
+                          borderRadius: isOwn ? "16px 16px 0 16px" : "16px 16px 16px 0",
+                          background: isOwn ? "rgba(245,158,11,0.16)" : "var(--bg-secondary)",
+                          border: isOwn ? "0.5px solid rgba(245,158,11,0.3)" : "0.5px solid var(--border-secondary)",
+                          color: "var(--text-primary)",
+                          fontSize: 14,
+                          lineHeight: 1.5,
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                          animation: "fadeIn 0.3s ease"
+                        }}
+                      >
+                        <div style={{
+                          fontSize: 10,
+                          fontWeight: 600,
+                          color: isOwn ? "#fcd34d" : "#93c5fd",
+                          marginBottom: 4
+                        }}>
+                          {isOwn ? "You" : selectedPartner.name}
+                        </div>
+                        <div>{m.content}</div>
+                        <div style={{
+                          fontSize: 10, color: "var(--text-tertiary)", marginTop: 6,
+                          textAlign: isOwn ? "right" : "left"
+                        }}>
+                          {msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
                       </div>
                     </div>
                   );
-                })
-              )}
+                });
+              })()}
               <div id="chat-feed-end" />
             </div>
 
