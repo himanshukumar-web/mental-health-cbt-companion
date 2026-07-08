@@ -74,10 +74,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = useCallback(async (email: string, password: string, fullName: string, role: "user" | "admin" = "user"): Promise<string | null> => {
     if (!supabase) return "Supabase is not configured.";
+    
+    // Dynamic redirect URL based on current host (supports both localhost and Vercel)
+    const emailRedirectTo = typeof window !== "undefined"
+      ? `${window.location.origin}/role-select`
+      : undefined;
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName, role } },
+      options: {
+        data: { full_name: fullName, role },
+        emailRedirectTo,
+      },
     });
     return error?.message ?? null;
   }, []);

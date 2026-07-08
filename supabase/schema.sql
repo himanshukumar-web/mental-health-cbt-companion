@@ -72,3 +72,15 @@ create table if not exists appointments (
 create index if not exists appointments_doctor_id_idx  on appointments(doctor_id);
 create index if not exists appointments_patient_id_idx on appointments(patient_id);
 create index if not exists appointments_date_idx       on appointments(date);
+
+-- ── Direct Messages ───────────────────────────────────────────
+create table if not exists direct_messages (
+  id            uuid primary key default gen_random_uuid(),
+  sender_id     uuid not null references auth.users(id) on delete cascade,
+  receiver_id   uuid not null references auth.users(id) on delete cascade,
+  content       text not null,
+  timestamp     timestamptz not null default now()
+);
+
+create index if not exists dm_sender_receiver_idx on direct_messages(sender_id, receiver_id);
+create index if not exists dm_timestamp_idx        on direct_messages(timestamp);

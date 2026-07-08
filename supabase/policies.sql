@@ -93,3 +93,16 @@ create policy "Doctors update appointments"
       select id from doctors where user_id = auth.uid()
     )
   );
+
+-- ── Direct messages policies ───────────────────────────────────
+alter table direct_messages enable row level security;
+
+-- Users can read their own direct messages
+create policy "Users read own direct messages"
+  on direct_messages for select
+  using (auth.uid() = sender_id or auth.uid() = receiver_id);
+
+-- Users can insert their own direct messages
+create policy "Users insert own direct messages"
+  on direct_messages for insert
+  with check (auth.uid() = sender_id);

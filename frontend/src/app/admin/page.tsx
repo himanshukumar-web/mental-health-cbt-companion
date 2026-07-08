@@ -36,6 +36,20 @@ interface Stats {
   pending: number;
 }
 
+interface ChatPartner {
+  user_id: string;
+  name: string;
+  role: string;
+}
+
+interface ChatMessage {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  timestamp: string;
+}
+
 function StatCard({ icon, label, value, color, delay }: {
   icon: string; label: string; value: number; color: string; delay: number;
 }) {
@@ -88,8 +102,15 @@ export default function AdminDashboard() {
   const [doctor, setDoctor] = useState<DoctorProfile | null>(null);
   const [stats, setStats] = useState<Stats>({ total_patients: 0, today_appointments: 0, completed: 0, pending: 0 });
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "appointments">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "appointments" | "chat">("dashboard");
   const [loadingData, setLoadingData] = useState(true);
+
+  // Chat states
+  const [chatPartners, setChatPartners] = useState<ChatPartner[]>([]);
+  const [selectedPartner, setSelectedPartner] = useState<ChatPartner | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [sendingMsg, setSendingMsg] = useState(false);
 
   // Auth guard
   useEffect(() => {
@@ -103,23 +124,67 @@ export default function AdminDashboard() {
     if (!user) return;
     setLoadingData(true);
     try {
-      // Get doctor profile
-      const docRes = await fetch(`${API_URL}/doctors/user/${user.id}`);
-      if (docRes.ok) {
-        const docData = await docRes.json();
-        setDoctor(docData);
+      let docData = null;
+      try {
+        // Try getting doctor profile
+        const docRes = await fetch(`${API_URL}/doctors/user/${user.id}`);
+        if (docRes.ok) {
+          docData = await docRes.json();
+        } else {
+          // If not found, try to auto-create doctor profile
+          const createRes = await fetch(`${API_URL}/doctors`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_id: user.id,
+              full_name: user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "Doctor",
+              specialization: "General CBT Therapist",
+              bio: "Experienced CBT professional.",
+              experience_years: 5,
+            }),
+          });
+          if (createRes.ok) {
+            docData = await createRes.json();
+          }
+        }
+      } catch (err) {
+        console.error("Error with doctor profile endpoint:", err);
+      }
 
-        // Get stats
+      // Fallback object to prevent blank screen
+      if (!docData) {
+        docData = {
+          id: user.id,
+          user_id: user.id,
+          full_name: user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "Doctor",
+          specialization: "General CBT Therapist",
+          bio: "Experienced CBT professional.",
+          experience_years: 5,
+          available: true
+        };
+      }
+      
+      setDoctor(docData);
+
+      // Fetch stats
+      try {
         const statsRes = await fetch(`${API_URL}/admin/stats/${docData.id}`);
         if (statsRes.ok) setStats(await statsRes.json());
+      } catch (e) {
+        console.error("Failed to load stats:", e);
+      }
 
-        // Get appointments
+      // Fetch appointments
+      try {
         const apptsRes = await fetch(`${API_URL}/appointments/doctor/${docData.id}`);
         if (apptsRes.ok) {
           const apptsData = await apptsRes.json();
           setAppointments(apptsData.appointments || []);
         }
+      } catch (e) {
+        console.error("Failed to load appointments:", e);
       }
+
     } catch (err) {
       console.error("Failed to fetch admin data:", err);
     }
@@ -127,6 +192,44 @@ export default function AdminDashboard() {
   }, [user]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Load chat partners
+  useEffect(() => {
+    if (!user || activeTab !== "chat") return;
+    const loadPartners = async () => {
+      try {
+        const res = await fetch(`${API_URL}/messages/partners/${user.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setChatPartners(data.partners || []);
+        }
+      } catch (e) {
+        console.error("Failed to load partners:", e);
+      }
+    };
+    loadPartners();
+    const t = setInterval(loadPartners, 4000);
+    return () => clearInterval(t);
+  }, [user, activeTab]);
+
+  // Load message history
+  useEffect(() => {
+    if (!user || !selectedPartner || activeTab !== "chat") return;
+    const loadHistory = async () => {
+      try {
+        const res = await fetch(`${API_URL}/messages/history?user1=${user.id}&user2=${selectedPartner.user_id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setChatMessages(data.messages || []);
+        }
+      } catch (e) {
+        console.error("Failed to load messages:", e);
+      }
+    };
+    loadHistory();
+    const t = setInterval(loadHistory, 3000);
+    return () => clearInterval(t);
+  }, [user, selectedPartner, activeTab]);
 
   const handleStatusUpdate = async (appointmentId: string, newStatus: string) => {
     try {
@@ -141,6 +244,30 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || !user || !selectedPartner || sendingMsg) return;
+    setSendingMsg(true);
+    try {
+      const res = await fetch(`${API_URL}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sender_id: user.id,
+          receiver_id: selectedPartner.user_id,
+          content: chatInput.trim()
+        }),
+      });
+      if (res.ok) {
+        const newMsg = await res.json();
+        setChatMessages(prev => [...prev, newMsg]);
+        setChatInput("");
+      }
+    } catch (e) {
+      console.error("Failed to send message:", e);
+    }
+    setSendingMsg(false);
+  };
+
   if (loading || !user) {
     return (
       <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-primary)" }}>
@@ -149,6 +276,8 @@ export default function AdminDashboard() {
     );
   }
 
+  // Resolve Doctor Name dynamically with fallback to metadata/email
+  const doctorName = doctor?.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "Doctor";
   const todayAppts = appointments.filter(a => a.date === new Date().toISOString().split("T")[0]);
 
   return (
@@ -167,7 +296,7 @@ export default function AdminDashboard() {
         padding: "28px 16px", display: "flex", flexDirection: "column",
         animation: "slideIn 0.4s ease",
       }}>
-        {/* Logo */}
+        {/* Logo - Dr. Name on Top Left */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 40, padding: "0 8px" }}>
           <div style={{
             width: 36, height: 36, borderRadius: 10,
@@ -176,7 +305,9 @@ export default function AdminDashboard() {
             fontSize: 18, boxShadow: "0 4px 16px rgba(245,158,11,0.3)",
           }}>🩺</div>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-display)" }}>Sera Admin</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-display)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 170 }}>
+              Dr. {doctorName}
+            </div>
             <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>Doctor Portal</div>
           </div>
         </div>
@@ -185,6 +316,7 @@ export default function AdminDashboard() {
         {[
           { id: "dashboard" as const, icon: "📊", label: "Dashboard" },
           { id: "appointments" as const, icon: "📅", label: "Appointments" },
+          { id: "chat" as const, icon: "💬", label: "Live Chat" },
         ].map((item) => (
           <button
             key={item.id}
@@ -205,6 +337,17 @@ export default function AdminDashboard() {
           </button>
         ))}
 
+        {/* Option for Sera AI Chat (not named Home) */}
+        <Link href="/chat" style={{
+          display: "flex", alignItems: "center", gap: 12,
+          padding: "12px 14px", borderRadius: 10,
+          color: "var(--text-secondary)", fontSize: 14,
+          marginBottom: 4, transition: "all 0.2s",
+        }}>
+          <span style={{ fontSize: 18 }}>🌿</span>
+          Sera AI Chat
+        </Link>
+
         <Link href="/" style={{
           display: "flex", alignItems: "center", gap: 12,
           padding: "12px 14px", borderRadius: 10,
@@ -212,13 +355,13 @@ export default function AdminDashboard() {
           marginBottom: 4, transition: "all 0.2s",
         }}>
           <span style={{ fontSize: 18 }}>🏠</span>
-          Home
+          Landing Page
         </Link>
 
         {/* Spacer */}
         <div style={{ flex: 1 }} />
 
-        {/* Doctor info */}
+        {/* Doctor info at Down Side */}
         <div style={{
           padding: "16px 14px", borderRadius: 12,
           background: "var(--bg-glass)",
@@ -228,12 +371,12 @@ export default function AdminDashboard() {
             width: 40, height: 40, borderRadius: "50%",
             background: "linear-gradient(135deg, #f59e0b, #d97706)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 18, marginBottom: 10,
+            fontSize: 18, marginBottom: 10, color: "white", fontWeight: "bold"
           }}>
-            {doctor?.full_name?.charAt(0) || "D"}
+            {doctorName.charAt(0)}
           </div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", marginBottom: 2 }}>
-            Dr. {doctor?.full_name || "Doctor"}
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            Dr. {doctorName}
           </div>
           <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 12 }}>
             {doctor?.specialization || "CBT Therapist"}
@@ -251,16 +394,16 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main content */}
-      <main style={{ flex: 1, padding: "32px 36px", overflowY: "auto" }}>
+      <main style={{ flex: 1, padding: "32px 36px", overflowY: "auto", display: "flex", flexDirection: "column" }}>
         {activeTab === "dashboard" && (
           <div style={{ animation: "fadeIn 0.4s ease" }}>
-            {/* Header */}
+            {/* Header - Greeting Dr. Name */}
             <div style={{ marginBottom: 32 }}>
               <h1 style={{
                 fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 700,
                 color: "var(--text-primary)", marginBottom: 8,
               }}>
-                Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}, Dr. {doctor?.full_name?.split(" ")[0] || "Doctor"} 👋
+                Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}, Dr. {doctorName} 👋
               </h1>
               <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
                 Here&apos;s your dashboard overview for today
@@ -379,12 +522,26 @@ export default function AdminDashboard() {
             onStatusUpdate={handleStatusUpdate}
           />
         )}
+
+        {activeTab === "chat" && (
+          <AdminChatView
+            partners={chatPartners}
+            selectedPartner={selectedPartner}
+            onSelectPartner={setSelectedPartner}
+            messages={chatMessages}
+            input={chatInput}
+            setInput={setChatInput}
+            onSend={handleSendMessage}
+            sending={sendingMsg}
+            userId={user.id}
+          />
+        )}
       </main>
     </div>
   );
 }
 
-// ── Admin Appointments View (embedded in dashboard) ──────────────────────────
+// ── Admin Appointments View ──────────────────────────────────────────
 
 function AdminAppointmentsView({ appointments, loading: loadingData, onStatusUpdate }: {
   appointments: Appointment[];
@@ -512,6 +669,196 @@ function AdminAppointmentsView({ appointments, loading: loadingData, onStatusUpd
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Admin Chat View (Live Chat) ──────────────────────────────────────────
+
+function AdminChatView({
+  partners, selectedPartner, onSelectPartner, messages, input, setInput, onSend, sending, userId
+}: {
+  partners: ChatPartner[];
+  selectedPartner: ChatPartner | null;
+  onSelectPartner: (partner: ChatPartner | null) => void;
+  messages: ChatMessage[];
+  input: string;
+  setInput: (val: string) => void;
+  onSend: () => void;
+  sending: boolean;
+  userId: string;
+}) {
+  const [activePartnerHover, setActivePartnerHover] = useState<string | null>(null);
+  const msgEndRef = useState<HTMLDivElement | null>(null);
+
+  // Auto scroll to bottom
+  useEffect(() => {
+    const el = document.getElementById("chat-feed-end");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  return (
+    <div style={{ display: "flex", flex: 1, gap: 20, height: "calc(100vh - 120px)", animation: "fadeIn 0.4s ease" }}>
+      {/* Partners List (Left Panel) */}
+      <div style={{
+        width: 280, background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
+        borderRadius: 20, padding: 16, display: "flex", flexDirection: "column", gap: 12,
+        backdropFilter: "blur(12px)"
+      }}>
+        <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", paddingBottom: 10, borderBottom: "0.5px solid var(--border-tertiary)" }}>
+          Patients / Chats
+        </h3>
+        
+        {partners.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "40px 10px", color: "var(--text-tertiary)", fontSize: 13 }}>
+            No chat history found. Chats will appear when patients message you or book sessions.
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, overflowY: "auto", flex: 1 }}>
+            {partners.map(p => {
+              const isSelected = selectedPartner?.user_id === p.user_id;
+              const isHovered = activePartnerHover === p.user_id;
+              return (
+                <button
+                  key={p.user_id}
+                  onClick={() => onSelectPartner(p)}
+                  onMouseEnter={() => setActivePartnerHover(p.user_id)}
+                  onMouseLeave={() => setActivePartnerHover(null)}
+                  style={{
+                    padding: "12px 14px", borderRadius: 12, border: "none",
+                    background: isSelected ? "rgba(245,158,11,0.15)" : isHovered ? "rgba(255,255,255,0.05)" : "transparent",
+                    color: isSelected ? "#fcd34d" : "var(--text-secondary)",
+                    cursor: "pointer", transition: "all 0.2s", textAlign: "left"
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: "50%",
+                      background: isSelected ? "linear-gradient(135deg, #f59e0b, #d97706)" : "linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      color: isSelected ? "white" : "var(--text-secondary)", fontSize: 13, fontWeight: "bold"
+                    }}>{p.name.charAt(0)}</div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 500, color: isSelected ? "#fcd34d" : "var(--text-primary)" }}>{p.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-tertiary)", textTransform: "capitalize" }}>{p.role}</div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Chat Conversation (Right Panel) */}
+      <div style={{
+        flex: 1, background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
+        borderRadius: 20, display: "flex", flexDirection: "column", overflow: "hidden",
+        backdropFilter: "blur(12px)"
+      }}>
+        {selectedPartner ? (
+          <>
+            {/* Header */}
+            <div style={{
+              padding: "16px 20px", borderBottom: "0.5px solid var(--border-tertiary)",
+              display: "flex", alignItems: "center", justifyItems: "center", gap: 12
+            }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: "50%",
+                background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "white", fontWeight: "bold", fontSize: 14
+              }}>{selectedPartner.name.charAt(0)}</div>
+              <div>
+                <h4 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)" }}>{selectedPartner.name}</h4>
+                <div style={{ fontSize: 11, color: "#22c55e", display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }}></span>
+                  Active Chat
+                </div>
+              </div>
+            </div>
+
+            {/* Messages Feed */}
+            <div style={{ flex: 1, padding: "20px 24px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 12 }}>
+              {messages.length === 0 ? (
+                <div style={{ margin: "auto", color: "var(--text-tertiary)", fontSize: 13 }}>
+                  No messages yet. Send a message to start the conversation!
+                </div>
+              ) : (
+                messages.map(m => {
+                  const isOwn = m.sender_id === userId;
+                  return (
+                    <div
+                      key={m.id}
+                      style={{
+                        alignSelf: isOwn ? "flex-end" : "flex-start",
+                        maxWidth: "70%",
+                        padding: "12px 16px",
+                        borderRadius: isOwn ? "16px 16px 0 16px" : "16px 16px 16px 0",
+                        background: isOwn ? "rgba(245,158,11,0.16)" : "var(--bg-secondary)",
+                        border: isOwn ? "0.5px solid rgba(245,158,11,0.3)" : "0.5px solid var(--border-secondary)",
+                        color: "var(--text-primary)",
+                        fontSize: 14,
+                        lineHeight: 1.5,
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                        animation: "fadeIn 0.3s ease"
+                      }}
+                    >
+                      <div>{m.content}</div>
+                      <div style={{
+                        fontSize: 10, color: "var(--text-tertiary)", marginTop: 4,
+                        textAlign: isOwn ? "right" : "left"
+                      }}>
+                        {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <div id="chat-feed-end" />
+            </div>
+
+            {/* Footer Input */}
+            <div style={{
+              padding: "16px 20px", borderTop: "0.5px solid var(--border-tertiary)",
+              display: "flex", gap: 10, alignItems: "center"
+            }}>
+              <input
+                type="text"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") onSend(); }}
+                placeholder={`Message ${selectedPartner.name}...`}
+                style={{
+                  flex: 1, padding: "12px 16px", borderRadius: 12,
+                  border: "0.5px solid var(--border-secondary)",
+                  background: "var(--bg-secondary)", color: "var(--text-primary)",
+                  fontSize: 14, fontFamily: "inherit"
+                }}
+              />
+              <button
+                onClick={onSend}
+                disabled={sending || !input.trim()}
+                style={{
+                  padding: "12px 20px", borderRadius: 12, border: "none",
+                  background: input.trim() ? "linear-gradient(135deg, #f59e0b, #d97706)" : "rgba(255,255,255,0.05)",
+                  color: input.trim() ? "white" : "var(--text-tertiary)",
+                  fontSize: 14, fontWeight: 600, cursor: input.trim() ? "pointer" : "default",
+                  transition: "all 0.2s"
+                }}
+              >
+                {sending ? "..." : "Send ➔"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <div style={{ margin: "auto", textAlign: "center", color: "var(--text-tertiary)", padding: 20 }}>
+            <div style={{ fontSize: 44, marginBottom: 12 }}>💬</div>
+            <h4 style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6 }}>No Active Chat</h4>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>Select a patient from the list on the left to start live messaging.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -71,6 +71,12 @@ class StatusUpdate(BaseModel):
     status: str         # pending | confirmed | completed | cancelled
 
 
+class DirectMessageCreate(BaseModel):
+    sender_id: str
+    receiver_id: str
+    content: str
+
+
 # ── REST endpoints ─────────────────────────────────────────────────────────────
 
 @app.get("/health")
@@ -184,6 +190,35 @@ async def get_admin_stats(doctor_id: str):
     """Get dashboard statistics for a doctor."""
     stats = await crud.get_admin_stats(doctor_id)
     return stats
+
+
+# ── Direct Messaging endpoints ──────────────────────────────────────────────────
+
+@app.post("/messages")
+async def send_direct_message(body: DirectMessageCreate):
+    """Send a direct message between doctor and patient."""
+    msg = await crud.create_direct_message(
+        sender_id=body.sender_id,
+        receiver_id=body.receiver_id,
+        content=body.content
+    )
+    if not msg:
+        raise HTTPException(status_code=500, detail="Failed to send message")
+    return msg
+
+
+@app.get("/messages/history")
+async def get_message_history(user1: str, user2: str, limit: int = 50):
+    """Get message history between two users."""
+    history = await crud.get_direct_messages(user1, user2, limit)
+    return {"messages": history}
+
+
+@app.get("/messages/partners/{user_id}")
+async def get_message_partners(user_id: str):
+    """Get partners who have messaged or have appointments with this user."""
+    partners = await crud.get_chat_partners(user_id)
+    return {"partners": partners}
 
 
 # ── WebSocket endpoint ─────────────────────────────────────────────────────────

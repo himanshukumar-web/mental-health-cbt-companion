@@ -23,6 +23,20 @@ interface Appointment {
   };
 }
 
+interface ChatPartner {
+  user_id: string;
+  name: string;
+  role: string;
+}
+
+interface ChatMessage {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  timestamp: string;
+}
+
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, { bg: string; text: string; border: string; icon: string }> = {
     pending: { bg: "rgba(245,158,11,0.12)", text: "#fcd34d", border: "rgba(245,158,11,0.3)", icon: "⏳" },
@@ -51,10 +65,19 @@ export default function MyAppointmentsPage() {
   const [loadingData, setLoadingData] = useState(true);
   const [filter, setFilter] = useState("all");
 
+  // Chat states
+  const [chatPartners, setChatPartners] = useState<ChatPartner[]>([]);
+  const [selectedPartner, setSelectedPartner] = useState<ChatPartner | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [sendingMsg, setSendingMsg] = useState(false);
+  const [activePartnerHover, setActivePartnerHover] = useState<string | null>(null);
+
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
   }, [user, loading, router]);
 
+  // Load appointments
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -69,6 +92,52 @@ export default function MyAppointmentsPage() {
     })();
   }, [user]);
 
+  // Load chat partners
+  useEffect(() => {
+    if (!user || filter !== "chat") return;
+    const loadPartners = async () => {
+      try {
+        const res = await fetch(`${API_URL}/messages/partners/${user.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setChatPartners(data.partners || []);
+        }
+      } catch (e) {
+        console.error("Failed to load chat partners:", e);
+      }
+    };
+    loadPartners();
+    const t = setInterval(loadPartners, 4000);
+    return () => clearInterval(t);
+  }, [user, filter]);
+
+  // Load messages
+  useEffect(() => {
+    if (!user || !selectedPartner || filter !== "chat") return;
+    const loadHistory = async () => {
+      try {
+        const res = await fetch(`${API_URL}/messages/history?user1=${user.id}&user2=${selectedPartner.user_id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setChatMessages(data.messages || []);
+        }
+      } catch (e) {
+        console.error("Failed to load message history:", e);
+      }
+    };
+    loadHistory();
+    const t = setInterval(loadHistory, 3000);
+    return () => clearInterval(t);
+  }, [user, selectedPartner, filter]);
+
+  // Scroll chat to end
+  useEffect(() => {
+    if (filter === "chat" && selectedPartner) {
+      const el = document.getElementById("patient-chat-end");
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatMessages, filter, selectedPartner]);
+
   const handleCancel = async (id: string) => {
     try {
       await fetch(`${API_URL}/appointments/${id}/status`, {
@@ -80,6 +149,30 @@ export default function MyAppointmentsPage() {
     } catch { /* ignore */ }
   };
 
+  const handleSend = async () => {
+    if (!chatInput.trim() || !user || !selectedPartner || sendingMsg) return;
+    setSendingMsg(true);
+    try {
+      const res = await fetch(`${API_URL}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sender_id: user.id,
+          receiver_id: selectedPartner.user_id,
+          content: chatInput.trim()
+        })
+      });
+      if (res.ok) {
+        const newMsg = await res.json();
+        setChatMessages(prev => [...prev, newMsg]);
+        setChatInput("");
+      }
+    } catch (e) {
+      console.error("Failed to send message:", e);
+    }
+    setSendingMsg(false);
+  };
+
   const filtered = filter === "all" ? appointments : appointments.filter(a => a.status === filter);
 
   const filters = [
@@ -88,6 +181,7 @@ export default function MyAppointmentsPage() {
     { id: "confirmed", label: "Confirmed", count: appointments.filter(a => a.status === "confirmed").length },
     { id: "completed", label: "Completed", count: appointments.filter(a => a.status === "completed").length },
     { id: "cancelled", label: "Cancelled", count: appointments.filter(a => a.status === "cancelled").length },
+    { id: "chat", label: "💬 Live Chat with Doctor", count: chatPartners.length },
   ];
 
   if (loading) {
@@ -142,7 +236,7 @@ export default function MyAppointmentsPage() {
             fontWeight: 700, color: "var(--text-primary)", marginBottom: 8,
           }}>My Appointments 📋</h1>
           <p style={{ fontSize: 15, color: "var(--text-secondary)" }}>
-            Track and manage your booked sessions
+            Track your bookings and chat live with your doctor
           </p>
         </div>
 
@@ -151,7 +245,7 @@ export default function MyAppointmentsPage() {
           {filters.map(f => (
             <button
               key={f.id}
-              onClick={() => setFilter(f.id)}
+              onClick={() => { setFilter(f.id); setSelectedPartner(null); }}
               style={{
                 padding: "8px 16px", borderRadius: 10, border: "none",
                 background: filter === f.id ? "rgba(34,197,94,0.15)" : "var(--bg-glass)",
@@ -171,103 +265,229 @@ export default function MyAppointmentsPage() {
           ))}
         </div>
 
-        {/* List */}
-        {loadingData ? (
-          <div style={{ textAlign: "center", padding: 60, color: "var(--text-tertiary)" }}>
-            <div style={{ width: 28, height: 28, borderRadius: "50%", border: "2.5px solid rgba(34,197,94,0.3)", borderTopColor: "#22c55e", animation: "spin 0.8s linear infinite", margin: "0 auto 14px" }} />
-            Loading your appointments...
-          </div>
-        ) : filtered.length === 0 ? (
-          <div style={{
-            textAlign: "center", padding: "60px 24px", borderRadius: 20,
-            background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
-            animation: "fadeIn 0.4s ease 0.2s both",
-          }}>
-            <div style={{ fontSize: 52, marginBottom: 16 }}>📅</div>
-            <h3 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 8, fontFamily: "var(--font-display)" }}>
-              No Appointments
-            </h3>
-            <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 24 }}>
-              {filter !== "all" ? `No ${filter} appointments found` : "You haven't booked any appointments yet"}
-            </p>
-            <Link href="/appointments" style={{
-              display: "inline-block", padding: "12px 28px", borderRadius: 12,
-              background: "linear-gradient(135deg, #22c55e, #16a34a)",
-              color: "white", fontSize: 14, fontWeight: 600,
-              boxShadow: "0 4px 20px rgba(34,197,94,0.3)",
-            }}>Book Your First Appointment →</Link>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {filtered.map((appt, i) => {
-              const isPast = new Date(appt.date) < new Date(new Date().toDateString());
-              return (
-                <div key={appt.id} style={{
-                  padding: "22px 24px", borderRadius: 16,
-                  background: "var(--bg-glass)", backdropFilter: "blur(12px)",
-                  border: "0.5px solid var(--border-secondary)",
-                  animation: `fadeIn 0.3s ease ${i * 0.04}s both`,
-                  transition: "all 0.2s",
-                  opacity: appt.status === "cancelled" ? 0.6 : 1,
-                }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-                    <div style={{ display: "flex", gap: 16 }}>
-                      {/* Doctor avatar */}
-                      <div style={{
-                        width: 48, height: 48, borderRadius: 14, flexShrink: 0,
-                        background: "linear-gradient(135deg, #22c55e, #16a34a)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 20, color: "white", fontWeight: 700,
-                      }}>
-                        {appt.doctors?.full_name?.charAt(0) || "D"}
-                      </div>
-                      <div>
-                        <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>
-                          Dr. {appt.doctors?.full_name || "Doctor"}
-                        </h3>
-                        <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 10 }}>
-                          {appt.doctors?.specialization || "CBT Therapist"}
-                        </div>
-                        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                          <span style={{ fontSize: 13, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 5 }}>
-                            📅 {new Date(appt.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                          </span>
-                          <span style={{ fontSize: 13, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 5 }}>
-                            🕐 {appt.time_slot}
-                          </span>
-                          {isPast && appt.status !== "completed" && appt.status !== "cancelled" && (
-                            <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 6, background: "rgba(239,68,68,0.1)" }}>
-                              Past date
-                            </span>
-                          )}
-                        </div>
-                        {appt.notes && (
-                          <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 8, lineHeight: 1.5 }}>
-                            💬 {appt.notes}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+        {/* Direct Messages Chat View */}
+        {filter === "chat" ? (
+          <div style={{ display: "flex", gap: 20, height: 480, animation: "fadeIn 0.4s ease" }}>
+            {/* Doctors list (Left Column) */}
+            <div style={{
+              width: 240, background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
+              borderRadius: 20, padding: 14, display: "flex", flexDirection: "column", gap: 10
+            }}>
+              <h4 style={{ fontSize: 13, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.06em", paddingBottom: 8, borderBottom: "0.5px solid var(--border-tertiary)" }}>
+                Your Doctors
+              </h4>
+              {chatPartners.length === 0 ? (
+                <div style={{ color: "var(--text-tertiary)", fontSize: 12, padding: "20px 0", textAlign: "center" }}>
+                  Book an appointment first to open a chat channel with your doctor.
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, overflowY: "auto", flex: 1 }}>
+                  {chatPartners.map(p => {
+                    const isSelected = selectedPartner?.user_id === p.user_id;
+                    const isHovered = activePartnerHover === p.user_id;
+                    return (
+                      <button
+                        key={p.user_id}
+                        onClick={() => setSelectedPartner(p)}
+                        onMouseEnter={() => setActivePartnerHover(p.user_id)}
+                        onMouseLeave={() => setActivePartnerHover(null)}
+                        style={{
+                          padding: "10px 12px", borderRadius: 10, border: "none",
+                          background: isSelected ? "rgba(34,197,94,0.12)" : isHovered ? "rgba(255,255,255,0.04)" : "transparent",
+                          color: isSelected ? "#86efac" : "var(--text-secondary)",
+                          textAlign: "left", cursor: "pointer", transition: "all 0.2s"
+                        }}
+                      >
+                        <div style={{ fontWeight: 500, fontSize: 13 }}>Dr. {p.name}</div>
+                        <div style={{ fontSize: 10, color: "var(--text-tertiary)" }}>{p.role}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
-                      <StatusBadge status={appt.status} />
-                      {(appt.status === "pending" || appt.status === "confirmed") && !isPast && (
-                        <button
-                          onClick={() => handleCancel(appt.id)}
-                          style={{
-                            padding: "6px 14px", borderRadius: 8, border: "none",
-                            background: "rgba(239,68,68,0.1)", color: "#fca5a5",
-                            fontSize: 12, fontWeight: 500, cursor: "pointer",
-                            transition: "all 0.2s",
-                          }}
-                        >Cancel Appointment</button>
-                      )}
+            {/* Chat Box (Right Column) */}
+            <div style={{
+              flex: 1, background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
+              borderRadius: 20, display: "flex", flexDirection: "column", overflow: "hidden"
+            }}>
+              {selectedPartner ? (
+                <>
+                  {/* Header */}
+                  <div style={{ padding: "12px 18px", borderBottom: "0.5px solid var(--border-tertiary)" }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
+                      Chatting with Dr. {selectedPartner.name}
                     </div>
                   </div>
+                  
+                  {/* Message feed */}
+                  <div style={{ flex: 1, padding: "16px 20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
+                    {chatMessages.map(m => {
+                      const isOwn = m.sender_id === user?.id;
+                      return (
+                        <div
+                          key={m.id}
+                          style={{
+                            alignSelf: isOwn ? "flex-end" : "flex-start",
+                            maxWidth: "70%",
+                            padding: "10px 14px",
+                            borderRadius: isOwn ? "14px 14px 0 14px" : "14px 14px 14px 0",
+                            background: isOwn ? "rgba(34,197,94,0.15)" : "var(--bg-secondary)",
+                            border: isOwn ? "0.5px solid rgba(34,197,94,0.3)" : "0.5px solid var(--border-secondary)",
+                            color: "var(--text-primary)",
+                            fontSize: 13,
+                            lineHeight: 1.5
+                          }}
+                        >
+                          <div>{m.content}</div>
+                          <div style={{ fontSize: 9, color: "var(--text-tertiary)", marginTop: 4, textAlign: isOwn ? "right" : "left" }}>
+                            {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div id="patient-chat-end" />
+                  </div>
+
+                  {/* Input form */}
+                  <div style={{ padding: "12px 16px", borderTop: "0.5px solid var(--border-tertiary)", display: "flex", gap: 8 }}>
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={e => setChatInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") handleSend(); }}
+                      placeholder={`Message Dr. ${selectedPartner.name}...`}
+                      style={{
+                        flex: 1, padding: "10px 14px", borderRadius: 10,
+                        border: "0.5px solid var(--border-secondary)",
+                        background: "var(--bg-secondary)", color: "var(--text-primary)",
+                        fontSize: 13, fontFamily: "inherit"
+                      }}
+                    />
+                    <button
+                      onClick={handleSend}
+                      disabled={sendingMsg || !chatInput.trim()}
+                      style={{
+                        padding: "10px 16px", borderRadius: 10, border: "none",
+                        background: chatInput.trim() ? "linear-gradient(135deg, #22c55e, #16a34a)" : "rgba(255,255,255,0.05)",
+                        color: chatInput.trim() ? "white" : "var(--text-tertiary)",
+                        fontSize: 13, fontWeight: 600, cursor: chatInput.trim() ? "pointer" : "default"
+                      }}
+                    >
+                      {sendingMsg ? "..." : "Send"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div style={{ margin: "auto", textAlign: "center", color: "var(--text-tertiary)" }}>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>💬</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "var(--text-primary)" }}>No Active Chat</div>
+                  <div style={{ fontSize: 12 }}>Select a doctor on the left to start live chat.</div>
                 </div>
-              );
-            })}
+              )}
+            </div>
           </div>
+        ) : (
+          /* Normal Appointments Lists */
+          <>
+            {loadingData ? (
+              <div style={{ textAlign: "center", padding: 60, color: "var(--text-tertiary)" }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", border: "2.5px solid rgba(22,163,74,0.3)", borderTopColor: "#22c55e", animation: "spin 0.8s linear infinite", margin: "0 auto 14px" }} />
+                Loading your appointments...
+              </div>
+            ) : filtered.length === 0 ? (
+              <div style={{
+                textAlign: "center", padding: "60px 24px", borderRadius: 20,
+                background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
+                animation: "fadeIn 0.4s ease 0.2s both",
+              }}>
+                <div style={{ fontSize: 52, marginBottom: 16 }}>📅</div>
+                <h3 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 8, fontFamily: "var(--font-display)" }}>
+                  No Appointments
+                </h3>
+                <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 24 }}>
+                  {filter !== "all" ? `No ${filter} appointments found` : "You haven't booked any appointments yet"}
+                </p>
+                <Link href="/appointments" style={{
+                  display: "inline-block", padding: "12px 28px", borderRadius: 12,
+                  background: "linear-gradient(135deg, #22c55e, #16a34a)",
+                  color: "white", fontSize: 14, fontWeight: 600,
+                  boxShadow: "0 4px 20px rgba(34,197,94,0.3)",
+                }}>Book Your First Appointment →</Link>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {filtered.map((appt, i) => {
+                  const isPast = new Date(appt.date) < new Date(new Date().toDateString());
+                  return (
+                    <div key={appt.id} style={{
+                      padding: "22px 24px", borderRadius: 16,
+                      background: "var(--bg-glass)", backdropFilter: "blur(12px)",
+                      border: "0.5px solid var(--border-secondary)",
+                      animation: `fadeIn 0.3s ease ${i * 0.04}s both`,
+                      transition: "all 0.2s",
+                      opacity: appt.status === "cancelled" ? 0.6 : 1,
+                    }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+                        <div style={{ display: "flex", gap: 16 }}>
+                          <div style={{
+                            width: 48, height: 48, borderRadius: 14, flexShrink: 0,
+                            background: "linear-gradient(135deg, #22c55e, #16a34a)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 20, color: "white", fontWeight: 700,
+                          }}>
+                            {appt.doctors?.full_name?.charAt(0) || "D"}
+                          </div>
+                          <div>
+                            <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>
+                              Dr. {appt.doctors?.full_name || "Doctor"}
+                            </h3>
+                            <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 10 }}>
+                              {appt.doctors?.specialization || "CBT Therapist"}
+                            </div>
+                            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 13, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 5 }}>
+                                📅 {new Date(appt.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                              </span>
+                              <span style={{ fontSize: 13, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 5 }}>
+                                🕐 {appt.time_slot}
+                              </span>
+                              {isPast && appt.status !== "completed" && appt.status !== "cancelled" && (
+                                <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 6, background: "rgba(239,68,68,0.1)" }}>
+                                  Past date
+                                </span>
+                              )}
+                            </div>
+                            {appt.notes && (
+                              <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 8, lineHeight: 1.5 }}>
+                                💬 {appt.notes}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
+                          <StatusBadge status={appt.status} />
+                          {(appt.status === "pending" || appt.status === "confirmed") && !isPast && (
+                            <button
+                              onClick={() => handleCancel(appt.id)}
+                              style={{
+                                padding: "6px 14px", borderRadius: 8, border: "none",
+                                background: "rgba(239,68,68,0.1)", color: "#fca5a5",
+                                fontSize: 12, fontWeight: 500, cursor: "pointer",
+                                transition: "all 0.2s",
+                              }}
+                            >Cancel Appointment</button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
