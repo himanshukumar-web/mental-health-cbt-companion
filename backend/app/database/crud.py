@@ -13,6 +13,26 @@ DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "local_fallba
 def init_sqlite():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
+    # Create sessions table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS sessions (
+        id TEXT PRIMARY KEY,
+        mood_score INTEGER,
+        started_at TEXT
+    )
+    """)
+    # Create messages table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS messages (
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        role TEXT NOT NULL,
+        content_encrypted TEXT NOT NULL,
+        threat_level TEXT DEFAULT 'normal',
+        timestamp TEXT,
+        FOREIGN KEY(session_id) REFERENCES sessions(id)
+    )
+    """)
     # Create doctors table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS doctors (
@@ -358,22 +378,91 @@ def sqlite_get_chat_partners(user_id):
         conn.close()
 
 
+def sqlite_create_session(session_id, mood_score=None):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    started_at = datetime.now(timezone.utc).isoformat()
+    try:
+        cursor.execute("""
+        INSERT INTO sessions (id, mood_score, started_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET mood_score=excluded.mood_score
+        """, (session_id, mood_score, started_at))
+        conn.commit()
+        return True
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
+
+def sqlite_save_message(session_id, role, content, threat_level="normal"):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    msg_id = str(uuid.uuid4())
+    timestamp = datetime.now(timezone.utc).isoformat()
+    try:
+        # Check if session exists, if not create it
+        cursor.execute("SELECT id FROM sessions WHERE id=?", (session_id,))
+        if not cursor.fetchone():
+            cursor.execute("INSERT INTO sessions (id, started_at) VALUES (?, ?)", (session_id, timestamp))
+            
+        encrypted = encrypt_message(content, settings.encryption_key)
+        cursor.execute("""
+        INSERT INTO messages (id, session_id, role, content_encrypted, threat_level, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """, (msg_id, session_id, role, encrypted, threat_level, timestamp))
+        conn.commit()
+        return True
+    except Exception as e:
+        print("sqlite save message error:", e)
+        return False
+    finally:
+        conn.close()
+
+
+def sqlite_get_session_history(session_id, limit=20):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        SELECT role, content_encrypted, timestamp FROM messages
+        WHERE session_id=?
+        ORDER BY timestamp ASC
+        """, (session_id,))
+        rows = cursor.fetchall()
+        messages = []
+        for r in rows:
+            try:
+                content = decrypt_message(r[1], settings.encryption_key)
+                messages.append({"role": r[0], "content": content})
+            except Exception:
+                pass
+        return messages[-limit:]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
 # ── Core API Handlers ─────────────────────────────────────────────────────────
 
 async def create_session(session_id: str, mood_score: int | None = None) -> bool:
     """Create a new session row. Returns True on success."""
     db = get_supabase()
-    if not db:
-        return False
-    try:
-        db.table("sessions").insert({
-            "id": session_id,
-            "mood_score": mood_score,
-            "started_at": datetime.now(timezone.utc).isoformat(),
-        }).execute()
-        return True
-    except Exception:
-        return False
+    if db:
+        try:
+            db.table("sessions").insert({
+                "id": session_id,
+                "mood_score": mood_score,
+                "started_at": datetime.now(timezone.utc).isoformat(),
+            }).execute()
+            return True
+        except Exception:
+            pass
+
+    # Fallback to local SQLite
+    return sqlite_create_session(session_id, mood_score)
 
 
 async def save_message(
@@ -384,46 +473,50 @@ async def save_message(
 ) -> bool:
     """Encrypt and save a message to the database."""
     db = get_supabase()
-    if not db:
-        return False
-    try:
-        encrypted = encrypt_message(content, settings.encryption_key)
-        db.table("messages").insert({
-            "session_id": session_id,
-            "role": role,
-            "content_encrypted": encrypted,
-            "threat_level": threat_level,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        }).execute()
-        return True
-    except Exception:
-        return False
+    if db:
+        try:
+            encrypted = encrypt_message(content, settings.encryption_key)
+            db.table("messages").insert({
+                "session_id": session_id,
+                "role": role,
+                "content_encrypted": encrypted,
+                "threat_level": threat_level,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }).execute()
+            return True
+        except Exception:
+            pass
+
+    # Fallback to local SQLite
+    return sqlite_save_message(session_id, role, content, threat_level)
 
 
 async def get_session_history(session_id: str, limit: int = 20) -> list[dict]:
     """Return decrypted message history for a session."""
     db = get_supabase()
-    if not db:
-        return []
-    try:
-        result = (
-            db.table("messages")
-            .select("role, content_encrypted, timestamp")
-            .eq("session_id", session_id)
-            .order("timestamp")
-            .limit(limit)
-            .execute()
-        )
-        messages = []
-        for row in result.data:
-            try:
-                content = decrypt_message(row["content_encrypted"], settings.encryption_key)
-                messages.append({"role": row["role"], "content": content})
-            except Exception:
-                pass
-        return messages
-    except Exception:
-        return []
+    if db:
+        try:
+            result = (
+                db.table("messages")
+                .select("role, content_encrypted, timestamp")
+                .eq("session_id", session_id)
+                .order("timestamp")
+                .limit(limit)
+                .execute()
+            )
+            messages = []
+            for row in result.data:
+                try:
+                    content = decrypt_message(row["content_encrypted"], settings.encryption_key)
+                    messages.append({"role": row["role"], "content": content})
+                except Exception:
+                    pass
+            return messages
+        except Exception:
+            pass
+
+    # Fallback to local SQLite
+    return sqlite_get_session_history(session_id, limit)
 
 
 # ── Doctor CRUD ────────────────────────────────────────────────────────────────

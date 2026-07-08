@@ -24,6 +24,8 @@ export interface WSState {
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/^http/, "ws") ?? "ws://localhost:8000";
 
+const HTTP_API_URL = API_URL.replace(/^ws/, "http");
+
 export function useWebSocket(sessionId: string) {
   const wsRef = useRef<WebSocket | null>(null);
   const [wsState, setWsState] = useState<WSState>({
@@ -46,6 +48,26 @@ export function useWebSocket(sessionId: string) {
 
   // History ref so sendMessage always reads latest
   const historyRef = useRef<{ role: string; content: string }[]>([]);
+
+  // Load session history on mount or when sessionId changes
+  useEffect(() => {
+    if (!sessionId) return;
+    const loadHistory = async () => {
+      try {
+        const res = await fetch(`${HTTP_API_URL}/sessions/${sessionId}/history`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.history && data.history.length > 0) {
+            setMessages(data.history);
+            historyRef.current = data.history.map((m: any) => ({ role: m.role, content: m.content }));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load session history:", err);
+      }
+    };
+    loadHistory();
+  }, [sessionId]);
 
   const connect = useCallback(() => {
     if (!sessionId) return;
