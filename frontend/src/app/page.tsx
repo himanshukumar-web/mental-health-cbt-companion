@@ -96,32 +96,6 @@ export default function LandingPage() {
                     {user.user_metadata?.full_name ?? user.email}
                   </span>
 
-                  {/* Appointment links for logged-in users */}
-                  <Link href="/appointments" id="nav-book-appointment" style={{
-                    padding: "7px 14px", borderRadius: 10,
-                    background: "rgba(34,197,94,0.1)", border: "0.5px solid rgba(34,197,94,0.3)",
-                    color: "#86efac", fontSize: 12, fontWeight: 500,
-                  }}>
-                    📅 Book Appointment
-                  </Link>
-
-                  <Link href="/appointments/my" id="nav-my-appointments" style={{
-                    padding: "7px 14px", borderRadius: 10,
-                    border: "0.5px solid var(--border-secondary)",
-                    background: "var(--bg-glass)", color: "var(--text-secondary)",
-                    fontSize: 12, fontWeight: 500,
-                  }}>
-                    📋 My Appointments
-                  </Link>
-
-                  <Link href="/appointments/my?tab=chat" id="nav-doctor-chat" style={{
-                    padding: "7px 14px", borderRadius: 10,
-                    background: "rgba(59,130,246,0.12)", border: "0.5px solid rgba(59,130,246,0.3)",
-                    color: "#93c5fd", fontSize: 12, fontWeight: 500,
-                  }}>
-                    💬 Doctor Chat
-                  </Link>
-
                   {/* Admin dashboard link for doctors */}
                   {userRole === "admin" && (
                     <Link href="/admin" id="nav-admin-dashboard" style={{
