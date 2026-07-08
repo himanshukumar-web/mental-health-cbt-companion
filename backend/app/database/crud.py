@@ -83,17 +83,40 @@ def sqlite_create_doctor(user_id, full_name, specialization, bio, experience_yea
     doc_id = str(uuid.uuid4())
     created_at = datetime.now(timezone.utc).isoformat()
     try:
-        cursor.execute("""
-        INSERT INTO doctors (id, user_id, full_name, specialization, bio, experience_years, available, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(user_id) DO UPDATE SET
-            full_name=excluded.full_name,
-            specialization=excluded.specialization,
-            bio=excluded.bio,
-            experience_years=excluded.experience_years,
-            available=excluded.available
-        """, (doc_id, user_id, full_name, specialization, bio, experience_years, 1 if available else 0, created_at))
-        conn.commit()
+        # Auto-link logic: Check if default mock doctor exists under placeholder user_id '00000000-0000-0000-0000-000000000000'
+        cursor.execute("SELECT id FROM doctors WHERE user_id='00000000-0000-0000-0000-000000000000'")
+        placeholder = cursor.fetchone()
+        if placeholder:
+            # If the logged-in doctor has a different user_id, update placeholder to doctor's actual auth user_id
+            cursor.execute("""
+            UPDATE doctors SET 
+                user_id=?, 
+                full_name=?, 
+                specialization=?, 
+                bio=?, 
+                experience_years=?, 
+                available=? 
+            WHERE user_id='00000000-0000-0000-0000-000000000000'
+            """, (user_id, full_name, specialization, bio, experience_years, 1 if available else 0))
+            
+            # Also migrate any direct messages sent to/from the placeholder doctor to the actual doctor user_id
+            cursor.execute("UPDATE direct_messages SET sender_id=? WHERE sender_id='00000000-0000-0000-0000-000000000000'", (user_id,))
+            cursor.execute("UPDATE direct_messages SET receiver_id=? WHERE receiver_id='00000000-0000-0000-0000-000000000000'", (user_id,))
+            conn.commit()
+        else:
+            # Regular insert/update for other doctor accounts
+            cursor.execute("""
+            INSERT INTO doctors (id, user_id, full_name, specialization, bio, experience_years, available, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                full_name=excluded.full_name,
+                specialization=excluded.specialization,
+                bio=excluded.bio,
+                experience_years=excluded.experience_years,
+                available=excluded.available
+            """, (doc_id, user_id, full_name, specialization, bio, experience_years, 1 if available else 0, created_at))
+            conn.commit()
+
         cursor.execute("SELECT id, user_id, full_name, specialization, bio, experience_years, available, created_at FROM doctors WHERE user_id=?", (user_id,))
         row = cursor.fetchone()
         return {
