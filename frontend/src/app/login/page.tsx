@@ -87,7 +87,7 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
     setLoading(true);
     const err = await signIn(email, password);
     if (err) { setError(err); setLoading(false); }
-    else { setDone(true); setTimeout(() => router.push("/chat"), 800); }
+    else { setDone(true); setTimeout(() => router.push("/role-select"), 800); }
   };
 
   return (
@@ -168,9 +168,11 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
 
 function SignupForm({ onSwitch }: { onSwitch: () => void }) {
   const { signUp } = useAuth();
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"user" | "admin">("user");
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -186,7 +188,7 @@ function SignupForm({ onSwitch }: { onSwitch: () => void }) {
     if (!valid) return;
     setError("");
     setLoading(true);
-    const err = await signUp(email, password, name);
+    const err = await signUp(email, password, name, role);
     if (err) { setError(err); setLoading(false); }
     else setDone(true);
   };
@@ -224,6 +226,44 @@ function SignupForm({ onSwitch }: { onSwitch: () => void }) {
           ⚠ {error}
         </div>
       )}
+
+      {/* Role toggle */}
+      <div style={{ marginBottom: 20 }}>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "#8b95a7", marginBottom: 8, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+          I am a
+        </label>
+        <div style={{ display: "flex", gap: 8 }}>
+          {([
+            { id: "user" as const, icon: "👤", label: "Patient", desc: "Seeking support" },
+            { id: "admin" as const, icon: "🩺", label: "Doctor", desc: "Mental health professional" },
+          ]).map((r) => (
+            <button
+              key={r.id}
+              onClick={() => setRole(r.id)}
+              style={{
+                flex: 1, padding: "14px 12px", borderRadius: 12,
+                border: role === r.id
+                  ? r.id === "admin" ? "1.5px solid rgba(245,158,11,0.5)" : "1.5px solid rgba(34,197,94,0.5)"
+                  : "1px solid rgba(255,255,255,0.10)",
+                background: role === r.id
+                  ? r.id === "admin" ? "rgba(245,158,11,0.08)" : "rgba(34,197,94,0.08)"
+                  : "rgba(255,255,255,0.04)",
+                cursor: "pointer", textAlign: "left",
+                transition: "all 0.2s",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 18 }}>{r.icon}</span>
+                <span style={{
+                  fontSize: 14, fontWeight: 600,
+                  color: role === r.id ? "#e8edf5" : "#8b95a7",
+                }}>{r.label}</span>
+              </div>
+              <div style={{ fontSize: 11, color: "#4b5563", paddingLeft: 26 }}>{r.desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <InputField label="Full name" type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Your name" icon="👤" />
       <InputField label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" icon="✉" />
@@ -305,7 +345,7 @@ function SignupForm({ onSwitch }: { onSwitch: () => void }) {
 // ── Reads ?mode=signup from URL to pre-select tab ─────────────────────────────
 
 function AuthPageInner() {
-  const { user, loading } = useAuth();
+  const { user, userRole, loading } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
   const [mode, setMode] = useState<"login" | "signup">(
@@ -313,10 +353,17 @@ function AuthPageInner() {
   );
   const [tagline] = useState(() => TAGLINES[Math.floor(Math.random() * TAGLINES.length)]);
 
-  // Already signed in — go to chat
+  // Already signed in — redirect based on role
   useEffect(() => {
-    if (!loading && user) router.replace("/chat");
-  }, [user, loading, router]);
+    if (!loading && user) {
+      if (userRole) {
+        if (userRole === "admin") router.replace("/admin");
+        else router.replace("/");
+      } else {
+        router.replace("/role-select");
+      }
+    }
+  }, [user, userRole, loading, router]);
 
   const leaves = [
     { x: "8%", y: "12%", size: 40, opacity: 0.15, rotate: 20 },
@@ -389,7 +436,7 @@ function AuthPageInner() {
             {[
               { icon: "🧠", text: "Evidence-based CBT techniques" },
               { icon: "🛡", text: "Real-time crisis detection" },
-              { icon: "🔒", text: "End-to-end encrypted sessions" },
+              { icon: "📅", text: "Doctor appointment booking" },
             ].map((f, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{

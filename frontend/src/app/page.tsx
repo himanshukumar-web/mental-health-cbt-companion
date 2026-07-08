@@ -22,15 +22,15 @@ const FEATURES = [
     desc: "Instant UI pivot with grounding techniques and emergency resources when distress is detected.",
   },
   {
-    icon: "🔒",
-    title: "Encrypted & Private",
-    desc: "All conversations are encrypted at rest. No personal data required to start.",
+    icon: "📅",
+    title: "Doctor Appointments",
+    desc: "Book appointments with mental health professionals easily. Track and manage your sessions.",
   },
 ];
 
 export default function LandingPage() {
   const router = useRouter();
-  const { user, signOut, loading } = useAuth();
+  const { user, userRole, signOut, loading } = useAuth();
   const [starting, setStarting] = useState(false);
 
   const startSession = async () => {
@@ -89,12 +89,42 @@ export default function LandingPage() {
 
           {/* Auth nav */}
           {!loading && (
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               {user ? (
                 <>
                   <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
                     {user.user_metadata?.full_name ?? user.email}
                   </span>
+
+                  {/* Appointment links for logged-in users */}
+                  <Link href="/appointments" id="nav-book-appointment" style={{
+                    padding: "7px 14px", borderRadius: 10,
+                    background: "rgba(34,197,94,0.1)", border: "0.5px solid rgba(34,197,94,0.3)",
+                    color: "#86efac", fontSize: 12, fontWeight: 500,
+                  }}>
+                    📅 Book Appointment
+                  </Link>
+
+                  <Link href="/appointments/my" id="nav-my-appointments" style={{
+                    padding: "7px 14px", borderRadius: 10,
+                    border: "0.5px solid var(--border-secondary)",
+                    background: "var(--bg-glass)", color: "var(--text-secondary)",
+                    fontSize: 12, fontWeight: 500,
+                  }}>
+                    📋 My Appointments
+                  </Link>
+
+                  {/* Admin dashboard link for doctors */}
+                  {userRole === "admin" && (
+                    <Link href="/admin" id="nav-admin-dashboard" style={{
+                      padding: "7px 14px", borderRadius: 10,
+                      background: "rgba(245,158,11,0.12)", border: "0.5px solid rgba(245,158,11,0.3)",
+                      color: "#fcd34d", fontSize: 12, fontWeight: 600,
+                    }}>
+                      🩺 Admin Dashboard
+                    </Link>
+                  )}
+
                   <button
                     onClick={startSession}
                     style={{
@@ -206,7 +236,18 @@ export default function LandingPage() {
                 </>
               ) : user ? "Continue Session →" : "Try it free →"}
             </button>
-            {!user && (
+
+            {user ? (
+              <Link href="/appointments" style={{
+                padding: "15px 28px", borderRadius: 14,
+                border: "0.5px solid rgba(34,197,94,0.3)",
+                background: "rgba(34,197,94,0.08)", color: "#86efac",
+                fontSize: 15, fontWeight: 500,
+                display: "flex", alignItems: "center", gap: 8,
+              }}>
+                📅 Book Appointment
+              </Link>
+            ) : (
               <Link href="/signup" style={{
                 padding: "15px 28px", borderRadius: 14,
                 border: "0.5px solid var(--border-primary)",

@@ -38,3 +38,37 @@ create table if not exists audit_logs (
   metadata     jsonb,
   created_at   timestamptz not null default now()
 );
+
+-- ── Doctors ───────────────────────────────────────────────────
+create table if not exists doctors (
+  id               uuid primary key default gen_random_uuid(),
+  user_id          uuid not null references auth.users(id) on delete cascade,
+  full_name        text not null,
+  specialization   text default 'General CBT Therapist',
+  bio              text,
+  experience_years int default 0,
+  available        boolean default true,
+  avatar_url       text,
+  created_at       timestamptz not null default now()
+);
+
+create unique index if not exists doctors_user_id_idx on doctors(user_id);
+
+-- ── Appointments ──────────────────────────────────────────────
+create table if not exists appointments (
+  id            uuid primary key default gen_random_uuid(),
+  doctor_id     uuid not null references doctors(id) on delete cascade,
+  patient_id    uuid references auth.users(id) on delete set null,
+  patient_name  text not null,
+  patient_email text not null,
+  date          date not null,
+  time_slot     text not null,
+  status        text not null default 'pending'
+                check (status in ('pending','confirmed','completed','cancelled')),
+  notes         text,
+  created_at    timestamptz not null default now()
+);
+
+create index if not exists appointments_doctor_id_idx  on appointments(doctor_id);
+create index if not exists appointments_patient_id_idx on appointments(patient_id);
+create index if not exists appointments_date_idx       on appointments(date);

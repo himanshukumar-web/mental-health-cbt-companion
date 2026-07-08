@@ -29,6 +29,21 @@
   --accent-dim:     rgba(34,197,94,0.15);
   --accent-glow:    rgba(34,197,94,0.25);
 
+  /* Admin — amber */
+  --admin-accent:   #f59e0b;
+  --admin-dim:      rgba(245,158,11,0.15);
+  --admin-glow:     rgba(245,158,11,0.25);
+
+  /* Success */
+  --success-bg:     rgba(34,197,94,0.1);
+  --success-text:   #86efac;
+  --success-border: rgba(34,197,94,0.3);
+
+  /* Warning */
+  --warning-bg:     rgba(245,158,11,0.1);
+  --warning-text:   #fcd34d;
+  --warning-border: rgba(245,158,11,0.3);
+
   /* Info (user bubble) */
   --info-bg:        rgba(59,130,246,0.12);
   --info-text:      #93c5fd;
@@ -92,6 +107,22 @@ html, body {
   0%   { background-position: 0% 50%; }
   50%  { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
+}
+@keyframes slideIn {
+  from { transform: translateX(-20px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+@keyframes scaleIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+@keyframes slideRight {
+  from { transform: translateX(30px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+@keyframes countUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
 }
 
 /* ── Utilities ─────────────────────────────────────────────────────────────── */

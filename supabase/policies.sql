@@ -44,3 +44,52 @@ create policy "Users insert own messages"
 create policy "No public audit log access"
   on audit_logs for all
   using (false);
+
+-- ── Doctors policies ──────────────────────────────────────────
+alter table doctors enable row level security;
+
+-- Anyone can view available doctors
+create policy "Public read doctors"
+  on doctors for select
+  using (true);
+
+-- Doctors can insert their own profile
+create policy "Doctors insert own profile"
+  on doctors for insert
+  with check (auth.uid() = user_id);
+
+-- Doctors can update their own profile
+create policy "Doctors update own profile"
+  on doctors for update
+  using (auth.uid() = user_id);
+
+-- ── Appointments policies ─────────────────────────────────────
+alter table appointments enable row level security;
+
+-- Users can see their own appointments
+create policy "Users read own appointments"
+  on appointments for select
+  using (auth.uid() = patient_id);
+
+-- Doctors can see appointments assigned to them
+create policy "Doctors read own appointments"
+  on appointments for select
+  using (
+    doctor_id in (
+      select id from doctors where user_id = auth.uid()
+    )
+  );
+
+-- Authenticated users can create appointments
+create policy "Users create appointments"
+  on appointments for insert
+  with check (auth.uid() = patient_id);
+
+-- Doctors can update appointment status
+create policy "Doctors update appointments"
+  on appointments for update
+  using (
+    doctor_id in (
+      select id from doctors where user_id = auth.uid()
+    )
+  );

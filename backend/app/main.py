@@ -16,6 +16,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from app.config import settings
 from app.agents.monitor import analyze_threat_level
@@ -46,6 +47,30 @@ app.add_middleware(
 )
 
 
+# ── Pydantic models ───────────────────────────────────────────────────────────
+
+class DoctorCreate(BaseModel):
+    user_id: str
+    full_name: str
+    specialization: str = "General CBT Therapist"
+    bio: str = ""
+    experience_years: int = 0
+
+
+class AppointmentCreate(BaseModel):
+    doctor_id: str
+    patient_id: str
+    patient_name: str
+    patient_email: str
+    date: str           # YYYY-MM-DD
+    time_slot: str      # e.g. "10:00 AM"
+    notes: str = ""
+
+
+class StatusUpdate(BaseModel):
+    status: str         # pending | confirmed | completed | cancelled
+
+
 # ── REST endpoints ─────────────────────────────────────────────────────────────
 
 @app.get("/health")
@@ -64,6 +89,101 @@ async def create_session():
 async def get_history(session_id: str):
     history = await crud.get_session_history(session_id)
     return {"session_id": session_id, "messages": history}
+
+
+# ── Doctor endpoints ───────────────────────────────────────────────────────────
+
+@app.get("/doctors")
+async def list_doctors():
+    """List all available doctors."""
+    doctors = await crud.get_doctors(available_only=True)
+    return {"doctors": doctors}
+
+
+@app.get("/doctors/{doctor_id}")
+async def get_doctor(doctor_id: str):
+    """Get a single doctor's details."""
+    doctor = await crud.get_doctor_by_id(doctor_id)
+    if not doctor:
+        raise HTTPException(status_code=404, detail="Doctor not found")
+    return doctor
+
+
+@app.get("/doctors/user/{user_id}")
+async def get_doctor_by_user(user_id: str):
+    """Get doctor profile by auth user_id."""
+    doctor = await crud.get_doctor_by_user_id(user_id)
+    if not doctor:
+        raise HTTPException(status_code=404, detail="Doctor profile not found")
+    return doctor
+
+
+@app.post("/doctors")
+async def create_doctor(body: DoctorCreate):
+    """Create a new doctor profile."""
+    doctor = await crud.create_doctor(
+        user_id=body.user_id,
+        full_name=body.full_name,
+        specialization=body.specialization,
+        bio=body.bio,
+        experience_years=body.experience_years,
+    )
+    if not doctor:
+        raise HTTPException(status_code=500, detail="Failed to create doctor profile")
+    return doctor
+
+
+# ── Appointment endpoints ──────────────────────────────────────────────────────
+
+@app.post("/appointments")
+async def create_appointment(body: AppointmentCreate):
+    """Book a new appointment."""
+    appt = await crud.create_appointment(
+        doctor_id=body.doctor_id,
+        patient_id=body.patient_id,
+        patient_name=body.patient_name,
+        patient_email=body.patient_email,
+        date=body.date,
+        time_slot=body.time_slot,
+        notes=body.notes,
+    )
+    if not appt:
+        raise HTTPException(status_code=500, detail="Failed to create appointment")
+    return appt
+
+
+@app.get("/appointments/user/{user_id}")
+async def get_user_appointments(user_id: str):
+    """Get all appointments for a patient."""
+    appts = await crud.get_user_appointments(user_id)
+    return {"appointments": appts}
+
+
+@app.get("/appointments/doctor/{doctor_id}")
+async def get_doctor_appointments(doctor_id: str, status: str | None = None):
+    """Get all appointments for a doctor, optionally filtered by status."""
+    appts = await crud.get_doctor_appointments(doctor_id, status)
+    return {"appointments": appts}
+
+
+@app.patch("/appointments/{appointment_id}/status")
+async def update_appointment_status(appointment_id: str, body: StatusUpdate):
+    """Update appointment status (confirm/cancel/complete)."""
+    if body.status not in ("pending", "confirmed", "completed", "cancelled"):
+        raise HTTPException(status_code=400, detail="Invalid status")
+    ok = await crud.update_appointment_status(appointment_id, body.status)
+    if not ok:
+        raise HTTPException(status_code=500, detail="Failed to update status")
+    return {"id": appointment_id, "status": body.status}
+
+
+# ── Admin stats endpoint ──────────────────────────────────────────────────────
+
+@app.get("/admin/stats/{doctor_id}")
+async def get_admin_stats(doctor_id: str):
+    """Get dashboard statistics for a doctor."""
+    stats = await crud.get_admin_stats(doctor_id)
+    return stats
 
 
 # ── WebSocket endpoint ─────────────────────────────────────────────────────────
