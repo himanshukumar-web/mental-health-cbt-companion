@@ -373,7 +373,7 @@ export default function ChatWindow({
                 }}>🌿</div>
               )}
               <div style={{
-                maxWidth: "72%", padding: "10px 14px",
+                maxWidth: isMobile ? "88%" : "72%", padding: isMobile ? "10px 12px" : "10px 14px",
                 borderRadius: msg.role === "user"
                   ? "16px 16px 4px 16px"
                   : "16px 16px 16px 4px",
@@ -383,7 +383,7 @@ export default function ChatWindow({
                 color: msg.role === "user"
                   ? "var(--color-text-info)"
                   : "var(--text-primary)",
-                fontSize: 14, lineHeight: 1.65,
+                fontSize: isMobile ? 13 : 14, lineHeight: 1.65,
                 border: msg.role === "user"
                   ? "0.5px solid var(--color-border-info)"
                   : "0.5px solid var(--border-secondary)",
@@ -456,7 +456,7 @@ export default function ChatWindow({
 
         {/* Input */}
         <div style={{
-          padding: "12px 16px", borderTop: "0.5px solid var(--border-secondary)",
+          padding: isMobile ? "10px 12px" : "12px 16px", borderTop: "0.5px solid var(--border-secondary)",
           display: "flex", gap: 8, alignItems: "flex-end",
           background: "var(--bg-secondary)", flexShrink: 0,
         }}>

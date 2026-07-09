@@ -118,9 +118,9 @@
   --border-tertiary: rgba(255, 255, 255, 0.05);
 }
 
-/* Smooth transition for theme variables change */
-html, body, main, div, nav, header, aside, section, footer, button, input, textarea {
-  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+/* Smooth transition ONLY on theme toggle — NOT on every element (perf killer on mobile) */
+html.theme-transitioning, html.theme-transitioning *, html.theme-transitioning *::before, html.theme-transitioning *::after {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease !important;
 }
 
 /* ── Reset ─────────────────────────────────────────────────────────────────── */
@@ -133,6 +133,9 @@ html, body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
 }
 
 /* ── Scrollbar ─────────────────────────────────────────────────────────────── */
@@ -177,3 +180,25 @@ textarea:focus, input:focus { outline: none; }
 textarea { resize: none; }
 a { text-decoration: none; color: inherit; }
 button { cursor: pointer; font-family: var(--font-sans); }
+
+/* ── Mobile Performance ───────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Kill expensive animations on mobile */
+  *, *::before, *::after {
+    animation-duration: 0.3s !important;
+  }
+  /* Disable backdrop-filter blur (GPU-heavy on mobile) */
+  * {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* ── Mobile Touch ─────────────────────────────────────────────────────────── */
+@media (hover: none) and (pointer: coarse) {
+  button, a, input, textarea, select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+

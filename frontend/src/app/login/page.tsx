@@ -384,6 +384,11 @@ function AuthPageInner() {
         @keyframes spin      { to { transform: rotate(360deg); } }
         @keyframes fadeSlide { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
         @keyframes float     { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+        @media (max-width: 640px) {
+          .login-left-panel { display: none !important; }
+          .login-card { flex-direction: column !important; max-width: 100% !important; border-radius: 16px !important; }
+          .login-form-panel { padding: 24px 20px !important; }
+        }
       `}</style>
 
       {/* Ambient glow orbs */}
@@ -392,7 +397,7 @@ function AuthPageInner() {
 
       {leaves.map((l, i) => <Leaf key={i} {...l} />)}
 
-      <div style={{
+      <div className="login-card" style={{
         display: "flex", width: "100%", maxWidth: 880,
         borderRadius: 24, overflow: "hidden",
         boxShadow: "0 20px 60px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.3)",
@@ -400,7 +405,7 @@ function AuthPageInner() {
         animation: "fadeSlide 0.5s ease",
       }}>
         {/* Left green panel */}
-        <div style={{
+        <div className="login-left-panel" style={{
           width: 340, flexShrink: 0,
           background: "linear-gradient(160deg, #059669 0%, #047857 50%, #065f46 100%)",
           padding: "48px 36px", display: "flex", flexDirection: "column",
@@ -456,7 +461,7 @@ function AuthPageInner() {
         </div>
 
         {/* Right form panel — DARK */}
-        <div style={{ flex: 1, background: "#111827", padding: "48px 40px", overflowY: "auto" }}>
+        <div className="login-form-panel" style={{ flex: 1, background: "#111827", padding: "48px 40px", overflowY: "auto" }}>
           {/* Tab switcher */}
           <div style={{ display: "flex", marginBottom: 32, gap: 4, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 4 }}>
             {(["login", "signup"] as const).map(m => (

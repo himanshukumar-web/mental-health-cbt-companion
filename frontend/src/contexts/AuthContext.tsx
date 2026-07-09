@@ -76,7 +76,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setTheme = (newTheme: AppTheme) => {
     setThemeState(newTheme);
     localStorage.setItem("app-theme", newTheme);
+    // Enable transitions only during user-triggered theme switch
+    if (typeof document !== "undefined") {
+      document.documentElement.classList.add("theme-transitioning");
+    }
     applyTheme(newTheme);
+    // Remove after transition completes
+    setTimeout(() => {
+      if (typeof document !== "undefined") {
+        document.documentElement.classList.remove("theme-transitioning");
+      }
+    }, 300);
   };
 
   useEffect(() => {

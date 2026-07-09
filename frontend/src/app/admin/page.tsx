@@ -443,7 +443,7 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main content */}
-      <main style={{ flex: 1, padding: "20px 36px 36px", overflowY: "auto", display: "flex", flexDirection: "column" }}>
+      <main style={{ flex: 1, padding: isMobile ? "16px 12px 24px" : "20px 36px 36px", overflowY: "auto", display: "flex", flexDirection: "column" }}>
         {/* Top Header bar with Home, Menu toggle and Theme controls */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, paddingBottom: 12, borderBottom: "0.5px solid var(--border-tertiary)", flexWrap: "wrap", gap: 12 }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -491,8 +491,8 @@ export default function AdminDashboard() {
 
             {/* Stats grid */}
             <div style={{
-              display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: 16, marginBottom: 32,
+              display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: isMobile ? 10 : 16, marginBottom: 32,
             }}>
               <StatCard icon="👥" label="Total Patients" value={stats.total_patients} color="rgba(59,130,246,0.15)" delay={0} />
               <StatCard icon="📅" label="Today's Appointments" value={stats.today_appointments} color="rgba(245,158,11,0.15)" delay={0.1} />
@@ -536,10 +536,11 @@ export default function AdminDashboard() {
                   {todayAppts.map((appt, i) => (
                     <div key={appt.id} style={{
                       display: "flex", alignItems: "center", justifyContent: "space-between",
-                      padding: "14px 16px", borderRadius: 12,
+                      padding: isMobile ? "12px" : "14px 16px", borderRadius: 12,
                       background: "var(--bg-secondary)",
                       border: "0.5px solid var(--border-tertiary)",
                       animation: `fadeIn 0.3s ease ${i * 0.05}s both`,
+                      flexWrap: isMobile ? "wrap" as const : "nowrap" as const, gap: isMobile ? 8 : 0,
                     }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                         <div style={{

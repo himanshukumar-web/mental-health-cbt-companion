@@ -68,14 +68,15 @@ export default function LandingPage() {
       </div>
 
       <div style={{
-        maxWidth: 1100, margin: "0 auto", padding: "0 24px",
+        maxWidth: 1100, margin: "0 auto", padding: "0 16px",
         display: "flex", flexDirection: "column", alignItems: "center",
         minHeight: "100vh",
       }}>
         {/* Navbar */}
         <nav style={{
           width: "100%", display: "flex", alignItems: "center",
-          justifyContent: "space-between", padding: "24px 0",
+          justifyContent: "space-between", padding: "16px 0",
+          flexWrap: "wrap", gap: 10,
         }}>
           {/* Logo & Theme */}
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -93,7 +94,7 @@ export default function LandingPage() {
 
           {/* Auth nav */}
           {!loading && (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
               {user ? (
                 <>
                   <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
@@ -162,7 +163,7 @@ export default function LandingPage() {
         <section style={{
           flex: 1, display: "flex", flexDirection: "column",
           alignItems: "center", justifyContent: "center",
-          textAlign: "center", padding: "80px 0 60px",
+          textAlign: "center", padding: "40px 0 40px",
           animation: "fadeIn 0.8s ease",
         }}>
           <div style={{
@@ -200,14 +201,15 @@ export default function LandingPage() {
             responds with compassion — with a built-in safety guardrail that activates instantly.
           </p>
 
-          <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
             <button
               id="start-session-btn"
               onClick={startSession}
               disabled={starting}
               style={{
-                padding: "15px 36px", borderRadius: 14, border: "none",
+                padding: "14px 28px", borderRadius: 14, border: "none",
                 background: starting ? "rgba(34,197,94,0.4)" : "linear-gradient(135deg, #22c55e, #16a34a)",
+                width: "100%", maxWidth: 320,
                 color: "white", fontSize: 16, fontWeight: 600,
                 cursor: starting ? "default" : "pointer",
                 boxShadow: "0 4px 24px rgba(34,197,94,0.35)",
@@ -290,8 +292,8 @@ export default function LandingPage() {
         <section id="how" style={{ width: "100%", paddingBottom: 80 }}>
           <div style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 16,
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(220px, 100%), 1fr))",
+            gap: 12,
           }}>
             {FEATURES.map((f, i) => (
               <div key={i} style={{

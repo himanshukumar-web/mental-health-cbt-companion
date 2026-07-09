@@ -163,7 +163,7 @@ export default function BookAppointmentPage() {
   return (
     <div style={{
       minHeight: "100vh", background: "var(--bg-primary)",
-      padding: "0 24px 60px", position: "relative", overflow: "hidden",
+      padding: "0 16px 60px", position: "relative", overflow: "hidden",
     }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -239,7 +239,7 @@ export default function BookAppointmentPage() {
               </div>
               {i < 2 && (
                 <div style={{
-                  width: 60, height: 2, margin: "0 12px",
+                  width: 40, height: 2, margin: "0 8px",
                   background: step > s.num ? "#22c55e" : "var(--border-secondary)",
                   borderRadius: 2, transition: "background 0.3s",
                   marginBottom: 22,
@@ -270,8 +270,8 @@ export default function BookAppointmentPage() {
               </div>
             ) : (
               <div style={{
-                display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                gap: 16,
+                display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(260px, 100%), 1fr))",
+                gap: 14,
               }}>
                 {doctors.map((doc, i) => {
                   const isHovered = hoveredDoctor === doc.id;
@@ -360,7 +360,7 @@ export default function BookAppointmentPage() {
         {step === 2 && (
           <div style={{ animation: "fadeIn 0.4s ease" }}>
             <div style={{
-              padding: "28px", borderRadius: 20,
+              padding: "20px", borderRadius: 20,
               background: "var(--bg-glass)", backdropFilter: "blur(12px)",
               border: "0.5px solid var(--border-secondary)",
               marginBottom: 24,
@@ -436,7 +436,7 @@ export default function BookAppointmentPage() {
                 Select Time Slot
               </h3>
               <div style={{
-                display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
+                display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100px, 100%), 1fr))",
                 gap: 8,
               }}>
                 {TIME_SLOTS.map((slot) => {

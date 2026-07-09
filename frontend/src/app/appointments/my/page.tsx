@@ -218,16 +218,22 @@ function MyAppointmentsPageInner() {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: "0 24px 60px" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: "0 16px 60px" }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        @media (max-width: 640px) {
+          .my-chat-layout { flex-direction: column !important; height: auto !important; }
+          .my-chat-sidebar { width: 100% !important; max-height: 200px !important; }
+          .my-chat-main { min-height: 350px !important; }
+        }
       `}</style>
 
       {/* Navbar */}
       <nav style={{
-        maxWidth: 900, margin: "0 auto", padding: "24px 0",
+        maxWidth: 900, margin: "0 auto", padding: "16px 0",
         display: "flex", alignItems: "center", justifyContent: "space-between",
+        flexWrap: "wrap", gap: 10,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -295,11 +301,11 @@ function MyAppointmentsPageInner() {
 
         {/* Direct Messages Chat View */}
         {filter === "chat" ? (
-          <div style={{ display: "flex", gap: 20, height: 480, animation: "fadeIn 0.4s ease" }}>
+          <div className="my-chat-layout" style={{ display: "flex", gap: 16, height: 480, animation: "fadeIn 0.4s ease" }}>
             {/* Doctors list (Left Column) */}
-            <div style={{
+            <div className="my-chat-sidebar" style={{
               width: 240, background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
-              borderRadius: 20, padding: 14, display: "flex", flexDirection: "column", gap: 10
+              borderRadius: 16, padding: 12, display: "flex", flexDirection: "column", gap: 8
             }}>
               <h4 style={{ fontSize: 13, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.06em", paddingBottom: 8, borderBottom: "0.5px solid var(--border-tertiary)" }}>
                 Your Doctors
@@ -357,9 +363,9 @@ function MyAppointmentsPageInner() {
             </div>
 
             {/* Chat Box (Right Column) */}
-            <div style={{
+            <div className="my-chat-main" style={{
               flex: 1, background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
-              borderRadius: 20, display: "flex", flexDirection: "column", overflow: "hidden"
+              borderRadius: 16, display: "flex", flexDirection: "column", overflow: "hidden"
             }}>
               {selectedPartner ? (
                 <>

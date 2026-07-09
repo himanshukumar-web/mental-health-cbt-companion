@@ -334,16 +334,9 @@ def sqlite_get_chat_partners(user_id):
     cursor = conn.cursor()
     partners = set()
     try:
-        cursor.execute("SELECT receiver_id FROM direct_messages WHERE sender_id=?", (user_id,))
-        for r in cursor.fetchall(): partners.add(r[0])
-        cursor.execute("SELECT sender_id FROM direct_messages WHERE receiver_id=?", (user_id,))
-        for r in cursor.fetchall(): partners.add(r[0])
-        
-        cursor.execute("SELECT doctor_id FROM appointments WHERE patient_id=?", (user_id,))
+        cursor.execute("SELECT sender_id, receiver_id FROM direct_messages WHERE sender_id=? OR receiver_id=?", (user_id, user_id))
         for r in cursor.fetchall():
-            cursor.execute("SELECT user_id FROM doctors WHERE id=?", (r[0],))
-            doc = cursor.fetchone()
-            if doc: partners.add(doc[0])
+            partners.add(r[1] if r[0] == user_id else r[0])
             
         cursor.execute("SELECT id FROM doctors WHERE user_id=?", (user_id,))
         doc = cursor.fetchone()
@@ -351,28 +344,48 @@ def sqlite_get_chat_partners(user_id):
             cursor.execute("SELECT patient_id FROM appointments WHERE doctor_id=?", (doc[0],))
             for r in cursor.fetchall():
                 if r[0]: partners.add(r[0])
+        else:
+            cursor.execute("""
+                SELECT d.user_id FROM appointments a
+                JOIN doctors d ON a.doctor_id = d.id
+                WHERE a.patient_id=?
+            """, (user_id,))
+            for r in cursor.fetchall():
+                if r[0]: partners.add(r[0])
                 
         res = []
-        for p_id in partners:
-            cursor.execute("SELECT full_name FROM doctors WHERE user_id=?", (p_id,))
-            doc_row = cursor.fetchone()
-            name = "User"
-            role = "patient"
-            if doc_row:
-                name = doc_row[0]
-                role = "doctor"
-            else:
-                cursor.execute("SELECT patient_name FROM appointments WHERE patient_id=? LIMIT 1", (p_id,))
-                appt_row = cursor.fetchone()
-                if appt_row: name = appt_row[0]
+        if not partners:
+            return []
             
-            res.append({
-                "user_id": p_id,
-                "name": name,
-                "role": role
-            })
+        p_list = list(partners)
+        placeholders = ",".join("?" for _ in p_list)
+        cursor.execute(f"SELECT user_id, full_name FROM doctors WHERE user_id IN ({placeholders})", p_list)
+        docs_map = {r[0]: r[1] for r in cursor.fetchall()}
+        
+        remaining_ids = [p_id for p_id in p_list if p_id not in docs_map]
+        patients_map = {}
+        if remaining_ids:
+            ph2 = ",".join("?" for _ in remaining_ids)
+            cursor.execute(f"SELECT patient_id, patient_name FROM appointments WHERE patient_id IN ({ph2})", remaining_ids)
+            for r in cursor.fetchall():
+                patients_map[r[0]] = r[1]
+                
+        for p_id in p_list:
+            if p_id in docs_map:
+                res.append({
+                    "user_id": p_id,
+                    "name": docs_map[p_id],
+                    "role": "doctor"
+                })
+            else:
+                res.append({
+                    "user_id": p_id,
+                    "name": patients_map.get(p_id, "User"),
+                    "role": "patient"
+                })
         return res
-    except Exception:
+    except Exception as e:
+        print("sqlite_get_chat_partners error:", e)
         return []
     finally:
         conn.close()
@@ -823,11 +836,11 @@ async def get_chat_partners(user_id: str) -> list[dict]:
     db = get_supabase()
     if db:
         try:
-            sent = db.table("direct_messages").select("receiver_id").eq("sender_id", user_id).execute()
-            rcvd = db.table("direct_messages").select("sender_id").eq("receiver_id", user_id).execute()
+            # Get direct messages using OR condition
+            dm_query = db.table("direct_messages").select("sender_id, receiver_id").or_(f"sender_id.eq.{user_id},receiver_id.eq.{user_id}").execute()
             partners = set()
-            for r in sent.data or []: partners.add(r["receiver_id"])
-            for r in rcvd.data or []: partners.add(r["sender_id"])
+            for r in dm_query.data or []:
+                partners.add(r["receiver_id"] if str(r["sender_id"]) == user_id else r["sender_id"])
             
             # Fetch names
             appts_patient = db.table("appointments").select("doctor_id, doctors(user_id, full_name)").eq("patient_id", user_id).execute()
@@ -842,21 +855,34 @@ async def get_chat_partners(user_id: str) -> list[dict]:
                     if a.get("patient_id"):
                         partners.add(a["patient_id"])
                         
+            if not partners:
+                return []
+                
+            p_list = list(partners)
+            
+            # Query all matching doctors in a single batch query!
+            docs_query = db.table("doctors").select("user_id, full_name").in_("user_id", p_list).execute()
+            docs_map = {d["user_id"]: d["full_name"] for d in docs_query.data or []}
+            
+            # Find which users are not doctors
+            remaining_ids = [p_id for p_id in p_list if p_id not in docs_map]
+            
+            # Query all matching patient names in a single batch query!
+            patients_map = {}
+            if remaining_ids:
+                appts_query = db.table("appointments").select("patient_id, patient_name").in_("patient_id", remaining_ids).execute()
+                for a in appts_query.data or []:
+                    patients_map[a["patient_id"]] = a["patient_name"]
+                
             result_partners = []
-            for p_id in partners:
-                name = "User"
-                role = "patient"
-                doc_query = db.table("doctors").select("full_name").eq("user_id", p_id).execute()
-                if doc_query.data:
-                    name = doc_query.data[0]["full_name"]
-                    role = "doctor"
+            for p_id in p_list:
+                if p_id in docs_map:
+                    result_partners.append({"user_id": p_id, "name": docs_map[p_id], "role": "doctor"})
                 else:
-                    appt_query = db.table("appointments").select("patient_name").eq("patient_id", p_id).limit(1).execute()
-                    if appt_query.data:
-                        name = appt_query.data[0]["patient_name"]
-                result_partners.append({"user_id": p_id, "name": name, "role": role})
+                    result_partners.append({"user_id": p_id, "name": patients_map.get(p_id, "User"), "role": "patient"})
             return result_partners
-        except Exception:
+        except Exception as e:
+            print("get_chat_partners error:", e)
             pass
 
     # Fallback to local SQLite Database
