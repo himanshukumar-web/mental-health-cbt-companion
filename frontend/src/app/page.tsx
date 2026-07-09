@@ -201,7 +201,7 @@ export default function LandingPage() {
             responds with compassion — with a built-in safety guardrail that activates instantly.
           </p>
 
-          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
             <button
               id="start-session-btn"
               onClick={startSession}
@@ -209,8 +209,7 @@ export default function LandingPage() {
               style={{
                 padding: "14px 28px", borderRadius: 14, border: "none",
                 background: starting ? "rgba(34,197,94,0.4)" : "linear-gradient(135deg, #22c55e, #16a34a)",
-                width: "100%", maxWidth: 320,
-                color: "white", fontSize: 16, fontWeight: 600,
+                color: "white", fontSize: 15, fontWeight: 600,
                 cursor: starting ? "default" : "pointer",
                 boxShadow: "0 4px 24px rgba(34,197,94,0.35)",
                 transition: "all 0.2s",
@@ -225,55 +224,55 @@ export default function LandingPage() {
               ) : user ? "Continue Session →" : "Try it free →"}
             </button>
 
-            {user ? (
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-                {userRole === "admin" ? (
-                  <>
-                    <Link href="/admin?tab=appointments" style={{
-                      padding: "15px 28px", borderRadius: 14,
-                      border: "0.5px solid rgba(245,158,11,0.3)",
-                      background: "rgba(245,158,11,0.08)", color: "#fcd34d",
-                      fontSize: 15, fontWeight: 500,
-                      display: "flex", alignItems: "center", gap: 8,
-                    }}>
-                      📅 Manage Appointments
-                    </Link>
-                    <Link href="/admin?tab=chat" style={{
-                      padding: "15px 28px", borderRadius: 14,
-                      border: "0.5px solid rgba(59,130,246,0.3)",
-                      background: "rgba(59,130,246,0.08)", color: "#93c5fd",
-                      fontSize: 15, fontWeight: 500,
-                      display: "flex", alignItems: "center", gap: 8,
-                    }}>
-                      💬 Chat with Patient
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <Link href="/appointments" style={{
-                      padding: "15px 28px", borderRadius: 14,
-                      border: "0.5px solid rgba(34,197,94,0.3)",
-                      background: "rgba(34,197,94,0.08)", color: "#86efac",
-                      fontSize: 15, fontWeight: 500,
-                      display: "flex", alignItems: "center", gap: 8,
-                    }}>
-                      📅 Book Appointment
-                    </Link>
-                    <Link href="/appointments/my?tab=chat" style={{
-                      padding: "15px 28px", borderRadius: 14,
-                      border: "0.5px solid rgba(59,130,246,0.3)",
-                      background: "rgba(59,130,246,0.08)", color: "#93c5fd",
-                      fontSize: 15, fontWeight: 500,
-                      display: "flex", alignItems: "center", gap: 8,
-                    }}>
-                      💬 Chat with Doctor
-                    </Link>
-                  </>
-                )}
-              </div>
-            ) : (
+            {user && userRole === "admin" && (
+              <>
+                <Link href="/admin?tab=appointments" style={{
+                  padding: "14px 28px", borderRadius: 14,
+                  border: "0.5px solid rgba(245,158,11,0.3)",
+                  background: "rgba(245,158,11,0.08)", color: "#fcd34d",
+                  fontSize: 15, fontWeight: 500,
+                  display: "flex", alignItems: "center", gap: 8,
+                }}>
+                  📅 Manage Appointments
+                </Link>
+                <Link href="/admin?tab=chat" style={{
+                  padding: "14px 28px", borderRadius: 14,
+                  border: "0.5px solid rgba(59,130,246,0.3)",
+                  background: "rgba(59,130,246,0.08)", color: "#93c5fd",
+                  fontSize: 15, fontWeight: 500,
+                  display: "flex", alignItems: "center", gap: 8,
+                }}>
+                  💬 Chat with Patient
+                </Link>
+              </>
+            )}
+
+            {user && userRole !== "admin" && (
+              <>
+                <Link href="/appointments" style={{
+                  padding: "14px 28px", borderRadius: 14,
+                  border: "0.5px solid rgba(34,197,94,0.3)",
+                  background: "rgba(34,197,94,0.08)", color: "#86efac",
+                  fontSize: 15, fontWeight: 500,
+                  display: "flex", alignItems: "center", gap: 8,
+                }}>
+                  📅 Book Appointment
+                </Link>
+                <Link href="/appointments/my?tab=chat" style={{
+                  padding: "14px 28px", borderRadius: 14,
+                  border: "0.5px solid rgba(59,130,246,0.3)",
+                  background: "rgba(59,130,246,0.08)", color: "#93c5fd",
+                  fontSize: 15, fontWeight: 500,
+                  display: "flex", alignItems: "center", gap: 8,
+                }}>
+                  💬 Chat with Doctor
+                </Link>
+              </>
+            )}
+
+            {!user && (
               <Link href="/signup" style={{
-                padding: "15px 28px", borderRadius: 14,
+                padding: "14px 28px", borderRadius: 14,
                 border: "0.5px solid var(--border-primary)",
                 background: "var(--bg-glass)", color: "var(--text-secondary)",
                 fontSize: 15, fontWeight: 500,
