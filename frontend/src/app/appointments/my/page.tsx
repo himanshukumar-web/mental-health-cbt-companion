@@ -28,6 +28,7 @@ interface ChatPartner {
   user_id: string;
   name: string;
   role: string;
+  is_online?: boolean;
 }
 
 interface ChatMessage {
@@ -95,6 +96,21 @@ function MyAppointmentsPageInner() {
       } catch { /* ignore */ }
       setLoadingData(false);
     })();
+  }, [user]);
+
+  // Heartbeat for online presence
+  useEffect(() => {
+    if (!user) return;
+    const sendHeartbeat = () => {
+      fetch(`${API_URL}/users/heartbeat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id }),
+      }).catch(() => {});
+    };
+    sendHeartbeat();
+    const t = setInterval(sendHeartbeat, 15000);
+    return () => clearInterval(t);
   }, [user]);
 
   // Load chat partners and handle query parameter select
@@ -298,8 +314,29 @@ function MyAppointmentsPageInner() {
                           textAlign: "left", cursor: "pointer", transition: "all 0.2s"
                         }}
                       >
-                        <div style={{ fontWeight: 500, fontSize: 13 }}>Dr. {p.name}</div>
-                        <div style={{ fontSize: 10, color: "var(--text-tertiary)" }}>{p.role}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{ position: "relative" }}>
+                            <div style={{
+                              width: 30, height: 30, borderRadius: "50%",
+                              background: isSelected ? "linear-gradient(135deg, #22c55e, #16a34a)" : "linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))",
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              color: isSelected ? "white" : "var(--text-secondary)", fontSize: 12, fontWeight: "bold"
+                            }}>{p.name.charAt(0)}</div>
+                            <span style={{
+                              position: "absolute", bottom: -1, right: -1,
+                              width: 9, height: 9, borderRadius: "50%",
+                              background: p.is_online ? "#22c55e" : "#6b7280",
+                              border: "2px solid var(--bg-primary)",
+                              boxShadow: p.is_online ? "0 0 6px rgba(34,197,94,0.5)" : "none",
+                            }} />
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 500, fontSize: 13 }}>Dr. {p.name}</div>
+                            <div style={{ fontSize: 10, color: p.is_online ? "#22c55e" : "var(--text-tertiary)" }}>
+                              {p.is_online ? "● Online" : "○ Offline"}
+                            </div>
+                          </div>
+                        </div>
                       </button>
                     );
                   })}
@@ -315,9 +352,30 @@ function MyAppointmentsPageInner() {
               {selectedPartner ? (
                 <>
                   {/* Header */}
-                  <div style={{ padding: "12px 18px", borderBottom: "0.5px solid var(--border-tertiary)" }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
-                      Chatting with Dr. {selectedPartner.name}
+                  <div style={{ padding: "12px 18px", borderBottom: "0.5px solid var(--border-tertiary)", display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ position: "relative" }}>
+                      <div style={{
+                        width: 34, height: 34, borderRadius: "50%",
+                        background: "linear-gradient(135deg, #22c55e, #16a34a)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        color: "white", fontWeight: "bold", fontSize: 14
+                      }}>{selectedPartner.name.charAt(0)}</div>
+                      <span style={{
+                        position: "absolute", bottom: -1, right: -1,
+                        width: 9, height: 9, borderRadius: "50%",
+                        background: selectedPartner.is_online ? "#22c55e" : "#6b7280",
+                        border: "2px solid var(--bg-primary)",
+                        boxShadow: selectedPartner.is_online ? "0 0 6px rgba(34,197,94,0.5)" : "none",
+                      }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
+                        Dr. {selectedPartner.name}
+                      </div>
+                      <div style={{ fontSize: 10, color: selectedPartner.is_online ? "#22c55e" : "#6b7280", display: "flex", alignItems: "center", gap: 3 }}>
+                        <span style={{ width: 5, height: 5, borderRadius: "50%", background: selectedPartner.is_online ? "#22c55e" : "#6b7280", display: "inline-block" }}></span>
+                        {selectedPartner.is_online ? "Online" : "Offline"}
+                      </div>
                     </div>
                   </div>
                   

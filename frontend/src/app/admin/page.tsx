@@ -40,6 +40,7 @@ interface ChatPartner {
   user_id: string;
   name: string;
   role: string;
+  is_online?: boolean;
 }
 
 interface ChatMessage {
@@ -192,6 +193,21 @@ export default function AdminDashboard() {
   }, [user]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Heartbeat for online presence
+  useEffect(() => {
+    if (!user) return;
+    const sendHeartbeat = () => {
+      fetch(`${API_URL}/users/heartbeat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id }),
+      }).catch(() => {});
+    };
+    sendHeartbeat();
+    const t = setInterval(sendHeartbeat, 15000);
+    return () => clearInterval(t);
+  }, [user]);
 
   // Load chat partners
   useEffect(() => {
@@ -742,15 +758,26 @@ function AdminChatView({
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{
-                      width: 32, height: 32, borderRadius: "50%",
-                      background: isSelected ? "linear-gradient(135deg, #f59e0b, #d97706)" : "linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      color: isSelected ? "white" : "var(--text-secondary)", fontSize: 13, fontWeight: "bold"
-                    }}>{p.name.charAt(0)}</div>
+                    <div style={{ position: "relative" }}>
+                      <div style={{
+                        width: 32, height: 32, borderRadius: "50%",
+                        background: isSelected ? "linear-gradient(135deg, #f59e0b, #d97706)" : "linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        color: isSelected ? "white" : "var(--text-secondary)", fontSize: 13, fontWeight: "bold"
+                      }}>{p.name.charAt(0)}</div>
+                      <span style={{
+                        position: "absolute", bottom: -1, right: -1,
+                        width: 10, height: 10, borderRadius: "50%",
+                        background: p.is_online ? "#22c55e" : "#6b7280",
+                        border: "2px solid var(--bg-primary)",
+                        boxShadow: p.is_online ? "0 0 6px rgba(34,197,94,0.5)" : "none",
+                      }} />
+                    </div>
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 500, color: isSelected ? "#fcd34d" : "var(--text-primary)" }}>{p.name}</div>
-                      <div style={{ fontSize: 11, color: "var(--text-tertiary)", textTransform: "capitalize" }}>{p.role}</div>
+                      <div style={{ fontSize: 11, color: p.is_online ? "#22c55e" : "var(--text-tertiary)" }}>
+                        {p.is_online ? "● Online" : "○ Offline"}
+                      </div>
                     </div>
                   </div>
                 </button>
@@ -781,9 +808,9 @@ function AdminChatView({
               }}>{selectedPartner.name.charAt(0)}</div>
               <div>
                 <h4 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)" }}>{selectedPartner.name}</h4>
-                <div style={{ fontSize: 11, color: "#22c55e", display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }}></span>
-                  Active Chat
+                <div style={{ fontSize: 11, color: selectedPartner.is_online ? "#22c55e" : "#6b7280", display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: selectedPartner.is_online ? "#22c55e" : "#6b7280", display: "inline-block", boxShadow: selectedPartner.is_online ? "0 0 6px rgba(34,197,94,0.5)" : "none" }}></span>
+                  {selectedPartner.is_online ? "Online" : "Offline"}
                 </div>
               </div>
             </div>

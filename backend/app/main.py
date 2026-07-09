@@ -11,6 +11,7 @@ WebSocket protocol (JSON frames):
                    { type: "error", content: str }
 """
 import uuid
+import time
 import json
 from contextlib import asynccontextmanager
 
@@ -22,6 +23,10 @@ from app.config import settings
 from app.agents.monitor import analyze_threat_level
 from app.agents.therapist import stream_response
 from app.database import crud
+
+# In-memory online presence tracker: { user_id: last_heartbeat_timestamp }
+online_users: dict[str, float] = {}
+ONLINE_TIMEOUT = 30  # seconds — user is "online" if heartbeat within this window
 
 
 @asynccontextmanager
@@ -242,7 +247,28 @@ async def get_message_history(user1: str, user2: str, limit: int = 50):
 async def get_message_partners(user_id: str):
     """Get partners who have messaged or have appointments with this user."""
     partners = await crud.get_chat_partners(user_id)
+    now = time.time()
+    for p in partners:
+        last_seen = online_users.get(p["user_id"], 0)
+        p["is_online"] = (now - last_seen) < ONLINE_TIMEOUT
     return {"partners": partners}
+
+
+@app.post("/users/heartbeat")
+async def user_heartbeat(body: dict):
+    """Track user online presence."""
+    user_id = body.get("user_id")
+    if user_id:
+        online_users[user_id] = time.time()
+    return {"status": "ok"}
+
+
+@app.get("/users/online/{user_id}")
+async def check_user_online(user_id: str):
+    """Check if a specific user is online."""
+    now = time.time()
+    last_seen = online_users.get(user_id, 0)
+    return {"user_id": user_id, "is_online": (now - last_seen) < ONLINE_TIMEOUT}
 
 
 # ── WebSocket endpoint ─────────────────────────────────────────────────────────
