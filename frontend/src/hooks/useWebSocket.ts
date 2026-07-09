@@ -57,9 +57,9 @@ export function useWebSocket(sessionId: string) {
         const res = await fetch(`${HTTP_API_URL}/sessions/${sessionId}/history`);
         if (res.ok) {
           const data = await res.json();
-          if (data.history && data.history.length > 0) {
-            setMessages(data.history);
-            historyRef.current = data.history.map((m: any) => ({ role: m.role, content: m.content }));
+          if (data.messages && data.messages.length > 0) {
+            setMessages(data.messages);
+            historyRef.current = data.messages.map((m: any) => ({ role: m.role, content: m.content }));
           }
         }
       } catch (err) {

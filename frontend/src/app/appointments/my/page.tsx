@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import ThemeSelector from "@/components/ThemeSelector";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -82,6 +83,14 @@ function MyAppointmentsPageInner() {
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
   }, [user, loading, router]);
+
+  if (loading || !user) {
+    return (
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-primary)" }}>
+        <div style={{ width: 36, height: 36, borderRadius: "50%", border: "3px solid rgba(34,197,94,0.3)", borderTopColor: "#22c55e", animation: "spin 0.8s linear infinite" }} />
+      </div>
+    );
+  }
 
   // Load appointments
   useEffect(() => {
@@ -220,16 +229,19 @@ function MyAppointmentsPageInner() {
         maxWidth: 900, margin: "0 auto", padding: "24px 0",
         display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{
-            width: 34, height: 34, borderRadius: "50%",
-            background: "linear-gradient(135deg, #a7f3d0, #6ee7b7)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 16, boxShadow: "0 0 20px rgba(34,197,94,0.3)",
-          }}>🌿</div>
-          <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 18, color: "var(--text-primary)" }}>Sera</span>
-        </Link>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{
+              width: 34, height: 34, borderRadius: "50%",
+              background: "linear-gradient(135deg, #a7f3d0, #6ee7b7)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 16, boxShadow: "0 0 20px rgba(34,197,94,0.3)",
+            }}>🌿</div>
+            <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 18, color: "var(--text-primary)" }}>Sera</span>
+          </Link>
+          <ThemeSelector />
+        </div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <Link href="/appointments" style={{
             padding: "7px 16px", borderRadius: 10,
             background: "linear-gradient(135deg, #22c55e, #16a34a)",

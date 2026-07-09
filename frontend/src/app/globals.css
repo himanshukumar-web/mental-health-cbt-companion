@@ -76,6 +76,53 @@
   --font-sans: 'Inter', sans-serif;
 }
 
+/* Light theme overrides */
+.light-theme {
+  --bg-primary: #f3f4f6;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e5e7eb;
+  --bg-elevated: #f9fafb;
+  --bg-glass: rgba(0, 0, 0, 0.04);
+  --bg-glass-hover: rgba(0, 0, 0, 0.07);
+
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-tertiary: #9ca3af;
+  --text-muted: #cbd5e1;
+
+  --border-primary: rgba(0, 0, 0, 0.08);
+  --border-secondary: rgba(0, 0, 0, 0.05);
+  --border-tertiary: rgba(0, 0, 0, 0.03);
+
+  --info-bg: rgba(59, 130, 246, 0.08);
+  --info-text: #1d4ed8;
+  --border-info: rgba(59, 130, 246, 0.15);
+}
+
+/* Dark theme overrides */
+.dark-theme {
+  --bg-primary: #090d16;
+  --bg-secondary: #0f1322;
+  --bg-tertiary: #141a2e;
+  --bg-elevated: #1a233d;
+  --bg-glass: rgba(255, 255, 255, 0.05);
+  --bg-glass-hover: rgba(255, 255, 255, 0.08);
+
+  --text-primary: #f3f4f6;
+  --text-secondary: #9ca3af;
+  --text-tertiary: #6b7280;
+  --text-muted: #4b5563;
+
+  --border-primary: rgba(255, 255, 255, 0.12);
+  --border-secondary: rgba(255, 255, 255, 0.08);
+  --border-tertiary: rgba(255, 255, 255, 0.05);
+}
+
+/* Smooth transition for theme variables change */
+html, body, main, div, nav, header, aside, section, footer, button, input, textarea {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+}
+
 /* ── Reset ─────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 

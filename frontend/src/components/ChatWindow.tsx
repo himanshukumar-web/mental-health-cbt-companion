@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import type { AgentStatus, ChatMessage, WSState } from "@/hooks/useWebSocket";
 import { useAuth } from "@/contexts/AuthContext";
+import ThemeSelector from "@/components/ThemeSelector";
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
@@ -94,13 +95,27 @@ const MOOD_LABELS = ["Very low 😔", "Low 😟", "Neutral 😐", "Good 🙂", "
 export default function ChatWindow({
   messages, wsState, isStreaming, crisis, onSend, onDismissCrisis, user,
 }: ChatWindowProps) {
-  const { signOut } = useAuth();
+  const { signOut, userRole } = useAuth();
   const router = useRouter();
   const [input, setInput] = useState("");
   const [sessionTime, setSessionTime] = useState(0);
   const [msgCount, setMsgCount] = useState(0);
   const [mood, setMood] = useState<number | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (!mobile) setSidebarOpen(false);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const formatTime = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
@@ -134,15 +149,32 @@ export default function ChatWindow({
 
   return (
     <>
+      {/* Mobile Sidebar Overlay */}
+      {isMobile && sidebarOpen && (
+        <div 
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)",
+            zIndex: 99, backdropFilter: "blur(4px)", animation: "fadeIn 0.2s ease"
+          }}
+        />
+      )}
+
       {/* Sidebar */}
       <div style={{
-        width: 200, borderRight: "0.5px solid var(--border-secondary)",
+        width: 220, borderRight: "0.5px solid var(--border-secondary)",
         display: "flex", flexDirection: "column", padding: "16px 12px",
         background: "var(--bg-secondary)", flexShrink: 0,
+        transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        position: isMobile ? "absolute" : "relative",
+        top: 0, bottom: 0, left: 0,
+        zIndex: 100,
+        transform: isMobile ? (sidebarOpen ? "translateX(0)" : "translateX(-100%)") : "none",
+        boxShadow: isMobile && sidebarOpen ? "5px 0 25px rgba(0,0,0,0.5)" : "none",
       }}>
-        {/* Brand */}
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+        {/* Brand & Go to Home */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
             <div style={{
               width: 28, height: 28, borderRadius: "50%",
               background: "linear-gradient(135deg,#a7f3d0,#6ee7b7)",
@@ -151,7 +183,19 @@ export default function ChatWindow({
             }}>🌿</div>
             <span style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)" }}>Sera</span>
           </div>
-          <div style={{ fontSize: 11, color: "var(--text-tertiary)", paddingLeft: 2 }}>CBT Companion</div>
+          
+          <button
+            onClick={() => router.push("/")}
+            style={{
+              width: "100%", padding: "8px 10px", borderRadius: 8,
+              background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
+              color: "var(--text-secondary)", fontSize: 12, fontWeight: 600, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              transition: "all 0.2s"
+            }}
+          >
+            🏠 Go to Home
+          </button>
         </div>
 
         {/* Agents */}
@@ -196,21 +240,23 @@ export default function ChatWindow({
           </div>
         )}
 
-        {/* Chat with Doctor Option */}
-        <div style={{ borderTop: "0.5px solid var(--border-tertiary)", paddingTop: 12, marginBottom: 12 }}>
-          <button
-            onClick={() => router.push("/appointments/my?tab=chat")}
-            style={{
-              width: "100%", padding: "8px 10px", borderRadius: 8,
-              background: "rgba(59,130,246,0.12)", border: "0.5px solid rgba(59,130,246,0.3)",
-              color: "#93c5fd", fontSize: 11, fontWeight: 600, cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-              transition: "all 0.2s"
-            }}
-          >
-            💬 Chat with Doctor
-          </button>
-        </div>
+        {/* Chat with Doctor/Patient Option */}
+        {user && (
+          <div style={{ borderTop: "0.5px solid var(--border-tertiary)", paddingTop: 12, marginBottom: 12 }}>
+            <button
+              onClick={() => router.push(userRole === "admin" ? "/admin?tab=chat" : "/appointments/my?tab=chat")}
+              style={{
+                width: "100%", padding: "8px 10px", borderRadius: 8,
+                background: "rgba(59,130,246,0.12)", border: "0.5px solid rgba(59,130,246,0.3)",
+                color: "#93c5fd", fontSize: 11, fontWeight: 600, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                transition: "all 0.2s"
+              }}
+            >
+              💬 {userRole === "admin" ? "Chat with Patient" : "Chat with Doctor"}
+            </button>
+          </div>
+        )}
 
         {/* User + Connection */}
         <div style={{ marginTop: "auto" }}>
@@ -253,13 +299,25 @@ export default function ChatWindow({
       </div>
 
       {/* Chat area */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, position: "relative" }}>
         {/* Header */}
         <div style={{
           padding: "12px 16px", borderBottom: "0.5px solid var(--border-secondary)",
           display: "flex", alignItems: "center", gap: 10, background: "var(--bg-secondary)",
           flexShrink: 0,
         }}>
+          {isMobile && (
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              style={{
+                background: "none", border: "none", color: "var(--text-primary)",
+                fontSize: 20, padding: "4px 8px", cursor: "pointer", marginRight: 4,
+                display: "flex", alignItems: "center", justifyContent: "center"
+              }}
+            >
+              ☰
+            </button>
+          )}
           <div style={{
             width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
             background: "linear-gradient(135deg,#a7f3d0,#6ee7b7)",
@@ -272,13 +330,18 @@ export default function ChatWindow({
               {isStreaming ? "typing…" : "Active · CBT Companion"}
             </div>
           </div>
-          <div style={{
-            marginLeft: "auto", fontSize: 11, color: "var(--text-tertiary)",
-            padding: "3px 10px", borderRadius: 8,
-            border: "0.5px solid var(--border-secondary)",
-            background: "var(--bg-glass)",
-          }}>
-            Multi-agent · Encrypted
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+            {!isMobile && (
+              <div style={{
+                fontSize: 11, color: "var(--text-tertiary)",
+                padding: "4px 10px", borderRadius: 8,
+                border: "0.5px solid var(--border-secondary)",
+                background: "var(--bg-glass)",
+              }}>
+                Multi-agent · Encrypted
+              </div>
+            )}
+            <ThemeSelector />
           </div>
         </div>
 

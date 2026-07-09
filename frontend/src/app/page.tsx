@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import ThemeSelector from "@/components/ThemeSelector";
 
 const FEATURES = [
   {
@@ -76,15 +77,18 @@ export default function LandingPage() {
           width: "100%", display: "flex", alignItems: "center",
           justifyContent: "space-between", padding: "24px 0",
         }}>
-          {/* Logo */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{
-              width: 34, height: 34, borderRadius: "50%",
-              background: "linear-gradient(135deg, #a7f3d0, #6ee7b7)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 16, boxShadow: "0 0 20px rgba(34,197,94,0.3)",
-            }}>🌿</div>
-            <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 18, color: "var(--text-primary)" }}>Sera</span>
+          {/* Logo & Theme */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{
+                width: 34, height: 34, borderRadius: "50%",
+                background: "linear-gradient(135deg, #a7f3d0, #6ee7b7)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 16, boxShadow: "0 0 20px rgba(34,197,94,0.3)",
+              }}>🌿</div>
+              <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 18, color: "var(--text-primary)" }}>Sera</span>
+            </Link>
+            <ThemeSelector />
           </div>
 
           {/* Auth nav */}
@@ -220,25 +224,50 @@ export default function LandingPage() {
             </button>
 
             {user ? (
-              <div style={{ display: "flex", gap: 10 }}>
-                <Link href="/appointments" style={{
-                  padding: "15px 28px", borderRadius: 14,
-                  border: "0.5px solid rgba(34,197,94,0.3)",
-                  background: "rgba(34,197,94,0.08)", color: "#86efac",
-                  fontSize: 15, fontWeight: 500,
-                  display: "flex", alignItems: "center", gap: 8,
-                }}>
-                  📅 Book Appointment
-                </Link>
-                <Link href="/appointments/my?tab=chat" style={{
-                  padding: "15px 28px", borderRadius: 14,
-                  border: "0.5px solid rgba(59,130,246,0.3)",
-                  background: "rgba(59,130,246,0.08)", color: "#93c5fd",
-                  fontSize: 15, fontWeight: 500,
-                  display: "flex", alignItems: "center", gap: 8,
-                }}>
-                  💬 Chat with Doctor
-                </Link>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+                {userRole === "admin" ? (
+                  <>
+                    <Link href="/admin?tab=appointments" style={{
+                      padding: "15px 28px", borderRadius: 14,
+                      border: "0.5px solid rgba(245,158,11,0.3)",
+                      background: "rgba(245,158,11,0.08)", color: "#fcd34d",
+                      fontSize: 15, fontWeight: 500,
+                      display: "flex", alignItems: "center", gap: 8,
+                    }}>
+                      📅 Manage Appointments
+                    </Link>
+                    <Link href="/admin?tab=chat" style={{
+                      padding: "15px 28px", borderRadius: 14,
+                      border: "0.5px solid rgba(59,130,246,0.3)",
+                      background: "rgba(59,130,246,0.08)", color: "#93c5fd",
+                      fontSize: 15, fontWeight: 500,
+                      display: "flex", alignItems: "center", gap: 8,
+                    }}>
+                      💬 Chat with Patient
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/appointments" style={{
+                      padding: "15px 28px", borderRadius: 14,
+                      border: "0.5px solid rgba(34,197,94,0.3)",
+                      background: "rgba(34,197,94,0.08)", color: "#86efac",
+                      fontSize: 15, fontWeight: 500,
+                      display: "flex", alignItems: "center", gap: 8,
+                    }}>
+                      📅 Book Appointment
+                    </Link>
+                    <Link href="/appointments/my?tab=chat" style={{
+                      padding: "15px 28px", borderRadius: 14,
+                      border: "0.5px solid rgba(59,130,246,0.3)",
+                      background: "rgba(59,130,246,0.08)", color: "#93c5fd",
+                      fontSize: 15, fontWeight: 500,
+                      display: "flex", alignItems: "center", gap: 8,
+                    }}>
+                      💬 Chat with Doctor
+                    </Link>
+                  </>
+                )}
               </div>
             ) : (
               <Link href="/signup" style={{

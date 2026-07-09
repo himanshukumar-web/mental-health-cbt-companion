@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import ThemeSelector from "@/components/ThemeSelector";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -105,6 +106,20 @@ export default function AdminDashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [activeTab, setActiveTab] = useState<"dashboard" | "appointments" | "chat" | "profile">("dashboard");
   const [loadingData, setLoadingData] = useState(true);
+
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (!mobile) setSidebarOpen(false);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Chat states
   const [chatPartners, setChatPartners] = useState<ChatPartner[]>([]);
@@ -297,7 +312,7 @@ export default function AdminDashboard() {
   const todayAppts = appointments.filter(a => a.date === new Date().toISOString().split("T")[0]);
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)", fontFamily: "var(--font-sans)" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)", fontFamily: "var(--font-sans)", position: "relative" }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
@@ -305,12 +320,28 @@ export default function AdminDashboard() {
         @keyframes slideIn { from { transform:translateX(-20px); opacity:0; } to { transform:translateX(0); opacity:1; } }
       `}</style>
 
+      {/* Mobile Sidebar Overlay */}
+      {isMobile && sidebarOpen && (
+        <div 
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)",
+            zIndex: 99, backdropFilter: "blur(4px)", animation: "fadeIn 0.2s ease"
+          }}
+        />
+      )}
+
       {/* Sidebar */}
       <aside style={{
         width: 260, flexShrink: 0, background: "var(--bg-secondary)",
         borderRight: "0.5px solid var(--border-secondary)",
         padding: "28px 16px", display: "flex", flexDirection: "column",
-        animation: "slideIn 0.4s ease",
+        transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        position: isMobile ? "absolute" : "relative",
+        top: 0, bottom: 0, left: 0,
+        zIndex: 100,
+        transform: isMobile ? (sidebarOpen ? "translateX(0)" : "translateX(-100%)") : "none",
+        boxShadow: isMobile && sidebarOpen ? "5px 0 25px rgba(0,0,0,0.5)" : "none",
       }}>
         {/* Logo - Dr. Name on Top Left */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 40, padding: "0 8px" }}>
@@ -412,7 +443,37 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main content */}
-      <main style={{ flex: 1, padding: "32px 36px", overflowY: "auto", display: "flex", flexDirection: "column" }}>
+      <main style={{ flex: 1, padding: "20px 36px 36px", overflowY: "auto", display: "flex", flexDirection: "column" }}>
+        {/* Top Header bar with Home, Menu toggle and Theme controls */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, paddingBottom: 12, borderBottom: "0.5px solid var(--border-tertiary)", flexWrap: "wrap", gap: 12 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {isMobile && (
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                style={{
+                  background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
+                  color: "var(--text-primary)", fontSize: 13, fontWeight: 600,
+                  padding: "8px 16px", borderRadius: 10, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6
+                }}
+              >
+                ☰ Menu
+              </button>
+            )}
+            <Link href="/" style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "8px 16px", borderRadius: 10,
+              border: "0.5px solid var(--border-secondary)",
+              background: "var(--bg-glass)", color: "var(--text-secondary)",
+              fontSize: 13, fontWeight: 500,
+              transition: "all 0.2s"
+            }}>
+              ← Home
+            </Link>
+          </div>
+          <ThemeSelector />
+        </div>
+
         {activeTab === "dashboard" && (
           <div style={{ animation: "fadeIn 0.4s ease" }}>
             {/* Header - Greeting Dr. Name */}

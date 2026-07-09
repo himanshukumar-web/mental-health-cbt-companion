@@ -10,17 +10,17 @@ import CrisisPanel from "@/components/CrisisPanel";
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const hasSupabase = typeof window !== "undefined" && !!(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
 
   useEffect(() => {
     // If Supabase is configured and user is not logged in, redirect to login
-    const hasSupabase = !!(
-      process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    );
     if (!loading && !user && hasSupabase) {
       router.replace("/login");
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, hasSupabase]);
 
   if (loading) {
     return (
@@ -37,6 +37,20 @@ function AuthGate({ children }: { children: React.ReactNode }) {
             boxShadow: "0 0 20px rgba(34,197,94,0.3)",
           }}>🌿</div>
           <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Loading your session…</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (hasSupabase && !user) {
+    return (
+      <div style={{
+        height: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "var(--bg-primary)",
+      }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: 28, height: 28, borderRadius: "50%", border: "2px solid rgba(34,197,94,0.3)", borderTopColor: "#22c55e", animation: "spin 0.8s linear infinite", margin: "0 auto 12px" }} />
+          <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Redirecting to login…</div>
         </div>
       </div>
     );
