@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeSelector from "@/components/ThemeSelector";
@@ -98,13 +98,23 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export default function AdminDashboard() {
+function AdminDashboardInner() {
   const { user, userRole, loading, signOut } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab") as any;
   const [doctor, setDoctor] = useState<DoctorProfile | null>(null);
   const [stats, setStats] = useState<Stats>({ total_patients: 0, today_appointments: 0, completed: 0, pending: 0 });
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "appointments" | "chat" | "profile">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "appointments" | "chat" | "profile">(
+    () => (tabParam === "dashboard" || tabParam === "appointments" || tabParam === "chat" || tabParam === "profile" ? tabParam : "dashboard")
+  );
+
+  useEffect(() => {
+    if (tabParam === "dashboard" || tabParam === "appointments" || tabParam === "chat" || tabParam === "profile") {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
   const [loadingData, setLoadingData] = useState(true);
 
   const [isMobile, setIsMobile] = useState(false);
@@ -1179,5 +1189,17 @@ function AdminProfileEditView({ doctor, setDoctor, user }: AdminProfileEditViewP
         </button>
       </form>
     </div>
+  );
+}
+
+export default function AdminDashboard() {
+  return (
+    <Suspense fallback={
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-primary)" }}>
+        <div style={{ width: 40, height: 40, borderRadius: "50%", border: "3px solid rgba(245,158,11,0.3)", borderTopColor: "#f59e0b", animation: "spin 0.8s linear infinite" }} />
+      </div>
+    }>
+      <AdminDashboardInner />
+    </Suspense>
   );
 }

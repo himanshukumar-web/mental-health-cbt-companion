@@ -202,3 +202,47 @@ button { cursor: pointer; font-family: var(--font-sans); }
   }
 }
 
+/* ── Hero CTA Buttons Responsiveness ──────────────────────────────────────── */
+.hero-cta-container {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+
+.hero-cta-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .hero-cta-container {
+    flex-direction: column !important;
+    gap: 10px !important;
+    padding: 0 16px;
+  }
+  .hero-cta-button {
+    width: 100% !important;
+    max-width: 320px !important;
+    padding: 12px 20px !important;
+    font-size: 14px !important;
+  }
+  
+  /* Navbar responsiveness helper */
+  nav {
+    padding: 12px 0 !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+    align-items: center !important;
+  }
+  nav div {
+    justify-content: center !important;
+  }
+}
+

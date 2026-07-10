@@ -201,11 +201,12 @@ export default function LandingPage() {
             responds with compassion — with a built-in safety guardrail that activates instantly.
           </p>
 
-          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+          <div className="hero-cta-container">
             <button
               id="start-session-btn"
               onClick={startSession}
               disabled={starting}
+              className="hero-cta-button"
               style={{
                 padding: "14px 28px", borderRadius: 14, border: "none",
                 background: starting ? "rgba(34,197,94,0.4)" : "linear-gradient(135deg, #22c55e, #16a34a)",
@@ -213,7 +214,6 @@ export default function LandingPage() {
                 cursor: starting ? "default" : "pointer",
                 boxShadow: "0 4px 24px rgba(34,197,94,0.35)",
                 transition: "all 0.2s",
-                display: "flex", alignItems: "center", gap: 8,
               }}
             >
               {starting ? (
@@ -226,21 +226,19 @@ export default function LandingPage() {
 
             {user && userRole === "admin" && (
               <>
-                <Link href="/admin?tab=appointments" style={{
+                <Link href="/admin?tab=appointments" className="hero-cta-button" style={{
                   padding: "14px 28px", borderRadius: 14,
                   border: "0.5px solid rgba(245,158,11,0.3)",
                   background: "rgba(245,158,11,0.08)", color: "#fcd34d",
                   fontSize: 15, fontWeight: 500,
-                  display: "flex", alignItems: "center", gap: 8,
                 }}>
                   📅 Manage Appointments
                 </Link>
-                <Link href="/admin?tab=chat" style={{
+                <Link href="/admin?tab=chat" className="hero-cta-button" style={{
                   padding: "14px 28px", borderRadius: 14,
                   border: "0.5px solid rgba(59,130,246,0.3)",
                   background: "rgba(59,130,246,0.08)", color: "#93c5fd",
                   fontSize: 15, fontWeight: 500,
-                  display: "flex", alignItems: "center", gap: 8,
                 }}>
                   💬 Chat with Patient
                 </Link>
@@ -249,21 +247,19 @@ export default function LandingPage() {
 
             {user && userRole !== "admin" && (
               <>
-                <Link href="/appointments" style={{
+                <Link href="/appointments" className="hero-cta-button" style={{
                   padding: "14px 28px", borderRadius: 14,
                   border: "0.5px solid rgba(34,197,94,0.3)",
                   background: "rgba(34,197,94,0.08)", color: "#86efac",
                   fontSize: 15, fontWeight: 500,
-                  display: "flex", alignItems: "center", gap: 8,
                 }}>
                   📅 Book Appointment
                 </Link>
-                <Link href="/appointments/my?tab=chat" style={{
+                <Link href="/appointments/my?tab=chat" className="hero-cta-button" style={{
                   padding: "14px 28px", borderRadius: 14,
                   border: "0.5px solid rgba(59,130,246,0.3)",
                   background: "rgba(59,130,246,0.08)", color: "#93c5fd",
                   fontSize: 15, fontWeight: 500,
-                  display: "flex", alignItems: "center", gap: 8,
                 }}>
                   💬 Chat with Doctor
                 </Link>
@@ -271,7 +267,7 @@ export default function LandingPage() {
             )}
 
             {!user && (
-              <Link href="/signup" style={{
+              <Link href="/signup" className="hero-cta-button" style={{
                 padding: "14px 28px", borderRadius: 14,
                 border: "0.5px solid var(--border-primary)",
                 background: "var(--bg-glass)", color: "var(--text-secondary)",
