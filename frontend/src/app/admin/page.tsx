@@ -1126,8 +1126,9 @@ function AdminProfileEditView({ doctor, setDoctor, user }: AdminProfileEditViewP
           <label style={{ display: "block", fontSize: 13, color: "var(--text-secondary)", marginBottom: 6 }}>Experience (Years)</label>
           <input
             type="number"
-            value={experienceYears}
-            onChange={e => setExperienceYears(Number(e.target.value))}
+            placeholder="0"
+            value={experienceYears === 0 ? "" : experienceYears}
+            onChange={e => setExperienceYears(e.target.value === "" ? 0 : Number(e.target.value))}
             style={{
               width: "100%", padding: "12px 14px", borderRadius: 10,
               border: "0.5px solid var(--border-secondary)",
