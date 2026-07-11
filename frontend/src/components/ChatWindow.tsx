@@ -102,6 +102,12 @@ export default function ChatWindow({
   const [msgCount, setMsgCount] = useState(0);
   const [mood, setMood] = useState<number | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto scroll to bottom when messages or isStreaming changes
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isStreaming]);
 
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -426,7 +432,7 @@ export default function ChatWindow({
             </div>
           )}
           {/* Scroll anchor */}
-          <div id="messages-bottom" />
+          <div ref={messagesEndRef} id="messages-bottom" />
         </div>
 
         {/* Quick prompts */}
