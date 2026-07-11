@@ -70,15 +70,10 @@ export default function LandingPage() {
           flexWrap: "wrap", gap: 10,
         }}>
           {/* Logo & Theme */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{
-                width: 34, height: 34, borderRadius: "50%",
-                background: "linear-gradient(135deg, #a7f3d0, #6ee7b7)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 16, boxShadow: "0 0 20px rgba(34,197,94,0.3)",
-              }}>🌿</div>
-              <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 18, color: "var(--text-primary)" }}>Sera</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--logo-gap, 10px)" }}>
+            <Link href="/" style={{ display: "flex", alignItems: "center", gap: "var(--logo-gap, 10px)" }}>
+              <div className="nav-logo-icon">🌿</div>
+              <span className="nav-logo-text">Sera</span>
             </Link>
             <ThemeSelector />
           </div>
@@ -88,60 +83,37 @@ export default function LandingPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
               {user ? (
                 <>
-                  <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+                  <span className="nav-username">
                     {user.user_metadata?.full_name ?? user.email}
                   </span>
 
                   {/* Admin dashboard link for doctors */}
                   {userRole === "admin" && (
-                    <Link href="/admin" id="nav-admin-dashboard" style={{
-                      padding: "7px 14px", borderRadius: 10,
-                      background: "rgba(245,158,11,0.12)", border: "0.5px solid rgba(245,158,11,0.3)",
-                      color: "#fcd34d", fontSize: 12, fontWeight: 600,
-                    }}>
-                      🩺 Admin Dashboard
+                    <Link href="/admin" id="nav-admin-dashboard" className="nav-btn nav-btn-admin">
+                      🩺 Admin
                     </Link>
                   )}
 
                   <button
                     onClick={startSession}
-                    style={{
-                      padding: "7px 16px", borderRadius: 10,
-                      background: "linear-gradient(135deg,#22c55e,#16a34a)",
-                      border: "none", color: "white", fontSize: 13, fontWeight: 600,
-                      cursor: "pointer",
-                    }}
+                    className="nav-btn nav-btn-primary"
                   >
                     Open Sera →
                   </button>
                   <button
                     id="nav-signout"
                     onClick={() => signOut()}
-                    style={{
-                      padding: "7px 14px", borderRadius: 10,
-                      border: "0.5px solid var(--border-secondary)",
-                      background: "var(--bg-glass)", color: "var(--text-tertiary)",
-                      fontSize: 13, cursor: "pointer",
-                    }}
+                    className="nav-btn nav-btn-secondary"
                   >
                     Sign out
                   </button>
                 </>
               ) : (
                 <>
-                  <Link href="/login" id="nav-login" style={{
-                    padding: "7px 16px", borderRadius: 10,
-                    border: "0.5px solid var(--border-secondary)",
-                    background: "var(--bg-glass)", color: "var(--text-secondary)",
-                    fontSize: 13, fontWeight: 500,
-                  }}>
+                  <Link href="/login" id="nav-login" className="nav-btn nav-btn-secondary">
                     Sign in
                   </Link>
-                  <Link href="/signup" id="nav-signup" style={{
-                    padding: "7px 16px", borderRadius: 10,
-                    background: "linear-gradient(135deg,#22c55e,#16a34a)",
-                    border: "none", color: "white", fontSize: 13, fontWeight: 600,
-                  }}>
+                  <Link href="/signup" id="nav-signup" className="nav-btn nav-btn-primary">
                     Sign up free
                   </Link>
                 </>

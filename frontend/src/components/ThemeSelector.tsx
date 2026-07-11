@@ -12,15 +12,7 @@ export default function ThemeSelector() {
   ];
 
   return (
-    <div style={{
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 4,
-      background: "var(--bg-glass)",
-      border: "0.5px solid var(--border-secondary)",
-      borderRadius: 12,
-      padding: 3,
-    }}>
+    <div className="theme-selector-container">
       {themes.map((t) => {
         const isActive = theme === t.id;
         return (
@@ -28,20 +20,7 @@ export default function ThemeSelector() {
             key={t.id}
             onClick={() => setTheme(t.id)}
             title={`${t.label} Theme`}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 28,
-              height: 28,
-              borderRadius: 9,
-              border: "none",
-              background: isActive ? "var(--bg-glass-hover)" : "transparent",
-              color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
-              fontSize: 13,
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-            }}
+            className={`theme-selector-btn ${isActive ? "active" : ""}`}
           >
             {t.icon}
           </button>
