@@ -110,6 +110,11 @@ async def get_user_sessions(user_id: str):
     return {"sessions": sessions}
 
 
+@app.get("/sessions/{session_id}/history")
+async def get_history(session_id: str):
+    history = await crud.get_session_history(session_id)
+    return {"session_id": session_id, "messages": history}
+
 
 # ── Doctor endpoints ───────────────────────────────────────────────────────────
 
