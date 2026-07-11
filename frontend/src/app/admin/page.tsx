@@ -81,10 +81,10 @@ function StatCard({ icon, label, value, color, delay }: {
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, { bg: string; text: string; border: string }> = {
-    pending: { bg: "rgba(245,158,11,0.12)", text: "#fcd34d", border: "rgba(245,158,11,0.3)" },
-    confirmed: { bg: "rgba(59,130,246,0.12)", text: "#93c5fd", border: "rgba(59,130,246,0.3)" },
-    completed: { bg: "rgba(34,197,94,0.12)", text: "#86efac", border: "rgba(34,197,94,0.3)" },
-    cancelled: { bg: "rgba(239,68,68,0.12)", text: "#fca5a5", border: "rgba(239,68,68,0.3)" },
+    pending: { bg: "var(--warning-bg)", text: "var(--warning-text)", border: "var(--warning-border)" },
+    confirmed: { bg: "var(--info-bg)", text: "var(--info-text)", border: "var(--info-border)" },
+    completed: { bg: "var(--success-bg)", text: "var(--success-text)", border: "var(--success-border)" },
+    cancelled: { bg: "var(--crisis-bg)", text: "var(--crisis-text)", border: "var(--crisis-border)" },
   };
   const s = styles[status] || styles.pending;
   return (
@@ -610,6 +610,7 @@ function AdminDashboardInner() {
             appointments={appointments}
             loading={loadingData}
             onStatusUpdate={handleStatusUpdate}
+            isMobile={isMobile}
           />
         )}
 
@@ -624,6 +625,7 @@ function AdminDashboardInner() {
             onSend={handleSendMessage}
             sending={sendingMsg}
             userId={user.id}
+            isMobile={isMobile}
           />
         )}
 
@@ -641,10 +643,11 @@ function AdminDashboardInner() {
 
 // ── Admin Appointments View ──────────────────────────────────────────
 
-function AdminAppointmentsView({ appointments, loading: loadingData, onStatusUpdate }: {
+function AdminAppointmentsView({ appointments, loading: loadingData, onStatusUpdate, isMobile }: {
   appointments: Appointment[];
   loading: boolean;
   onStatusUpdate: (id: string, status: string) => void;
+  isMobile?: boolean;
 }) {
   const [filter, setFilter] = useState<string>("all");
 
@@ -718,15 +721,16 @@ function AdminAppointmentsView({ appointments, loading: loadingData, onStatusUpd
           {filtered.map((appt, i) => (
             <div key={appt.id} style={{
               display: "flex", alignItems: "center", justifyContent: "space-between",
-              padding: "18px 20px", borderRadius: 14,
+              padding: isMobile ? "14px 16px" : "18px 20px", borderRadius: 14,
               background: "var(--bg-glass)", backdropFilter: "blur(12px)",
               border: "0.5px solid var(--border-secondary)",
               animation: `fadeIn 0.3s ease ${i * 0.03}s both`,
               transition: "all 0.2s",
+              flexWrap: isMobile ? "wrap" : "nowrap", gap: isMobile ? 12 : 0,
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                 <div style={{
-                  width: 44, height: 44, borderRadius: "50%",
+                  width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
                   background: "linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.15))",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 18, fontWeight: 600, color: "#93c5fd",
@@ -735,10 +739,10 @@ function AdminAppointmentsView({ appointments, loading: loadingData, onStatusUpd
                   <div style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", marginBottom: 3 }}>
                     {appt.patient_name}
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--text-tertiary)", display: "flex", gap: 12 }}>
+                  <div style={{ fontSize: 12, color: "var(--text-tertiary)", display: "flex", gap: "6px 12px", flexWrap: "wrap" }}>
                     <span>📅 {new Date(appt.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
                     <span>🕐 {appt.time_slot}</span>
-                    <span>✉ {appt.patient_email}</span>
+                    <span style={{ wordBreak: "break-all" }}>✉ {appt.patient_email}</span>
                   </div>
                 </div>
               </div>
@@ -774,7 +778,7 @@ function AdminAppointmentsView({ appointments, loading: loadingData, onStatusUpd
 // ── Admin Chat View (Live Chat) ──────────────────────────────────────────
 
 function AdminChatView({
-  partners, selectedPartner, onSelectPartner, messages, input, setInput, onSend, sending, userId
+  partners, selectedPartner, onSelectPartner, messages, input, setInput, onSend, sending, userId, isMobile
 }: {
   partners: ChatPartner[];
   selectedPartner: ChatPartner | null;
@@ -785,6 +789,7 @@ function AdminChatView({
   onSend: () => void;
   sending: boolean;
   userId: string;
+  isMobile: boolean;
 }) {
   const [activePartnerHover, setActivePartnerHover] = useState<string | null>(null);
   const msgEndRef = useState<HTMLDivElement | null>(null);
@@ -796,16 +801,17 @@ function AdminChatView({
   }, [messages]);
 
   return (
-    <div style={{ display: "flex", flex: 1, gap: 20, height: "calc(100vh - 120px)", animation: "fadeIn 0.4s ease" }}>
+    <div style={{ display: "flex", flex: 1, gap: isMobile ? 0 : 20, height: isMobile ? "calc(100vh - 160px)" : "calc(100vh - 120px)", animation: "fadeIn 0.4s ease" }}>
       {/* Partners List (Left Panel) */}
-      <div style={{
-        width: 280, background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
-        borderRadius: 20, padding: 16, display: "flex", flexDirection: "column", gap: 12,
-        backdropFilter: "blur(12px)"
-      }}>
-        <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", paddingBottom: 10, borderBottom: "0.5px solid var(--border-tertiary)" }}>
-          Patients / Chats
-        </h3>
+      {(!isMobile || !selectedPartner) && (
+        <div style={{
+          width: isMobile ? "100%" : 280, background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
+          borderRadius: 20, padding: 16, display: "flex", flexDirection: "column", gap: 12,
+          backdropFilter: "blur(12px)"
+        }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", paddingBottom: 10, borderBottom: "0.5px solid var(--border-tertiary)" }}>
+            Patients / Chats
+          </h3>
         
         {partners.length === 0 ? (
           <div style={{ textAlign: "center", padding: "40px 10px", color: "var(--text-tertiary)", fontSize: 13 }}>
@@ -824,8 +830,8 @@ function AdminChatView({
                   onMouseLeave={() => setActivePartnerHover(null)}
                   style={{
                     padding: "12px 14px", borderRadius: 12, border: "none",
-                    background: isSelected ? "rgba(245,158,11,0.15)" : isHovered ? "rgba(255,255,255,0.05)" : "transparent",
-                    color: isSelected ? "#fcd34d" : "var(--text-secondary)",
+                    background: isSelected ? "var(--warning-bg)" : isHovered ? "var(--bg-glass-hover)" : "transparent",
+                    color: isSelected ? "var(--warning-text)" : "var(--text-secondary)",
                     cursor: "pointer", transition: "all 0.2s", textAlign: "left"
                   }}
                 >
@@ -858,20 +864,35 @@ function AdminChatView({
           </div>
         )}
       </div>
+      )}
 
       {/* Chat Conversation (Right Panel) */}
-      <div style={{
-        flex: 1, background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
-        borderRadius: 20, display: "flex", flexDirection: "column", overflow: "hidden",
-        backdropFilter: "blur(12px)"
-      }}>
-        {selectedPartner ? (
-          <>
-            {/* Header */}
-            <div style={{
-              padding: "16px 20px", borderBottom: "0.5px solid var(--border-tertiary)",
-              display: "flex", alignItems: "center", justifyItems: "center", gap: 12
-            }}>
+      {(!isMobile || selectedPartner) && (
+        <div style={{
+          flex: 1, background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
+          borderRadius: 20, display: isMobile && !selectedPartner ? "none" : "flex", flexDirection: "column", overflow: "hidden",
+          backdropFilter: "blur(12px)", width: isMobile ? "100%" : "auto"
+        }}>
+          {selectedPartner ? (
+            <>
+              {/* Header */}
+              <div style={{
+                padding: "16px 20px", borderBottom: "0.5px solid var(--border-tertiary)",
+                display: "flex", alignItems: "center", justifyItems: "center", gap: 12
+              }}>
+                {isMobile && (
+                  <button
+                    onClick={() => onSelectPartner(null)}
+                    style={{
+                      background: "none", border: "none", color: "var(--text-primary)",
+                      fontSize: 18, cursor: "pointer", marginRight: 8,
+                      display: "flex", alignItems: "center", justifyContent: "center"
+                    }}
+                    title="Back to patients"
+                  >
+                    ←
+                  </button>
+                )}
               <div style={{
                 width: 36, height: 36, borderRadius: "50%",
                 background: "linear-gradient(135deg, #f59e0b, #d97706)",
@@ -999,6 +1020,7 @@ function AdminChatView({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

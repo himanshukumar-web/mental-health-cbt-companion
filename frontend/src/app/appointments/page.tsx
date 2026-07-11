@@ -41,6 +41,14 @@ export default function BookAppointmentPage() {
   const [hoveredDoctor, setHoveredDoctor] = useState<string | null>(null);
   const [hoveredSlot, setHoveredSlot] = useState<string | null>(null);
 
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 500);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
   }, [user, loading, router]);
@@ -223,26 +231,26 @@ export default function BookAppointmentPage() {
             <div key={s.num} style={{ display: "flex", alignItems: "center" }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                 <div style={{
-                  width: 40, height: 40, borderRadius: "50%",
+                  width: isMobile ? 32 : 40, height: isMobile ? 32 : 40, borderRadius: "50%",
                   background: step >= s.num ? "linear-gradient(135deg, #22c55e, #16a34a)" : "var(--bg-glass)",
                   border: step >= s.num ? "none" : "1px solid var(--border-secondary)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   color: step >= s.num ? "white" : "var(--text-tertiary)",
-                  fontSize: 14, fontWeight: 700,
+                  fontSize: isMobile ? 12 : 14, fontWeight: 700,
                   boxShadow: step >= s.num ? "0 4px 16px rgba(34,197,94,0.3)" : "none",
                   transition: "all 0.3s",
                 }}>{step > s.num ? "✓" : s.num}</div>
                 <span style={{
-                  fontSize: 12, color: step >= s.num ? "var(--text-primary)" : "var(--text-tertiary)",
+                  fontSize: isMobile ? 10 : 12, color: step >= s.num ? "var(--text-primary)" : "var(--text-tertiary)",
                   fontWeight: step === s.num ? 600 : 400, transition: "all 0.3s",
                 }}>{s.label}</span>
               </div>
               {i < 2 && (
                 <div style={{
-                  width: 40, height: 2, margin: "0 8px",
+                  width: isMobile ? 20 : 40, height: 2, margin: isMobile ? "0 4px" : "0 8px",
                   background: step > s.num ? "#22c55e" : "var(--border-secondary)",
                   borderRadius: 2, transition: "background 0.3s",
-                  marginBottom: 22,
+                  marginBottom: isMobile ? 16 : 22,
                 }} />
               )}
             </div>
@@ -410,20 +418,20 @@ export default function BookAppointmentPage() {
                       style={{
                         flexShrink: 0, padding: "12px 14px", borderRadius: 14,
                         border: isSelected ? "1.5px solid #22c55e" : "0.5px solid var(--border-secondary)",
-                        background: isSelected ? "rgba(34,197,94,0.12)" : isWeekend ? "rgba(255,255,255,0.02)" : "var(--bg-glass)",
+                        background: isSelected ? "var(--success-bg)" : isWeekend ? "transparent" : "var(--bg-glass)",
                         cursor: isWeekend ? "not-allowed" : "pointer",
                         opacity: isWeekend ? 0.4 : 1,
                         display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
                         minWidth: 64, transition: "all 0.2s",
                       }}
                     >
-                      <span style={{ fontSize: 11, color: isSelected ? "#86efac" : "var(--text-tertiary)", fontWeight: 500, textTransform: "uppercase" }}>
+                      <span style={{ fontSize: 11, color: isSelected ? "var(--success-text)" : "var(--text-tertiary)", fontWeight: 500, textTransform: "uppercase" }}>
                         {d.toLocaleDateString("en", { weekday: "short" })}
                       </span>
-                      <span style={{ fontSize: 20, fontWeight: 700, color: isSelected ? "#22c55e" : "var(--text-primary)" }}>
+                      <span style={{ fontSize: 20, fontWeight: 700, color: isSelected ? "var(--success-text)" : "var(--text-primary)" }}>
                         {d.getDate()}
                       </span>
-                      <span style={{ fontSize: 10, color: isSelected ? "#86efac" : "var(--text-tertiary)" }}>
+                      <span style={{ fontSize: 10, color: isSelected ? "var(--success-text)" : "var(--text-tertiary)" }}>
                         {d.toLocaleDateString("en", { month: "short" })}
                       </span>
                     </button>
@@ -450,7 +458,7 @@ export default function BookAppointmentPage() {
                       onMouseLeave={() => setHoveredSlot(null)}
                       style={{
                         padding: "12px 10px", borderRadius: 10, border: "none",
-                        background: isSelected ? "linear-gradient(135deg, #22c55e, #16a34a)" : isHovered ? "rgba(255,255,255,0.08)" : "var(--bg-secondary)",
+                        background: isSelected ? "linear-gradient(135deg, #22c55e, #16a34a)" : isHovered ? "var(--bg-glass-hover)" : "var(--bg-secondary)",
                         color: isSelected ? "white" : "var(--text-secondary)",
                         fontSize: 13, fontWeight: isSelected ? 600 : 400,
                         cursor: "pointer", transition: "all 0.2s",

@@ -147,7 +147,7 @@ export default function RoleSelectPage() {
 
       {/* Role cards */}
       <div style={{
-        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
         gap: 24, maxWidth: 720, width: "100%",
       }}>
         {roles.map((role, i) => {
@@ -227,8 +227,8 @@ export default function RoleSelectPage() {
                 <div style={{
                   marginTop: 24, padding: "12px 0",
                   textAlign: "center", borderRadius: 12,
-                  background: isHovered ? role.gradient : "rgba(255,255,255,0.06)",
-                  color: isHovered ? "white" : "var(--text-tertiary)",
+                  background: isHovered ? role.gradient : "var(--bg-tertiary)",
+                  color: isHovered ? "white" : "var(--text-secondary)",
                   fontSize: 14, fontWeight: 600,
                   transition: "all 0.3s",
                 }}>

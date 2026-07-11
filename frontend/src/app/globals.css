@@ -97,6 +97,18 @@
   --info-bg: rgba(59, 130, 246, 0.08);
   --info-text: #1d4ed8;
   --border-info: rgba(59, 130, 246, 0.15);
+
+  --success-bg: rgba(22, 163, 74, 0.08);
+  --success-text: #166534;
+  --success-border: rgba(22, 163, 74, 0.2);
+
+  --warning-bg: rgba(217, 119, 6, 0.08);
+  --warning-text: #9a3412;
+  --warning-border: rgba(217, 119, 6, 0.2);
+
+  --crisis-bg: rgba(220, 38, 38, 0.08);
+  --crisis-text: #991b1b;
+  --crisis-border: rgba(220, 38, 38, 0.2);
 }
 
 /* Dark theme overrides */
@@ -116,6 +128,22 @@
   --border-primary: rgba(255, 255, 255, 0.12);
   --border-secondary: rgba(255, 255, 255, 0.08);
   --border-tertiary: rgba(255, 255, 255, 0.05);
+
+  --info-bg: rgba(59, 130, 246, 0.12);
+  --info-text: #93c5fd;
+  --border-info: rgba(59, 130, 246, 0.25);
+
+  --success-bg: rgba(34, 197, 94, 0.1);
+  --success-text: #86efac;
+  --success-border: rgba(34, 197, 94, 0.3);
+
+  --warning-bg: rgba(245, 158, 11, 0.1);
+  --warning-text: #fcd34d;
+  --warning-border: rgba(245, 158, 11, 0.3);
+
+  --crisis-bg: rgba(239, 68, 68, 0.08);
+  --crisis-text: #fca5a5;
+  --crisis-border: rgba(239, 68, 68, 0.25);
 }
 
 /* Smooth transition ONLY on theme toggle — NOT on every element (perf killer on mobile) */

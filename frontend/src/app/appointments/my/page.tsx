@@ -42,10 +42,10 @@ interface ChatMessage {
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, { bg: string; text: string; border: string; icon: string }> = {
-    pending: { bg: "rgba(245,158,11,0.12)", text: "#fcd34d", border: "rgba(245,158,11,0.3)", icon: "⏳" },
-    confirmed: { bg: "rgba(59,130,246,0.12)", text: "#93c5fd", border: "rgba(59,130,246,0.3)", icon: "✓" },
-    completed: { bg: "rgba(34,197,94,0.12)", text: "#86efac", border: "rgba(34,197,94,0.3)", icon: "✅" },
-    cancelled: { bg: "rgba(239,68,68,0.12)", text: "#fca5a5", border: "rgba(239,68,68,0.3)", icon: "✕" },
+    pending: { bg: "var(--warning-bg)", text: "var(--warning-text)", border: "var(--warning-border)", icon: "⏳" },
+    confirmed: { bg: "var(--info-bg)", text: "var(--info-text)", border: "var(--info-border)", icon: "✓" },
+    completed: { bg: "var(--success-bg)", text: "var(--success-text)", border: "var(--success-border)", icon: "✅" },
+    cancelled: { bg: "var(--crisis-bg)", text: "var(--crisis-text)", border: "var(--crisis-border)", icon: "✕" },
   };
   const s = styles[status] || styles.pending;
   return (
@@ -79,6 +79,15 @@ function MyAppointmentsPageInner() {
   const [chatInput, setChatInput] = useState("");
   const [sendingMsg, setSendingMsg] = useState(false);
   const [activePartnerHover, setActivePartnerHover] = useState<string | null>(null);
+
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -222,10 +231,10 @@ function MyAppointmentsPageInner() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-        @media (max-width: 640px) {
-          .my-chat-layout { flex-direction: column !important; height: auto !important; }
-          .my-chat-sidebar { width: 100% !important; max-height: 200px !important; }
-          .my-chat-main { min-height: 350px !important; }
+        @media (max-width: 768px) {
+          .my-chat-layout { height: calc(100vh - 250px) !important; min-height: 450px !important; }
+          .my-chat-sidebar { width: 100% !important; height: 100% !important; max-height: none !important; }
+          .my-chat-main { height: 100% !important; min-height: none !important; }
         }
       `}</style>
 
@@ -303,10 +312,11 @@ function MyAppointmentsPageInner() {
         {filter === "chat" ? (
           <div className="my-chat-layout" style={{ display: "flex", gap: 16, height: 480, animation: "fadeIn 0.4s ease" }}>
             {/* Doctors list (Left Column) */}
-            <div className="my-chat-sidebar" style={{
-              width: 240, background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
-              borderRadius: 16, padding: 12, display: "flex", flexDirection: "column", gap: 8
-            }}>
+            {(!isMobile || !selectedPartner) && (
+              <div className="my-chat-sidebar" style={{
+                width: isMobile ? "100%" : 240, background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
+                borderRadius: 16, padding: 12, display: "flex", flexDirection: "column", gap: 8
+              }}>
               <h4 style={{ fontSize: 13, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.06em", paddingBottom: 8, borderBottom: "0.5px solid var(--border-tertiary)" }}>
                 Your Doctors
               </h4>
@@ -327,8 +337,8 @@ function MyAppointmentsPageInner() {
                         onMouseLeave={() => setActivePartnerHover(null)}
                         style={{
                           padding: "10px 12px", borderRadius: 10, border: "none",
-                          background: isSelected ? "rgba(34,197,94,0.12)" : isHovered ? "rgba(255,255,255,0.04)" : "transparent",
-                          color: isSelected ? "#86efac" : "var(--text-secondary)",
+                          background: isSelected ? "var(--success-bg)" : isHovered ? "var(--bg-glass-hover)" : "transparent",
+                          color: isSelected ? "var(--success-text)" : "var(--text-secondary)",
                           textAlign: "left", cursor: "pointer", transition: "all 0.2s"
                         }}
                       >
@@ -361,16 +371,32 @@ function MyAppointmentsPageInner() {
                 </div>
               )}
             </div>
+            )}
 
             {/* Chat Box (Right Column) */}
-            <div className="my-chat-main" style={{
-              flex: 1, background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
-              borderRadius: 16, display: "flex", flexDirection: "column", overflow: "hidden"
-            }}>
-              {selectedPartner ? (
-                <>
-                  {/* Header */}
-                  <div style={{ padding: "12px 18px", borderBottom: "0.5px solid var(--border-tertiary)", display: "flex", alignItems: "center", gap: 12 }}>
+            {(!isMobile || selectedPartner) && (
+              <div className="my-chat-main" style={{
+                flex: 1, background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
+                borderRadius: 16, display: isMobile && !selectedPartner ? "none" : "flex", flexDirection: "column", overflow: "hidden",
+                width: isMobile ? "100%" : "auto"
+              }}>
+                {selectedPartner ? (
+                  <>
+                    {/* Header */}
+                    <div style={{ padding: "12px 18px", borderBottom: "0.5px solid var(--border-tertiary)", display: "flex", alignItems: "center", gap: 12 }}>
+                      {isMobile && (
+                        <button
+                          onClick={() => setSelectedPartner(null)}
+                          style={{
+                            background: "none", border: "none", color: "var(--text-primary)",
+                            fontSize: 18, cursor: "pointer", marginRight: 8,
+                            display: "flex", alignItems: "center", justifyContent: "center"
+                          }}
+                          title="Back to list"
+                        >
+                          ←
+                        </button>
+                      )}
                     <div style={{ position: "relative" }}>
                       <div style={{
                         width: 34, height: 34, borderRadius: "50%",
@@ -496,6 +522,7 @@ function MyAppointmentsPageInner() {
                 </div>
               )}
             </div>
+            )}
           </div>
         ) : (
           /* Normal Appointments Lists */
