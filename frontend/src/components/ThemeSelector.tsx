@@ -1,31 +1,35 @@
 "use client";
 
-import { useAuth, type AppTheme } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function ThemeSelector() {
   const { theme, setTheme } = useAuth();
 
-  const themes: { id: AppTheme; label: string; icon: string; activeColor: string }[] = [
-    { id: "default", label: "Default", icon: "✨", activeColor: "#10b981" },
-    { id: "light", label: "Light", icon: "☀️", activeColor: "#f59e0b" },
-    { id: "dark", label: "Dark", icon: "🌙", activeColor: "#6366f1" },
-  ];
+  const toggleTheme = () => {
+    if (theme === "light") {
+      setTheme("dark");
+    } else {
+      setTheme("light");
+    }
+  };
+
+  const isLight = theme === "light";
 
   return (
-    <div className="theme-selector-container">
-      {themes.map((t) => {
-        const isActive = theme === t.id;
-        return (
-          <button
-            key={t.id}
-            onClick={() => setTheme(t.id)}
-            title={`${t.label} Theme`}
-            className={`theme-selector-btn ${isActive ? "active" : ""}`}
-          >
-            {t.icon}
-          </button>
-        );
-      })}
-    </div>
+    <button
+      onClick={toggleTheme}
+      title={`Switch to ${isLight ? "dark" : "light"} theme`}
+      className="theme-toggle-btn"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        border: "none",
+        cursor: "pointer",
+        transition: "all 0.2s ease",
+      }}
+    >
+      {isLight ? "🌙" : "☀️"}
+    </button>
   );
 }

@@ -275,16 +275,10 @@ button { cursor: pointer; font-family: var(--font-sans); }
     gap: 6px !important;
   }
 
-  .theme-selector-container {
-    gap: 2px !important;
-    padding: 2px !important;
-    border-radius: 10px !important;
-  }
-  .theme-selector-btn {
-    width: 22px !important;
-    height: 22px !important;
-    border-radius: 6px !important;
-    font-size: 11px !important;
+  .theme-toggle-btn {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 12px !important;
   }
 
   :root {
@@ -312,32 +306,19 @@ button { cursor: pointer; font-family: var(--font-sans); }
 :root {
   --logo-gap: 10px;
 }
-.theme-selector-container {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+.theme-toggle-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   background: var(--bg-glass);
   border: 0.5px solid var(--border-secondary);
-  border-radius: 12px;
-  padding: 3px;
-}
-.theme-selector-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 9px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-.theme-selector-btn.active {
-  background: var(--bg-glass-hover);
   color: var(--text-primary);
+  font-size: 15px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.theme-toggle-btn:hover {
+  background: var(--bg-glass-hover);
+  transform: scale(1.05);
 }
 
 .nav-logo-icon {

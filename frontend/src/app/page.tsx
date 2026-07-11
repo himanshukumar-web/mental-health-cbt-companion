@@ -94,12 +94,7 @@ export default function LandingPage() {
                     </Link>
                   )}
 
-                  <button
-                    onClick={startSession}
-                    className="nav-btn nav-btn-primary"
-                  >
-                    Open Sera →
-                  </button>
+
                   <button
                     id="nav-signout"
                     onClick={() => signOut()}
