@@ -268,7 +268,11 @@ button { cursor: pointer; font-family: var(--font-sans); }
     flex-direction: row !important;
     justify-content: space-between !important;
     align-items: center !important;
-    flex-wrap: wrap !important;
+    flex-wrap: nowrap !important;
+  }
+  .nav-auth-container {
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
   }
 
   .theme-selector-container {
@@ -386,5 +390,12 @@ button { cursor: pointer; font-family: var(--font-sans); }
   color: #fcd34d !important;
   font-weight: 600;
   cursor: pointer;
+}
+
+.nav-auth-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
 }
 

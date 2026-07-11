@@ -80,7 +80,7 @@ export default function LandingPage() {
 
           {/* Auth nav */}
           {!loading && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <div className="nav-auth-container">
               {user ? (
                 <>
                   <span className="nav-username">
