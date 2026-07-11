@@ -488,6 +488,18 @@ async def save_message(
     db = get_supabase()
     if db:
         try:
+            # Check if session exists in Supabase
+            try:
+                res = db.table("sessions").select("id").eq("id", session_id).execute()
+                if not res.data:
+                    # Create session
+                    db.table("sessions").insert({
+                        "id": session_id,
+                        "started_at": datetime.now(timezone.utc).isoformat(),
+                    }).execute()
+            except Exception as e:
+                print("Supabase check/create session error:", e)
+
             encrypted = encrypt_message(content, settings.encryption_key)
             db.table("messages").insert({
                 "session_id": session_id,
@@ -497,8 +509,8 @@ async def save_message(
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }).execute()
             return True
-        except Exception:
-            pass
+        except Exception as e:
+            print("Supabase save message error:", e)
 
     # Fallback to local SQLite
     return sqlite_save_message(session_id, role, content, threat_level)
