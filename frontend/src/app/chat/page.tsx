@@ -61,11 +61,49 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 function ChatPageInner() {
   const params = useSearchParams();
-  const [sessionId] = useState(() => params.get("session") ?? crypto.randomUUID());
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const [sessionId, setSessionId] = useState("");
+
+  useEffect(() => {
+    if (loading) return;
+
+    const querySession = params.get("session");
+    if (querySession) {
+      setSessionId(querySession);
+    } else if (user) {
+      setSessionId(user.id);
+    } else {
+      let localSession = localStorage.getItem("sera_guest_session");
+      if (!localSession) {
+        localSession = crypto.randomUUID();
+        localStorage.setItem("sera_guest_session", localSession);
+      }
+      setSessionId(localSession);
+    }
+  }, [user, loading, params]);
 
   const { messages, wsState, crisis, sendMessage, dismissCrisis } =
     useWebSocket(sessionId);
+
+  if (!sessionId) {
+    return (
+      <div style={{
+        height: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "var(--bg-primary)",
+      }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: "50%",
+            background: "linear-gradient(135deg,#a7f3d0,#6ee7b7)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 18, margin: "0 auto 16px",
+            boxShadow: "0 0 20px rgba(34,197,94,0.3)",
+          }}>🌿</div>
+          <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Loading your session…</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{
