@@ -34,19 +34,10 @@ export default function LandingPage() {
   const { user, userRole, signOut, loading } = useAuth();
   const [starting, setStarting] = useState(false);
 
-  const startSession = async () => {
+  const startSession = () => {
     setStarting(true);
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/sessions`,
-        { method: "POST" }
-      );
-      const data = await res.json();
-      router.push(`/chat?session=${data.session_id}`);
-    } catch {
-      const localId = crypto.randomUUID();
-      router.push(`/chat?session=${localId}`);
-    }
+    const localId = crypto.randomUUID();
+    router.push(`/chat?session=${localId}`);
   };
 
   return (

@@ -265,12 +265,10 @@ button { cursor: pointer; font-family: var(--font-sans); }
   /* Navbar responsiveness helper */
   nav {
     padding: 12px 0 !important;
-    flex-direction: column !important;
-    gap: 14px !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
     align-items: center !important;
-  }
-  nav div {
-    justify-content: center !important;
+    flex-wrap: wrap !important;
   }
 }
 

@@ -35,6 +35,7 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
   updateRole: (role: "user" | "admin") => Promise<string | null>;
+  signInWithGoogle: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -47,6 +48,7 @@ const AuthContext = createContext<AuthContextValue>({
   signIn: async () => null,
   signOut: async () => {},
   updateRole: async () => null,
+  signInWithGoogle: async () => null,
 });
 
 // ── Provider ──────────────────────────────────────────────────────────────────
@@ -150,8 +152,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   }, []);
 
+  const signInWithGoogle = useCallback(async (): Promise<string | null> => {
+    if (!supabase) return "Supabase is not configured.";
+    const redirectTo = typeof window !== "undefined"
+      ? `${window.location.origin}/role-select`
+      : undefined;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo },
+    });
+    return error?.message ?? null;
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, userRole, loading, theme, setTheme, signUp, signIn, signOut, updateRole }}>
+    <AuthContext.Provider value={{ user, userRole, loading, theme, setTheme, signUp, signIn, signOut, updateRole, signInWithGoogle }}>
       {children}
     </AuthContext.Provider>
   );
