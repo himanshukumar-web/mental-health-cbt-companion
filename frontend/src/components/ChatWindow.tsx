@@ -7,6 +7,10 @@ import type { AgentStatus, ChatMessage, WSState } from "@/hooks/useWebSocket";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeSelector from "@/components/ThemeSelector";
 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/^http/, "ws") ?? "ws://localhost:8000";
+const HTTP_API_URL = API_URL.replace(/^ws/, "http");
+
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function AgentStatusBadge({ label, status, pulse }: {
@@ -79,6 +83,7 @@ interface ChatWindowProps {
   onSend: (text: string) => void;
   onDismissCrisis: () => void;
   user?: User | null;
+  sessionId: string;
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
@@ -93,7 +98,7 @@ const QUICK_PROMPTS = [
 const MOOD_LABELS = ["Very low 😔", "Low 😟", "Neutral 😐", "Good 🙂", "Great 😊"];
 
 export default function ChatWindow({
-  messages, wsState, isStreaming, crisis, onSend, onDismissCrisis, user,
+  messages, wsState, isStreaming, crisis, onSend, onDismissCrisis, user, sessionId,
 }: ChatWindowProps) {
   const { signOut, userRole } = useAuth();
   const router = useRouter();
@@ -103,11 +108,29 @@ export default function ChatWindow({
   const [mood, setMood] = useState<number | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [sessionsList, setSessionsList] = useState<{ id: string; title: string }[]>([]);
 
   // Auto scroll to bottom when messages or isStreaming changes
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isStreaming]);
+
+  // Load chat session history list
+  useEffect(() => {
+    if (!user) return;
+    const fetchSessions = async () => {
+      try {
+        const res = await fetch(`${HTTP_API_URL}/users/${user.id}/sessions`);
+        if (res.ok) {
+          const data = await res.json();
+          setSessionsList(data.sessions || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch user sessions:", err);
+      }
+    };
+    fetchSessions();
+  }, [user, messages]);
 
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -202,6 +225,18 @@ export default function ChatWindow({
           >
             🏠 Go to Home
           </button>
+          <button
+            onClick={() => router.push(`/chat?session=${crypto.randomUUID()}`)}
+            style={{
+              width: "100%", padding: "8px 10px", borderRadius: 8,
+              background: "linear-gradient(135deg,#22c55e,#16a34a)", border: "none",
+              color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              transition: "all 0.2s", marginTop: 8
+            }}
+          >
+            ➕ New Chat
+          </button>
         </div>
 
         {/* Agents */}
@@ -261,6 +296,44 @@ export default function ChatWindow({
             >
               💬 {userRole === "admin" ? "Chat with Patient" : "Chat with Doctor"}
             </button>
+          </div>
+        )}
+
+        {/* Recent Chats list */}
+        {user && (
+          <div style={{ flex: 1, overflowY: "auto", margin: "16px 0", borderTop: "0.5px solid var(--border-tertiary)", paddingTop: 12 }}>
+            <div style={{
+              fontSize: 10, fontWeight: 600, color: "var(--text-tertiary)",
+              textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8,
+            }}>Recent Chats</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {sessionsList.map(s => {
+                const isSelected = s.id === sessionId;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => router.push(`/chat?session=${s.id}`)}
+                    style={{
+                      width: "100%", padding: "8px 10px", borderRadius: 8,
+                      border: "none",
+                      background: isSelected ? "rgba(34, 197, 94, 0.12)" : "transparent",
+                      color: isSelected ? "var(--text-primary)" : "var(--text-secondary)",
+                      fontSize: 12, textAlign: "left", cursor: "pointer",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      transition: "all 0.15s"
+                    }}
+                    title={s.title}
+                  >
+                    💬 {s.title}
+                  </button>
+                );
+              })}
+              {sessionsList.length === 0 && (
+                <div style={{ fontSize: 11, color: "var(--text-tertiary)", textAlign: "center", padding: "12px 0" }}>
+                  No previous chats
+                </div>
+              )}
+            </div>
           </div>
         )}
 

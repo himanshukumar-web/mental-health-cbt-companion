@@ -26,7 +26,7 @@ const API_URL =
 
 const HTTP_API_URL = API_URL.replace(/^ws/, "http");
 
-export function useWebSocket(sessionId: string) {
+export function useWebSocket(sessionId: string, userId?: string) {
   const wsRef = useRef<WebSocket | null>(null);
   const [wsState, setWsState] = useState<WSState>({
     isConnected: false,
@@ -71,7 +71,8 @@ export function useWebSocket(sessionId: string) {
 
   const connect = useCallback(() => {
     if (!sessionId) return;
-    const ws = new WebSocket(`${API_URL}/ws/${sessionId}`);
+    const queryParams = userId ? `?user_id=${userId}` : "";
+    const ws = new WebSocket(`${API_URL}/ws/${sessionId}${queryParams}`);
     wsRef.current = ws;
 
     ws.onopen = () =>

@@ -104,10 +104,11 @@ async def create_session():
     return {"session_id": session_id}
 
 
-@app.get("/sessions/{session_id}/history")
-async def get_history(session_id: str):
-    history = await crud.get_session_history(session_id)
-    return {"session_id": session_id, "messages": history}
+@app.get("/users/{user_id}/sessions")
+async def get_user_sessions(user_id: str):
+    sessions = await crud.get_user_sessions(user_id)
+    return {"sessions": sessions}
+
 
 
 # ── Doctor endpoints ───────────────────────────────────────────────────────────
@@ -274,7 +275,7 @@ async def check_user_online(user_id: str):
 # ── WebSocket endpoint ─────────────────────────────────────────────────────────
 
 @app.websocket("/ws/{session_id}")
-async def websocket_endpoint(websocket: WebSocket, session_id: str):
+async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str | None = None):
     await websocket.accept()
 
     try:
@@ -305,7 +306,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             # ── Crisis intercept ──────────────────────────────────────────────
             if threat_level == "crisis":
                 await websocket.send_json({"type": "crisis"})
-                await crud.save_message(session_id, "user", content, "crisis")
+                await crud.save_message(session_id, "user", content, "crisis", user_id)
                 continue
 
             # ── Agent 1: Therapist (streaming) ────────────────────────────────
@@ -337,8 +338,8 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             )
 
             # Persist to Supabase (non-blocking, fire-and-forget)
-            await crud.save_message(session_id, "user", content, threat_level)
-            await crud.save_message(session_id, "assistant", full_response, "normal")
+            await crud.save_message(session_id, "user", content, threat_level, user_id)
+            await crud.save_message(session_id, "assistant", full_response, "normal", user_id)
 
     except WebSocketDisconnect:
         pass

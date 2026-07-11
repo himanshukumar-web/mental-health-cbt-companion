@@ -83,7 +83,7 @@ function ChatPageInner() {
   }, [user, loading, params]);
 
   const { messages, wsState, crisis, sendMessage, dismissCrisis } =
-    useWebSocket(sessionId);
+    useWebSocket(sessionId, user?.id);
 
   if (!sessionId) {
     return (
@@ -125,7 +125,6 @@ function ChatPageInner() {
       {/* Crisis overlay */}
       {crisis && <CrisisPanel onDismiss={dismissCrisis} />}
 
-      {/* Main chat layout (sidebar + chat) */}
       <ChatWindow
         messages={messages}
         wsState={wsState}
@@ -134,6 +133,7 @@ function ChatPageInner() {
         onSend={sendMessage}
         onDismissCrisis={dismissCrisis}
         user={user}
+        sessionId={sessionId}
       />
     </div>
   );
