@@ -636,6 +636,56 @@ async def get_user_sessions(user_id: str) -> list[dict]:
     return sqlite_get_user_sessions(user_id)
 
 
+async def update_session_mood(session_id: str, mood_score: int) -> bool:
+    """Update the mood score of a session."""
+    db = get_supabase()
+    if db:
+        try:
+            db.table("sessions").update({"mood_score": mood_score}).eq("id", session_id).execute()
+            return True
+        except Exception as e:
+            print("Supabase update_session_mood error:", e)
+
+    # Fallback to local SQLite
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE sessions SET mood_score=? WHERE id=?", (mood_score, session_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print("sqlite update_session_mood error:", e)
+        return False
+    finally:
+        conn.close()
+
+
+async def get_session_mood(session_id: str) -> int | None:
+    """Retrieve the mood score of a session."""
+    db = get_supabase()
+    if db:
+        try:
+            res = db.table("sessions").select("mood_score").eq("id", session_id).execute()
+            if res.data:
+                return res.data[0].get("mood_score")
+        except Exception:
+            pass
+
+    # Fallback SQLite
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT mood_score FROM sessions WHERE id=?", (session_id,))
+        row = cursor.fetchone()
+        if row and row[0] is not None:
+            return int(row[0])
+    except Exception:
+        pass
+    finally:
+        conn.close()
+    return None
+
+
 # ── Doctor CRUD ────────────────────────────────────────────────────────────────
 
 async def create_doctor(

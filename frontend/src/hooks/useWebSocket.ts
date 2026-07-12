@@ -52,25 +52,54 @@ export function useWebSocket(sessionId: string, userId?: string) {
   // Load session history on mount or when sessionId changes
   useEffect(() => {
     if (!sessionId) return;
+
+    // Reset messages, history, and crisis state immediately when sessionId changes
+    const defaultMessages: ChatMessage[] = [
+      {
+        role: "assistant",
+        content:
+          "Hi, I'm Sera — your CBT companion. 🌿 This is a safe space to talk through whatever's on your mind. I use evidence-based CBT techniques to help you explore your thoughts and feelings. How are you doing today?",
+        agent: "therapist",
+      },
+    ];
+    setMessages(defaultMessages);
+    historyRef.current = [];
+    setCrisis(false);
+
+    let active = true;
+
     const loadHistory = async () => {
       try {
         const res = await fetch(`${HTTP_API_URL}/sessions/${sessionId}/history`);
         if (res.ok) {
           const data = await res.json();
-          if (data.messages && data.messages.length > 0) {
+          if (active && data.messages && data.messages.length > 0) {
             setMessages(data.messages);
             historyRef.current = data.messages.map((m: any) => ({ role: m.role, content: m.content }));
           }
         }
       } catch (err) {
-        console.error("Failed to load session history:", err);
+        if (active) {
+          console.error("Failed to load session history:", err);
+        }
       }
     };
     loadHistory();
+
+    return () => {
+      active = false;
+    };
   }, [sessionId]);
 
   const connect = useCallback(() => {
     if (!sessionId) return;
+    setWsState({
+      isConnected: false,
+      isStreaming: false,
+      monitorStatus: "idle",
+      therapistStatus: "idle",
+      threatLevel: "normal",
+    });
     const queryParams = userId ? `?user_id=${userId}` : "";
     const ws = new WebSocket(`${API_URL}/ws/${sessionId}${queryParams}`);
     wsRef.current = ws;
@@ -175,7 +204,11 @@ export function useWebSocket(sessionId: string, userId?: string) {
     connect();
     return () => {
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
-      wsRef.current?.close();
+      const ws = wsRef.current;
+      if (ws) {
+        ws.onclose = null;
+        ws.close();
+      }
     };
   }, [connect]);
 

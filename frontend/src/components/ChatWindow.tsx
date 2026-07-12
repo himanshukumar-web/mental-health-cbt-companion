@@ -110,6 +110,12 @@ export default function ChatWindow({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sessionsList, setSessionsList] = useState<{ id: string; title: string }[]>([]);
 
+  // Reset session-specific state when sessionId changes
+  useEffect(() => {
+    setSessionTime(0);
+    setMood(null);
+  }, [sessionId]);
+
   // Auto scroll to bottom when messages or isStreaming changes
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

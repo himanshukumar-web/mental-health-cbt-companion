@@ -54,6 +54,15 @@ app.add_middleware(
 
 # ── Pydantic models ───────────────────────────────────────────────────────────
 
+class SessionCreate(BaseModel):
+    user_id: str | None = None
+    mood_score: int | None = None
+
+
+class MoodUpdate(BaseModel):
+    mood_score: int
+
+
 class DoctorCreate(BaseModel):
     user_id: str
     full_name: str
@@ -98,9 +107,11 @@ async def health_check():
 
 
 @app.post("/sessions")
-async def create_session():
+async def create_session(body: SessionCreate | None = None):
     session_id = str(uuid.uuid4())
-    await crud.create_session(session_id)
+    user_id = body.user_id if body else None
+    mood_score = body.mood_score if body else None
+    await crud.create_session(session_id, mood_score=mood_score, user_id=user_id)
     return {"session_id": session_id}
 
 
@@ -114,6 +125,18 @@ async def get_user_sessions(user_id: str):
 async def get_history(session_id: str):
     history = await crud.get_session_history(session_id)
     return {"session_id": session_id, "messages": history}
+
+
+@app.get("/sessions/{session_id}/mood")
+async def get_session_mood(session_id: str):
+    mood = await crud.get_session_mood(session_id)
+    return {"mood_score": mood}
+
+
+@app.post("/sessions/{session_id}/mood")
+async def update_session_mood(session_id: str, body: MoodUpdate):
+    await crud.update_session_mood(session_id, body.mood_score)
+    return {"status": "ok"}
 
 
 # ── Doctor endpoints ───────────────────────────────────────────────────────────
