@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, Suspense } from "react";
+import { useEffect, useState, useCallback, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -454,7 +454,7 @@ function AdminDashboardInner() {
 
       {/* Main content */}
       <main style={{ flex: 1, padding: isMobile ? "16px 12px 24px" : "20px 36px 36px", overflowY: "auto", display: "flex", flexDirection: "column" }}>
-        {/* Top Header bar with Home, Menu toggle and Theme controls */}
+        {/* Top Header bar with Menu toggle and Theme controls */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, paddingBottom: 12, borderBottom: "0.5px solid var(--border-tertiary)", flexWrap: "wrap", gap: 12 }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {isMobile && (
@@ -470,16 +470,6 @@ function AdminDashboardInner() {
                 ☰ Menu
               </button>
             )}
-            <Link href="/" style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              padding: "8px 16px", borderRadius: 10,
-              border: "0.5px solid var(--border-secondary)",
-              background: "var(--bg-glass)", color: "var(--text-secondary)",
-              fontSize: 13, fontWeight: 500,
-              transition: "all 0.2s"
-            }}>
-              ← Home
-            </Link>
           </div>
           <ThemeSelector />
         </div>

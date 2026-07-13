@@ -28,6 +28,9 @@ from app.database import crud
 online_users: dict[str, float] = {}
 ONLINE_TIMEOUT = 30  # seconds — user is "online" if heartbeat within this window
 
+# In-memory typing status tracker: { (sender_id, receiver_id): expiration_timestamp }
+typing_users: dict[tuple[str, str], float] = {}
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -97,6 +100,12 @@ class DirectMessageCreate(BaseModel):
     sender_id: str
     receiver_id: str
     content: str
+
+
+class TypingUpdate(BaseModel):
+    sender_id: str
+    receiver_id: str
+    is_typing: bool
 
 
 # ── REST endpoints ─────────────────────────────────────────────────────────────
@@ -265,11 +274,33 @@ async def send_direct_message(body: DirectMessageCreate):
     return msg
 
 
+@app.post("/messages/typing")
+async def update_typing_status(body: TypingUpdate):
+    """Update typing status for a sender typing to a receiver."""
+    key = (body.sender_id, body.receiver_id)
+    if body.is_typing:
+        typing_users[key] = time.time() + 4.0  # Status expires in 4 seconds
+    else:
+        typing_users.pop(key, None)
+    return {"status": "ok"}
+
+
 @app.get("/messages/history")
 async def get_message_history(user1: str, user2: str, limit: int = 50):
-    """Get message history between two users."""
+    """Get message history between two users, plus typing status of the partner (user2)."""
     history = await crud.get_direct_messages(user1, user2, limit)
-    return {"messages": history}
+    
+    # Check if user2 (partner) is typing to user1 (current user)
+    partner_typing_key = (user2, user1)
+    is_typing = False
+    if partner_typing_key in typing_users:
+        if time.time() < typing_users[partner_typing_key]:
+            is_typing = True
+        else:
+            # Clean up expired typing key
+            typing_users.pop(partner_typing_key, None)
+            
+    return {"messages": history, "is_typing": is_typing}
 
 
 @app.get("/messages/partners/{user_id}")

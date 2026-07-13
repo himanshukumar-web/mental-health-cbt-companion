@@ -245,29 +245,23 @@ function MyAppointmentsPageInner() {
         flexWrap: "wrap", gap: 10,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: isMobile ? 6 : 10 }}>
             <div style={{
-              width: 34, height: 34, borderRadius: "50%",
+              width: isMobile ? 28 : 34, height: isMobile ? 28 : 34, borderRadius: "50%",
               background: "linear-gradient(135deg, #a7f3d0, #6ee7b7)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 16, boxShadow: "0 0 20px rgba(34,197,94,0.3)",
+              fontSize: isMobile ? 14 : 16, boxShadow: "0 0 20px rgba(34,197,94,0.3)",
             }}>🌿</div>
-            <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 18, color: "var(--text-primary)" }}>Sera</span>
+            <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: isMobile ? 16 : 18, color: "var(--text-primary)" }}>Sera</span>
           </Link>
           <ThemeSelector />
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <Link href="/appointments" style={{
-            padding: "7px 16px", borderRadius: 10,
+            padding: isMobile ? "5px 12px" : "7px 16px", borderRadius: 10,
             background: "linear-gradient(135deg, #22c55e, #16a34a)",
-            color: "white", fontSize: 13, fontWeight: 600,
+            color: "white", fontSize: isMobile ? 12 : 13, fontWeight: 600,
           }}>+ Book New</Link>
-          <Link href="/" style={{
-            padding: "7px 16px", borderRadius: 10,
-            border: "0.5px solid var(--border-secondary)",
-            background: "var(--bg-glass)", color: "var(--text-secondary)",
-            fontSize: 13, fontWeight: 500,
-          }}>← Home</Link>
         </div>
       </nav>
 
