@@ -24,12 +24,14 @@ from app.agents.monitor import analyze_threat_level
 from app.agents.therapist import stream_response
 from app.database import crud
 
+from typing import Dict, Tuple
+
 # In-memory online presence tracker: { user_id: last_heartbeat_timestamp }
-online_users: dict[str, float] = {}
+online_users: Dict[str, float] = {}
 ONLINE_TIMEOUT = 30  # seconds — user is "online" if heartbeat within this window
 
 # In-memory typing status tracker: { (sender_id, receiver_id): expiration_timestamp }
-typing_users: dict[tuple[str, str], float] = {}
+typing_users: Dict[Tuple[str, str], float] = {}
 
 
 @asynccontextmanager
