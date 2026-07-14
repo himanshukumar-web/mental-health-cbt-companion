@@ -224,6 +224,21 @@ async def create_appointment(body: AppointmentCreate):
     )
     if not appt:
         raise HTTPException(status_code=500, detail="Failed to create appointment")
+    
+    # Auto-create notification for the doctor
+    try:
+        doctor = await crud.get_doctor_by_id(body.doctor_id)
+        if doctor and doctor.get("user_id"):
+            await crud.create_notification(
+                user_id=doctor["user_id"],
+                notif_type="new_appointment",
+                title="New Appointment Booked 📅",
+                message=f"{body.patient_name} booked an appointment for {body.date} at {body.time_slot}",
+                link="/admin?tab=appointments",
+            )
+    except Exception as e:
+        print(f"Notification creation failed: {e}")
+    
     return appt
 
 
@@ -249,6 +264,39 @@ async def update_appointment_status(appointment_id: str, body: StatusUpdate):
     ok = await crud.update_appointment_status(appointment_id, body.status)
     if not ok:
         raise HTTPException(status_code=500, detail="Failed to update status")
+    
+    # Auto-create notification for the patient when appointment is confirmed
+    if body.status == "confirmed":
+        try:
+            appt = await crud.get_appointment_by_id(appointment_id)
+            if appt and appt.get("patient_id"):
+                doctor = await crud.get_doctor_by_id(appt["doctor_id"])
+                doctor_name = doctor["full_name"] if doctor else "your doctor"
+                await crud.create_notification(
+                    user_id=appt["patient_id"],
+                    notif_type="appointment_confirmed",
+                    title="Appointment Confirmed ✅",
+                    message=f"Dr. {doctor_name} confirmed your appointment for {appt['date']} at {appt['time_slot']}",
+                    link="/appointments/my",
+                )
+        except Exception as e:
+            print(f"Confirmation notification failed: {e}")
+    elif body.status == "cancelled":
+        try:
+            appt = await crud.get_appointment_by_id(appointment_id)
+            if appt and appt.get("patient_id"):
+                doctor = await crud.get_doctor_by_id(appt["doctor_id"])
+                doctor_name = doctor["full_name"] if doctor else "your doctor"
+                await crud.create_notification(
+                    user_id=appt["patient_id"],
+                    notif_type="appointment_cancelled",
+                    title="Appointment Cancelled ❌",
+                    message=f"Dr. {doctor_name} cancelled the appointment for {appt['date']} at {appt['time_slot']}",
+                    link="/appointments/my",
+                )
+        except Exception as e:
+            print(f"Cancellation notification failed: {e}")
+    
     return {"id": appointment_id, "status": body.status}
 
 
@@ -331,6 +379,34 @@ async def check_user_online(user_id: str):
     now = time.time()
     last_seen = online_users.get(user_id, 0)
     return {"user_id": user_id, "is_online": (now - last_seen) < ONLINE_TIMEOUT}
+
+
+# ── Notification endpoints ─────────────────────────────────────────────────────
+
+@app.get("/notifications/{user_id}")
+async def get_notifications(user_id: str, unread_only: bool = False):
+    """Get notifications for a user."""
+    notifications = await crud.get_user_notifications(user_id, unread_only)
+    unread_count = len([n for n in notifications if not n.get("is_read")])
+    return {"notifications": notifications, "unread_count": unread_count}
+
+
+@app.patch("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str):
+    """Mark a single notification as read."""
+    ok = await crud.mark_notification_read(notification_id)
+    if not ok:
+        raise HTTPException(status_code=500, detail="Failed to mark notification as read")
+    return {"status": "ok"}
+
+
+@app.patch("/notifications/read-all/{user_id}")
+async def mark_all_read(user_id: str):
+    """Mark all notifications as read for a user."""
+    ok = await crud.mark_all_notifications_read(user_id)
+    if not ok:
+        raise HTTPException(status_code=500, detail="Failed to mark notifications as read")
+    return {"status": "ok"}
 
 
 # ── WebSocket endpoint ─────────────────────────────────────────────────────────

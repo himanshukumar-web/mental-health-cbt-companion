@@ -43,7 +43,7 @@ export default function BookAppointmentPage() {
 
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth <= 500);
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
@@ -171,7 +171,7 @@ export default function BookAppointmentPage() {
   return (
     <div style={{
       minHeight: "100vh", background: "var(--bg-primary)",
-      padding: "0 16px 60px", position: "relative", overflow: "hidden",
+      padding: isMobile ? "0 12px 40px" : "0 16px 60px", position: "relative", overflow: "hidden",
     }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -184,36 +184,36 @@ export default function BookAppointmentPage() {
 
       {/* Navbar */}
       <nav style={{
-        maxWidth: 900, margin: "0 auto", padding: "24px 0",
+        maxWidth: 900, margin: "0 auto", padding: isMobile ? "16px 0" : "24px 0",
         display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <Link href="/" style={{ display: "flex", alignItems: "center", gap: isMobile ? 6 : 10 }}>
           <div style={{
-            width: 34, height: 34, borderRadius: "50%",
+            width: isMobile ? 28 : 34, height: isMobile ? 28 : 34, borderRadius: "50%",
             background: "linear-gradient(135deg, #a7f3d0, #6ee7b7)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 16, boxShadow: "0 0 20px rgba(34,197,94,0.3)",
+            fontSize: isMobile ? 14 : 16, boxShadow: "0 0 20px rgba(34,197,94,0.3)",
           }}>🌿</div>
-          <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 18, color: "var(--text-primary)" }}>Sera</span>
+          <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: isMobile ? 16 : 18, color: "var(--text-primary)" }}>Sera</span>
         </Link>
         <Link href="/" style={{
-          padding: "7px 16px", borderRadius: 10,
+          padding: isMobile ? "5px 12px" : "7px 16px", borderRadius: 10,
           border: "0.5px solid var(--border-secondary)",
           background: "var(--bg-glass)", color: "var(--text-secondary)",
-          fontSize: 13, fontWeight: 500,
+          fontSize: isMobile ? 12 : 13, fontWeight: 500,
         }}>← Back</Link>
       </nav>
 
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         {/* Title */}
-        <div style={{ textAlign: "center", marginBottom: 40, animation: "fadeIn 0.5s ease" }}>
+        <div style={{ textAlign: "center", marginBottom: isMobile ? 24 : 40, animation: "fadeIn 0.5s ease" }}>
           <h1 style={{
-            fontFamily: "var(--font-display)", fontSize: "clamp(24px, 4vw, 36px)",
+            fontFamily: "var(--font-display)", fontSize: "clamp(22px, 4vw, 36px)",
             fontWeight: 700, color: "var(--text-primary)", marginBottom: 10,
           }}>
             Book an Appointment 📅
           </h1>
-          <p style={{ fontSize: 15, color: "var(--text-secondary)" }}>
+          <p style={{ fontSize: isMobile ? 13 : 15, color: "var(--text-secondary)" }}>
             Schedule a session with our mental health professionals
           </p>
         </div>
@@ -521,7 +521,7 @@ export default function BookAppointmentPage() {
         {step === 3 && (
           <div style={{ animation: "fadeIn 0.4s ease", maxWidth: 560, margin: "0 auto" }}>
             <div style={{
-              padding: "32px 28px", borderRadius: 20,
+              padding: isMobile ? "20px 16px" : "32px 28px", borderRadius: 20,
               background: "var(--bg-glass)", backdropFilter: "blur(12px)",
               border: "0.5px solid var(--border-secondary)",
               boxShadow: "0 8px 32px rgba(0,0,0,0.2)",

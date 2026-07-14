@@ -79,6 +79,19 @@ def init_sqlite():
         timestamp TEXT
     )
     """)
+    # Create notifications table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS notifications (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        link TEXT,
+        is_read INTEGER DEFAULT 0,
+        created_at TEXT
+    )
+    """)
     
     # Initialize with default doctor if empty
     cursor.execute("SELECT COUNT(*) FROM doctors")
@@ -1041,3 +1054,188 @@ async def get_chat_partners(user_id: str) -> list[dict]:
 
     # Fallback to local SQLite Database
     return sqlite_get_chat_partners(user_id)
+
+
+# ── Notification CRUD ──────────────────────────────────────────────────────────
+
+def sqlite_create_notification(user_id, notif_type, title, message, link=None):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    notif_id = str(uuid.uuid4())
+    created_at = datetime.now(timezone.utc).isoformat()
+    try:
+        cursor.execute("""
+        INSERT INTO notifications (id, user_id, type, title, message, link, is_read, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, 0, ?)
+        """, (notif_id, user_id, notif_type, title, message, link, created_at))
+        conn.commit()
+        return {
+            "id": notif_id, "user_id": user_id, "type": notif_type,
+            "title": title, "message": message, "link": link,
+            "is_read": False, "created_at": created_at
+        }
+    except Exception as e:
+        print("sqlite_create_notification error:", e)
+        return None
+    finally:
+        conn.close()
+
+
+def sqlite_get_user_notifications(user_id, unread_only=False, limit=20):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        if unread_only:
+            cursor.execute("""
+            SELECT id, user_id, type, title, message, link, is_read, created_at
+            FROM notifications WHERE user_id=? AND is_read=0
+            ORDER BY created_at DESC LIMIT ?
+            """, (user_id, limit))
+        else:
+            cursor.execute("""
+            SELECT id, user_id, type, title, message, link, is_read, created_at
+            FROM notifications WHERE user_id=?
+            ORDER BY created_at DESC LIMIT ?
+            """, (user_id, limit))
+        rows = cursor.fetchall()
+        return [{
+            "id": r[0], "user_id": r[1], "type": r[2], "title": r[3],
+            "message": r[4], "link": r[5], "is_read": bool(r[6]), "created_at": r[7]
+        } for r in rows]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+def sqlite_mark_notification_read(notification_id):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE notifications SET is_read=1 WHERE id=?", (notification_id,))
+        conn.commit()
+        return True
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
+
+def sqlite_mark_all_notifications_read(user_id):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE notifications SET is_read=1 WHERE user_id=?", (user_id,))
+        conn.commit()
+        return True
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
+
+def sqlite_get_appointment_by_id(appointment_id):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        SELECT id, doctor_id, patient_id, patient_name, patient_email, date, time_slot, status, notes, created_at
+        FROM appointments WHERE id=?
+        """, (appointment_id,))
+        r = cursor.fetchone()
+        if r:
+            return {
+                "id": r[0], "doctor_id": r[1], "patient_id": r[2], "patient_name": r[3],
+                "patient_email": r[4], "date": r[5], "time_slot": r[6], "status": r[7],
+                "notes": r[8], "created_at": r[9]
+            }
+        return None
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
+async def create_notification(
+    user_id: str,
+    notif_type: str,
+    title: str,
+    message: str,
+    link: str | None = None,
+) -> dict | None:
+    """Create a notification for a user."""
+    db = get_supabase()
+    if db:
+        try:
+            result = db.table("notifications").insert({
+                "user_id": user_id,
+                "type": notif_type,
+                "title": title,
+                "message": message,
+                "link": link,
+                "is_read": False,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }).execute()
+            if result.data:
+                return result.data[0]
+        except Exception as e:
+            print("Supabase create_notification error:", e)
+
+    return sqlite_create_notification(user_id, notif_type, title, message, link)
+
+
+async def get_user_notifications(user_id: str, unread_only: bool = False, limit: int = 20) -> list[dict]:
+    """Get notifications for a user."""
+    db = get_supabase()
+    if db:
+        try:
+            query = db.table("notifications").select("*").eq("user_id", user_id)
+            if unread_only:
+                query = query.eq("is_read", False)
+            result = query.order("created_at", desc=True).limit(limit).execute()
+            if result.data is not None:
+                return result.data
+        except Exception as e:
+            print("Supabase get_user_notifications error:", e)
+
+    return sqlite_get_user_notifications(user_id, unread_only, limit)
+
+
+async def mark_notification_read(notification_id: str) -> bool:
+    """Mark a single notification as read."""
+    db = get_supabase()
+    if db:
+        try:
+            db.table("notifications").update({"is_read": True}).eq("id", notification_id).execute()
+            return True
+        except Exception:
+            pass
+
+    return sqlite_mark_notification_read(notification_id)
+
+
+async def mark_all_notifications_read(user_id: str) -> bool:
+    """Mark all notifications as read for a user."""
+    db = get_supabase()
+    if db:
+        try:
+            db.table("notifications").update({"is_read": True}).eq("user_id", user_id).execute()
+            return True
+        except Exception:
+            pass
+
+    return sqlite_mark_all_notifications_read(user_id)
+
+
+async def get_appointment_by_id(appointment_id: str) -> dict | None:
+    """Get a single appointment by its ID."""
+    db = get_supabase()
+    if db:
+        try:
+            result = db.table("appointments").select("*").eq("id", appointment_id).limit(1).execute()
+            if result.data:
+                return result.data[0]
+        except Exception:
+            pass
+
+    return sqlite_get_appointment_by_id(appointment_id)

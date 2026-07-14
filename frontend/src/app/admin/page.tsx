@@ -52,6 +52,17 @@ interface ChatMessage {
   timestamp: string;
 }
 
+interface Notification {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  message: string;
+  link: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
 function StatCard({ icon, label, value, color, delay }: {
   icon: string; label: string; value: number; color: string; delay: number;
 }) {
@@ -95,6 +106,210 @@ function StatusBadge({ status }: { status: string }) {
       fontSize: 11, fontWeight: 600,
       textTransform: "uppercase", letterSpacing: "0.05em",
     }}>{status}</span>
+  );
+}
+
+// ── Notification Bell Component (Admin) ──────────────────────────────────────
+
+function AdminNotificationBell({ userId, isMobile }: { userId: string; isMobile: boolean }) {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const bellRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    const fetchNotifs = async () => {
+      try {
+        const res = await fetch(`${API_URL}/notifications/${userId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setNotifications(data.notifications || []);
+          setUnreadCount(data.unread_count || 0);
+        }
+      } catch { /* ignore */ }
+    };
+    fetchNotifs();
+    const t = setInterval(fetchNotifs, 5000);
+    return () => clearInterval(t);
+  }, [userId]);
+
+  const handleMarkRead = async (id: string) => {
+    try {
+      await fetch(`${API_URL}/notifications/${id}/read`, { method: "PATCH" });
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch { /* ignore */ }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await fetch(`${API_URL}/notifications/read-all/${userId}`, { method: "PATCH" });
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch { /* ignore */ }
+  };
+
+  const timeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  return (
+    <div ref={bellRef} style={{ position: "relative" }}>
+      <button
+        onClick={() => setShowDropdown(!showDropdown)}
+        style={{
+          position: "relative", width: isMobile ? 34 : 38, height: isMobile ? 34 : 38,
+          borderRadius: 10, border: "0.5px solid var(--border-secondary)",
+          background: "var(--bg-glass)", cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: isMobile ? 16 : 18, transition: "all 0.2s",
+        }}
+        title="Notifications"
+      >
+        🔔
+        {unreadCount > 0 && (
+          <span style={{
+            position: "absolute", top: -4, right: -4,
+            width: 18, height: 18, borderRadius: "50%",
+            background: "linear-gradient(135deg, #ef4444, #dc2626)",
+            color: "white", fontSize: 10, fontWeight: 700,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 2px 8px rgba(239,68,68,0.4)",
+            animation: "scaleIn 0.3s ease",
+          }}>
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {showDropdown && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 8px)", right: 0,
+          width: isMobile ? "calc(100vw - 32px)" : 360, maxHeight: 420,
+          borderRadius: 16, background: "var(--bg-secondary)",
+          border: "0.5px solid var(--border-secondary)",
+          boxShadow: "0 12px 40px rgba(0,0,0,0.4)",
+          zIndex: 1000, overflow: "hidden",
+          animation: "fadeIn 0.2s ease",
+        }}>
+          <div style={{
+            padding: "14px 16px", borderBottom: "0.5px solid var(--border-tertiary)",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+          }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
+              Notifications {unreadCount > 0 && `(${unreadCount})`}
+            </span>
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllRead}
+                style={{
+                  background: "none", border: "none", color: "#fcd34d",
+                  fontSize: 12, fontWeight: 500, cursor: "pointer",
+                }}
+              >Mark all read</button>
+            )}
+          </div>
+
+          <div style={{ maxHeight: 360, overflowY: "auto" }}>
+            {notifications.length === 0 ? (
+              <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-tertiary)", fontSize: 13 }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>🔕</div>
+                No notifications yet
+              </div>
+            ) : (
+              notifications.map(n => (
+                <Link
+                  key={n.id}
+                  href={n.link || "#"}
+                  onClick={() => { handleMarkRead(n.id); setShowDropdown(false); }}
+                  style={{
+                    display: "flex", gap: 12, padding: "12px 16px",
+                    borderBottom: "0.5px solid var(--border-tertiary)",
+                    background: n.is_read ? "transparent" : "rgba(245,158,11,0.04)",
+                    transition: "background 0.2s",
+                  }}
+                >
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                    background: n.type === "new_appointment" ? "rgba(245,158,11,0.15)" : "rgba(59,130,246,0.12)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 16,
+                  }}>
+                    {n.type === "new_appointment" ? "📅" : "💬"}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: 13, fontWeight: n.is_read ? 400 : 600,
+                      color: "var(--text-primary)", marginBottom: 2,
+                    }}>{n.title}</div>
+                    <div style={{
+                      fontSize: 12, color: "var(--text-secondary)",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    }}>{n.message}</div>
+                    <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginTop: 4 }}>
+                      {timeAgo(n.created_at)}
+                    </div>
+                  </div>
+                  {!n.is_read && (
+                    <div style={{
+                      width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                      background: "#f59e0b", alignSelf: "center",
+                      boxShadow: "0 0 6px rgba(245,158,11,0.5)",
+                    }} />
+                  )}
+                </Link>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Typing Indicator ──────────────────────────────────────────────────────────
+
+function AdminTypingIndicator({ name }: { name: string }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 8,
+      padding: "6px 0", animation: "fadeIn 0.3s ease",
+    }}>
+      <div style={{
+        padding: "8px 14px", borderRadius: "14px 14px 14px 0",
+        background: "var(--bg-secondary)",
+        border: "0.5px solid var(--border-secondary)",
+        display: "flex", alignItems: "center", gap: 4,
+      }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={{
+            width: 6, height: 6, borderRadius: "50%",
+            background: "var(--text-tertiary)",
+            animation: `bounce 1.2s ${i * 0.2}s infinite`,
+          }} />
+        ))}
+      </div>
+      <span style={{ fontSize: 11, color: "var(--text-tertiary)", fontStyle: "italic" }}>
+        {name} is typing...
+      </span>
+    </div>
   );
 }
 
@@ -328,6 +543,8 @@ function AdminDashboardInner() {
         @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
         @keyframes countUp { from { transform:translateY(10px); opacity:0; } to { transform:translateY(0); opacity:1; } }
         @keyframes slideIn { from { transform:translateX(-20px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+        @keyframes scaleIn { from { transform: scale(0.8); opacity:0; } to { transform: scale(1); opacity:1; } }
+        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
       `}</style>
 
       {/* Mobile Sidebar Overlay */}
@@ -471,7 +688,10 @@ function AdminDashboardInner() {
               </button>
             )}
           </div>
-          <ThemeSelector />
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <AdminNotificationBell userId={user.id} isMobile={isMobile} />
+            <ThemeSelector />
+          </div>
         </div>
 
         {activeTab === "dashboard" && (
@@ -616,6 +836,7 @@ function AdminDashboardInner() {
             sending={sendingMsg}
             userId={user.id}
             isMobile={isMobile}
+            selectedPartnerUserId={selectedPartner?.user_id || null}
           />
         )}
 
@@ -768,7 +989,7 @@ function AdminAppointmentsView({ appointments, loading: loadingData, onStatusUpd
 // ── Admin Chat View (Live Chat) ──────────────────────────────────────────
 
 function AdminChatView({
-  partners, selectedPartner, onSelectPartner, messages, input, setInput, onSend, sending, userId, isMobile
+  partners, selectedPartner, onSelectPartner, messages, input, setInput, onSend, sending, userId, isMobile, selectedPartnerUserId
 }: {
   partners: ChatPartner[];
   selectedPartner: ChatPartner | null;
@@ -780,15 +1001,67 @@ function AdminChatView({
   sending: boolean;
   userId: string;
   isMobile: boolean;
+  selectedPartnerUserId: string | null;
 }) {
   const [activePartnerHover, setActivePartnerHover] = useState<string | null>(null);
-  const msgEndRef = useState<HTMLDivElement | null>(null);
+  const [partnerTyping, setPartnerTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTypingSentRef = useRef(0);
 
   // Auto scroll to bottom
   useEffect(() => {
     const el = document.getElementById("chat-feed-end");
     if (el) el.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, partnerTyping]);
+
+  // Poll typing status from message history response
+  useEffect(() => {
+    if (!selectedPartner) { setPartnerTyping(false); return; }
+    const checkTyping = async () => {
+      try {
+        const res = await fetch(`${API_URL}/messages/history?user1=${userId}&user2=${selectedPartner.user_id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setPartnerTyping(data.is_typing || false);
+        }
+      } catch { /* ignore */ }
+    };
+    const t = setInterval(checkTyping, 2500);
+    return () => clearInterval(t);
+  }, [selectedPartner, userId]);
+
+  // Send typing indicator (debounced)
+  const sendTypingIndicator = useCallback((isTyping: boolean) => {
+    if (!selectedPartner) return;
+    const now = Date.now();
+    if (isTyping && now - lastTypingSentRef.current < 2000) return;
+    lastTypingSentRef.current = now;
+    fetch(`${API_URL}/messages/typing`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sender_id: userId,
+        receiver_id: selectedPartner.user_id,
+        is_typing: isTyping,
+      }),
+    }).catch(() => {});
+  }, [userId, selectedPartner]);
+
+  const handleInputChange = (val: string) => {
+    setInput(val);
+    if (val.trim()) {
+      sendTypingIndicator(true);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => sendTypingIndicator(false), 3000);
+    } else {
+      sendTypingIndicator(false);
+    }
+  };
+
+  const handleSendWithTypingClear = () => {
+    sendTypingIndicator(false);
+    onSend();
+  };
 
   return (
     <div style={{ display: "flex", flex: 1, gap: isMobile ? 0 : 20, height: isMobile ? "calc(100vh - 160px)" : "calc(100vh - 120px)", animation: "fadeIn 0.4s ease" }}>
@@ -893,7 +1166,11 @@ function AdminChatView({
                 <h4 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)" }}>{selectedPartner.name}</h4>
                 <div style={{ fontSize: 11, color: selectedPartner.is_online ? "#22c55e" : "#6b7280", display: "flex", alignItems: "center", gap: 4 }}>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: selectedPartner.is_online ? "#22c55e" : "#6b7280", display: "inline-block", boxShadow: selectedPartner.is_online ? "0 0 6px rgba(34,197,94,0.5)" : "none" }}></span>
-                  {selectedPartner.is_online ? "Online" : "Offline"}
+                  {partnerTyping ? (
+                    <span style={{ color: "#86efac", fontStyle: "italic" }}>typing...</span>
+                  ) : (
+                    selectedPartner.is_online ? "Online" : "Offline"
+                  )}
                 </div>
               </div>
             </div>
@@ -966,6 +1243,10 @@ function AdminChatView({
                   );
                 });
               })()}
+              {/* Typing indicator */}
+              {partnerTyping && selectedPartner && (
+                <AdminTypingIndicator name={selectedPartner.name} />
+              )}
               <div id="chat-feed-end" />
             </div>
 
@@ -977,8 +1258,8 @@ function AdminChatView({
               <input
                 type="text"
                 value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") onSend(); }}
+                onChange={e => handleInputChange(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") handleSendWithTypingClear(); }}
                 placeholder={`Message ${selectedPartner.name}...`}
                 style={{
                   flex: 1, padding: "12px 16px", borderRadius: 12,
@@ -988,7 +1269,7 @@ function AdminChatView({
                 }}
               />
               <button
-                onClick={onSend}
+                onClick={handleSendWithTypingClear}
                 disabled={sending || !input.trim()}
                 style={{
                   padding: "12px 20px", borderRadius: 12, border: "none",

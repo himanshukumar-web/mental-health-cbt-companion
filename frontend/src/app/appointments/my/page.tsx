@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,6 +40,17 @@ interface ChatMessage {
   timestamp: string;
 }
 
+interface Notification {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  message: string;
+  link: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, { bg: string; text: string; border: string; icon: string }> = {
     pending: { bg: "var(--warning-bg)", text: "var(--warning-text)", border: "var(--warning-border)", icon: "⏳" },
@@ -61,6 +72,219 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+// ── Notification Bell Component ──────────────────────────────────────────
+
+function NotificationBell({ userId, isMobile }: { userId: string; isMobile: boolean }) {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const bellRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // Poll notifications
+  useEffect(() => {
+    if (!userId) return;
+    const fetchNotifs = async () => {
+      try {
+        const res = await fetch(`${API_URL}/notifications/${userId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setNotifications(data.notifications || []);
+          setUnreadCount(data.unread_count || 0);
+        }
+      } catch { /* ignore */ }
+    };
+    fetchNotifs();
+    const t = setInterval(fetchNotifs, 5000);
+    return () => clearInterval(t);
+  }, [userId]);
+
+  const handleMarkRead = async (id: string) => {
+    try {
+      await fetch(`${API_URL}/notifications/${id}/read`, { method: "PATCH" });
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch { /* ignore */ }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await fetch(`${API_URL}/notifications/read-all/${userId}`, { method: "PATCH" });
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch { /* ignore */ }
+  };
+
+  const timeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  return (
+    <div ref={bellRef} style={{ position: "relative" }}>
+      <button
+        onClick={() => setShowDropdown(!showDropdown)}
+        style={{
+          position: "relative", width: isMobile ? 34 : 38, height: isMobile ? 34 : 38,
+          borderRadius: 10, border: "0.5px solid var(--border-secondary)",
+          background: "var(--bg-glass)", cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: isMobile ? 16 : 18, transition: "all 0.2s",
+        }}
+        title="Notifications"
+      >
+        🔔
+        {unreadCount > 0 && (
+          <span style={{
+            position: "absolute", top: -4, right: -4,
+            width: 18, height: 18, borderRadius: "50%",
+            background: "linear-gradient(135deg, #ef4444, #dc2626)",
+            color: "white", fontSize: 10, fontWeight: 700,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 2px 8px rgba(239,68,68,0.4)",
+            animation: "scaleIn 0.3s ease",
+          }}>
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {/* Dropdown */}
+      {showDropdown && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 8px)", right: 0,
+          width: isMobile ? "calc(100vw - 32px)" : 360, maxHeight: 420,
+          borderRadius: 16, background: "var(--bg-secondary)",
+          border: "0.5px solid var(--border-secondary)",
+          boxShadow: "0 12px 40px rgba(0,0,0,0.4)",
+          zIndex: 1000, overflow: "hidden",
+          animation: "fadeIn 0.2s ease",
+        }}>
+          {/* Header */}
+          <div style={{
+            padding: "14px 16px", borderBottom: "0.5px solid var(--border-tertiary)",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+          }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
+              Notifications {unreadCount > 0 && `(${unreadCount})`}
+            </span>
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllRead}
+                style={{
+                  background: "none", border: "none", color: "#86efac",
+                  fontSize: 12, fontWeight: 500, cursor: "pointer",
+                }}
+              >Mark all read</button>
+            )}
+          </div>
+
+          {/* List */}
+          <div style={{ maxHeight: 360, overflowY: "auto" }}>
+            {notifications.length === 0 ? (
+              <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-tertiary)", fontSize: 13 }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>🔕</div>
+                No notifications yet
+              </div>
+            ) : (
+              notifications.map(n => (
+                <Link
+                  key={n.id}
+                  href={n.link || "#"}
+                  onClick={() => { handleMarkRead(n.id); setShowDropdown(false); }}
+                  style={{
+                    display: "flex", gap: 12, padding: "12px 16px",
+                    borderBottom: "0.5px solid var(--border-tertiary)",
+                    background: n.is_read ? "transparent" : "rgba(34,197,94,0.04)",
+                    transition: "background 0.2s",
+                  }}
+                >
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                    background: n.type === "appointment_confirmed" ? "rgba(34,197,94,0.15)"
+                      : n.type === "appointment_cancelled" ? "rgba(239,68,68,0.12)"
+                      : "rgba(59,130,246,0.12)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 16,
+                  }}>
+                    {n.type === "appointment_confirmed" ? "✅" : n.type === "appointment_cancelled" ? "❌" : "📅"}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: 13, fontWeight: n.is_read ? 400 : 600,
+                      color: "var(--text-primary)", marginBottom: 2,
+                    }}>{n.title}</div>
+                    <div style={{
+                      fontSize: 12, color: "var(--text-secondary)",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    }}>{n.message}</div>
+                    <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginTop: 4 }}>
+                      {timeAgo(n.created_at)}
+                    </div>
+                  </div>
+                  {!n.is_read && (
+                    <div style={{
+                      width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                      background: "#22c55e", alignSelf: "center",
+                      boxShadow: "0 0 6px rgba(34,197,94,0.5)",
+                    }} />
+                  )}
+                </Link>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Typing Indicator Component ──────────────────────────────────────────
+
+function TypingIndicator({ name }: { name: string }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 8,
+      padding: "6px 0", animation: "fadeIn 0.3s ease",
+    }}>
+      <div style={{
+        padding: "8px 14px", borderRadius: "14px 14px 14px 0",
+        background: "var(--bg-secondary)",
+        border: "0.5px solid var(--border-secondary)",
+        display: "flex", alignItems: "center", gap: 4,
+      }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={{
+            width: 6, height: 6, borderRadius: "50%",
+            background: "var(--text-tertiary)",
+            animation: `bounce 1.2s ${i * 0.2}s infinite`,
+          }} />
+        ))}
+      </div>
+      <span style={{ fontSize: 11, color: "var(--text-tertiary)", fontStyle: "italic" }}>
+        Dr. {name} is typing...
+      </span>
+    </div>
+  );
+}
+
+// ── Main Component ──────────────────────────────────────────────────────
+
 function MyAppointmentsPageInner() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -79,6 +303,11 @@ function MyAppointmentsPageInner() {
   const [chatInput, setChatInput] = useState("");
   const [sendingMsg, setSendingMsg] = useState(false);
   const [activePartnerHover, setActivePartnerHover] = useState<string | null>(null);
+  const [partnerTyping, setPartnerTyping] = useState(false);
+
+  // Typing debounce
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTypingSentRef = useRef(0);
 
   const [isMobile, setIsMobile] = useState(false);
 
@@ -157,7 +386,7 @@ function MyAppointmentsPageInner() {
     return () => clearInterval(t);
   }, [user, filter, initialDoctorUserId]);
 
-  // Load messages
+  // Load messages + typing status
   useEffect(() => {
     if (!user || !selectedPartner || filter !== "chat") return;
     const loadHistory = async () => {
@@ -166,6 +395,7 @@ function MyAppointmentsPageInner() {
         if (res.ok) {
           const data = await res.json();
           setChatMessages(data.messages || []);
+          setPartnerTyping(data.is_typing || false);
         }
       } catch (e) {
         console.error("Failed to load message history:", e);
@@ -182,7 +412,35 @@ function MyAppointmentsPageInner() {
       const el = document.getElementById("patient-chat-end");
       if (el) el.scrollIntoView({ behavior: "smooth" });
     }
-  }, [chatMessages, filter, selectedPartner]);
+  }, [chatMessages, filter, selectedPartner, partnerTyping]);
+
+  // Send typing indicator (debounced)
+  const sendTypingIndicator = useCallback((isTyping: boolean) => {
+    if (!user || !selectedPartner) return;
+    const now = Date.now();
+    if (isTyping && now - lastTypingSentRef.current < 2000) return;
+    lastTypingSentRef.current = now;
+    fetch(`${API_URL}/messages/typing`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sender_id: user.id,
+        receiver_id: selectedPartner.user_id,
+        is_typing: isTyping,
+      }),
+    }).catch(() => {});
+  }, [user, selectedPartner]);
+
+  const handleInputChange = (val: string) => {
+    setChatInput(val);
+    if (val.trim()) {
+      sendTypingIndicator(true);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => sendTypingIndicator(false), 3000);
+    } else {
+      sendTypingIndicator(false);
+    }
+  };
 
   const handleCancel = async (id: string) => {
     try {
@@ -198,6 +456,7 @@ function MyAppointmentsPageInner() {
   const handleSend = async () => {
     if (!chatInput.trim() || !user || !selectedPartner || sendingMsg) return;
     setSendingMsg(true);
+    sendTypingIndicator(false);
     try {
       const res = await fetch(`${API_URL}/messages`, {
         method: "POST",
@@ -231,6 +490,8 @@ function MyAppointmentsPageInner() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes scaleIn { from { transform: scale(0.8); opacity:0; } to { transform: scale(1); opacity:1; } }
+        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
         @media (max-width: 768px) {
           .my-chat-layout { height: calc(100vh - 250px) !important; min-height: 450px !important; }
           .my-chat-sidebar { width: 100% !important; height: 100% !important; max-height: none !important; }
@@ -244,7 +505,7 @@ function MyAppointmentsPageInner() {
         display: "flex", alignItems: "center", justifyContent: "space-between",
         flexWrap: "wrap", gap: 10,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 14 }}>
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: isMobile ? 6 : 10 }}>
             <div style={{
               width: isMobile ? 28 : 34, height: isMobile ? 28 : 34, borderRadius: "50%",
@@ -256,7 +517,8 @@ function MyAppointmentsPageInner() {
           </Link>
           <ThemeSelector />
         </div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <NotificationBell userId={user.id} isMobile={isMobile} />
           <Link href="/appointments" style={{
             padding: isMobile ? "5px 12px" : "7px 16px", borderRadius: 10,
             background: "linear-gradient(135deg, #22c55e, #16a34a)",
@@ -267,27 +529,27 @@ function MyAppointmentsPageInner() {
 
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         {/* Header */}
-        <div style={{ marginBottom: 32, animation: "fadeIn 0.4s ease" }}>
+        <div style={{ marginBottom: isMobile ? 20 : 32, animation: "fadeIn 0.4s ease" }}>
           <h1 style={{
-            fontFamily: "var(--font-display)", fontSize: "clamp(24px, 4vw, 32px)",
+            fontFamily: "var(--font-display)", fontSize: "clamp(22px, 4vw, 32px)",
             fontWeight: 700, color: "var(--text-primary)", marginBottom: 8,
           }}>My Appointments 📋</h1>
-          <p style={{ fontSize: 15, color: "var(--text-secondary)" }}>
+          <p style={{ fontSize: isMobile ? 13 : 15, color: "var(--text-secondary)" }}>
             Track your bookings and chat live with your doctor
           </p>
         </div>
 
         {/* Filter tabs */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 24, flexWrap: "wrap", animation: "fadeIn 0.4s ease 0.1s both" }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: isMobile ? 16 : 24, flexWrap: "wrap", animation: "fadeIn 0.4s ease 0.1s both" }}>
           {filters.map(f => (
             <button
               key={f.id}
               onClick={() => { setFilter(f.id); setSelectedPartner(null); }}
               style={{
-                padding: "8px 16px", borderRadius: 10, border: "none",
+                padding: isMobile ? "7px 12px" : "8px 16px", borderRadius: 10, border: "none",
                 background: filter === f.id ? "rgba(34,197,94,0.15)" : "var(--bg-glass)",
                 color: filter === f.id ? "#86efac" : "var(--text-secondary)",
-                fontSize: 13, fontWeight: filter === f.id ? 600 : 400,
+                fontSize: isMobile ? 12 : 13, fontWeight: filter === f.id ? 600 : 400,
                 cursor: "pointer", transition: "all 0.2s",
                 display: "flex", alignItems: "center", gap: 6,
               }}
@@ -412,13 +674,17 @@ function MyAppointmentsPageInner() {
                       </div>
                       <div style={{ fontSize: 10, color: selectedPartner.is_online ? "#22c55e" : "#6b7280", display: "flex", alignItems: "center", gap: 3 }}>
                         <span style={{ width: 5, height: 5, borderRadius: "50%", background: selectedPartner.is_online ? "#22c55e" : "#6b7280", display: "inline-block" }}></span>
-                        {selectedPartner.is_online ? "Online" : "Offline"}
+                        {partnerTyping ? (
+                          <span style={{ color: "#86efac", fontStyle: "italic" }}>typing...</span>
+                        ) : (
+                          selectedPartner.is_online ? "Online" : "Offline"
+                        )}
                       </div>
                     </div>
                   </div>
                   
                   {/* Message feed */}
-                  <div style={{ flex: 1, padding: "16px 20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ flex: 1, padding: isMobile ? "12px 14px" : "16px 20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
                     {(() => {
                       let lastDateStr = "";
                       return chatMessages.map(m => {
@@ -449,7 +715,7 @@ function MyAppointmentsPageInner() {
                             <div
                               style={{
                                 alignSelf: isOwn ? "flex-end" : "flex-start",
-                                maxWidth: "70%",
+                                maxWidth: isMobile ? "85%" : "70%",
                                 padding: "10px 14px",
                                 borderRadius: isOwn ? "14px 14px 0 14px" : "14px 14px 14px 0",
                                 background: isOwn ? "rgba(34,197,94,0.15)" : "var(--bg-secondary)",
@@ -476,6 +742,10 @@ function MyAppointmentsPageInner() {
                         );
                       });
                     })()}
+                    {/* Typing indicator */}
+                    {partnerTyping && selectedPartner && (
+                      <TypingIndicator name={selectedPartner.name} />
+                    )}
                     <div id="patient-chat-end" />
                   </div>
 
@@ -484,7 +754,7 @@ function MyAppointmentsPageInner() {
                     <input
                       type="text"
                       value={chatInput}
-                      onChange={e => setChatInput(e.target.value)}
+                      onChange={e => handleInputChange(e.target.value)}
                       onKeyDown={e => { if (e.key === "Enter") handleSend(); }}
                       placeholder={`Message Dr. ${selectedPartner.name}...`}
                       style={{
@@ -528,15 +798,15 @@ function MyAppointmentsPageInner() {
               </div>
             ) : filtered.length === 0 ? (
               <div style={{
-                textAlign: "center", padding: "60px 24px", borderRadius: 20,
+                textAlign: "center", padding: isMobile ? "40px 16px" : "60px 24px", borderRadius: 20,
                 background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
                 animation: "fadeIn 0.4s ease 0.2s both",
               }}>
-                <div style={{ fontSize: 52, marginBottom: 16 }}>📅</div>
-                <h3 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 8, fontFamily: "var(--font-display)" }}>
+                <div style={{ fontSize: isMobile ? 40 : 52, marginBottom: 16 }}>📅</div>
+                <h3 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 8, fontFamily: "var(--font-display)" }}>
                   No Appointments
                 </h3>
-                <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 24 }}>
+                <p style={{ fontSize: isMobile ? 13 : 14, color: "var(--text-secondary)", marginBottom: 24 }}>
                   {filter !== "all" ? `No ${filter} appointments found` : "You haven't booked any appointments yet"}
                 </p>
                 <Link href="/appointments" style={{
@@ -552,34 +822,34 @@ function MyAppointmentsPageInner() {
                   const isPast = new Date(appt.date) < new Date(new Date().toDateString());
                   return (
                     <div key={appt.id} style={{
-                      padding: "22px 24px", borderRadius: 16,
+                      padding: isMobile ? "16px" : "22px 24px", borderRadius: 16,
                       background: "var(--bg-glass)", backdropFilter: "blur(12px)",
                       border: "0.5px solid var(--border-secondary)",
                       animation: `fadeIn 0.3s ease ${i * 0.04}s both`,
                       transition: "all 0.2s",
                     }}>
-                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-                        <div style={{ display: "flex", gap: 16 }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: isMobile ? 12 : 16 }}>
+                        <div style={{ display: "flex", gap: isMobile ? 12 : 16, flex: 1, minWidth: 0 }}>
                           <div style={{
-                            width: 48, height: 48, borderRadius: 14, flexShrink: 0,
+                            width: isMobile ? 40 : 48, height: isMobile ? 40 : 48, borderRadius: isMobile ? 12 : 14, flexShrink: 0,
                             background: "linear-gradient(135deg, #22c55e, #16a34a)",
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 20, color: "white", fontWeight: 700,
+                            fontSize: isMobile ? 16 : 20, color: "white", fontWeight: 700,
                           }}>
                             {appt.doctors?.full_name?.charAt(0) || "D"}
                           </div>
-                          <div>
-                            <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>
+                          <div style={{ minWidth: 0 }}>
+                            <h3 style={{ fontSize: isMobile ? 14 : 16, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>
                               Dr. {appt.doctors?.full_name || "Doctor"}
                             </h3>
-                            <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 10 }}>
+                            <div style={{ fontSize: isMobile ? 11 : 12, color: "var(--text-tertiary)", marginBottom: 10 }}>
                               {appt.doctors?.specialization || "CBT Therapist"}
                             </div>
-                            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                              <span style={{ fontSize: 13, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 5 }}>
+                            <div style={{ display: "flex", gap: isMobile ? 10 : 16, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: isMobile ? 12 : 13, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 5 }}>
                                 📅 {new Date(appt.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                               </span>
-                              <span style={{ fontSize: 13, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 5 }}>
+                              <span style={{ fontSize: isMobile ? 12 : 13, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 5 }}>
                                 🕐 {appt.time_slot}
                               </span>
                               {isPast && (
@@ -596,7 +866,8 @@ function MyAppointmentsPageInner() {
                           </div>
                         </div>
 
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
+                        <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", alignItems: isMobile ? "center" : "flex-end", gap: 10, flexWrap: "wrap" }}>
+                          <StatusBadge status={appt.status} />
                           {appt.doctors?.user_id && (
                             <button
                               onClick={() => {
@@ -610,10 +881,10 @@ function MyAppointmentsPageInner() {
                               style={{
                                 padding: "8px 16px", borderRadius: 10, border: "none",
                                 background: "rgba(34,197,94,0.15)", color: "#86efac",
-                                fontSize: 13, fontWeight: 500, cursor: "pointer",
+                                fontSize: isMobile ? 12 : 13, fontWeight: 500, cursor: "pointer",
                                 transition: "all 0.2s"
                               }}
-                            >💬 Chat with Doctor</button>
+                            >💬 Chat</button>
                           )}
                         </div>
                       </div>
