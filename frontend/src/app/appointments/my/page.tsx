@@ -167,11 +167,14 @@ function NotificationBell({ userId, isMobile }: { userId: string; isMobile: bool
       {/* Dropdown */}
       {showDropdown && (
         <div style={{
-          position: "absolute", top: "calc(100% + 8px)", right: 0,
-          width: isMobile ? "calc(100vw - 32px)" : 360, maxHeight: 420,
+          position: isMobile ? "fixed" : "absolute",
+          top: isMobile ? 60 : "calc(100% + 8px)",
+          right: isMobile ? 16 : 0,
+          left: isMobile ? 16 : "auto",
+          width: isMobile ? "auto" : 360, maxHeight: 420,
           borderRadius: 16, background: "var(--bg-secondary)",
           border: "0.5px solid var(--border-secondary)",
-          boxShadow: "0 12px 40px rgba(0,0,0,0.4)",
+          boxShadow: "0 12px 40px rgba(0,0,0,0.5)",
           zIndex: 1000, overflow: "hidden",
           animation: "fadeIn 0.2s ease",
         }}>
@@ -520,10 +523,11 @@ function MyAppointmentsPageInner() {
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <NotificationBell userId={user.id} isMobile={isMobile} />
           <Link href="/appointments" style={{
-            padding: isMobile ? "5px 12px" : "7px 16px", borderRadius: 10,
+            padding: isMobile ? "4px 8px" : "7px 16px", borderRadius: isMobile ? 8 : 10,
             background: "linear-gradient(135deg, #22c55e, #16a34a)",
-            color: "white", fontSize: isMobile ? 12 : 13, fontWeight: 600,
-          }}>+ Book New</Link>
+            color: "white", fontSize: isMobile ? 11 : 13, fontWeight: 600,
+            whiteSpace: "nowrap",
+          }}>{isMobile ? "+ Book" : "+ Book New"}</Link>
         </div>
       </nav>
 
