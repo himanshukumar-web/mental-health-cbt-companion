@@ -325,14 +325,6 @@ function MyAppointmentsPageInner() {
     if (!loading && !user) router.replace("/login");
   }, [user, loading, router]);
 
-  if (loading || !user) {
-    return (
-      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-primary)" }}>
-        <div style={{ width: 36, height: 36, borderRadius: "50%", border: "3px solid rgba(34,197,94,0.3)", borderTopColor: "#22c55e", animation: "spin 0.8s linear infinite" }} />
-      </div>
-    );
-  }
-
   // Load appointments
   useEffect(() => {
     if (!user) return;
@@ -433,6 +425,14 @@ function MyAppointmentsPageInner() {
       }),
     }).catch(() => {});
   }, [user, selectedPartner]);
+
+  if (loading || !user) {
+    return (
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-primary)" }}>
+        <div style={{ width: 36, height: 36, borderRadius: "50%", border: "3px solid rgba(34,197,94,0.3)", borderTopColor: "#22c55e", animation: "spin 0.8s linear infinite" }} />
+      </div>
+    );
+  }
 
   const handleInputChange = (val: string) => {
     setChatInput(val);
