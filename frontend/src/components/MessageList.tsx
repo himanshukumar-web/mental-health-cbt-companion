@@ -3,6 +3,62 @@
 import { useEffect, useRef } from "react";
 import type { ChatMessage } from "@/hooks/useWebSocket";
 
+// ── Lightweight Markdown renderer ──────────────────────────────────────────────
+function renderMarkdown(text: string) {
+  if (!text) return null;
+  const lines = text.split("\n");
+  const elements: React.ReactNode[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (!trimmed) { i++; continue; }
+
+    const numMatch = trimmed.match(/^(\d+)[.)\-]\s+(.+)/);
+    if (numMatch) {
+      const listItems: React.ReactNode[] = [];
+      while (i < lines.length) {
+        const cur = lines[i].trim();
+        const m = cur.match(/^(\d+)[.)\-]\s+(.+)/);
+        if (!m) break;
+        listItems.push(<li key={i} style={{ marginBottom: 6, lineHeight: 1.6 }}>{formatInline(m[2])}</li>);
+        i++;
+      }
+      elements.push(<ol key={`ol-${i}`} style={{ margin: "8px 0", paddingLeft: 20, listStyleType: "decimal" }}>{listItems}</ol>);
+      continue;
+    }
+
+    const bulletMatch = trimmed.match(/^[-*•]\s+(.+)/);
+    if (bulletMatch) {
+      const listItems: React.ReactNode[] = [];
+      while (i < lines.length) {
+        const cur = lines[i].trim();
+        const m = cur.match(/^[-*•]\s+(.+)/);
+        if (!m) break;
+        listItems.push(<li key={i} style={{ marginBottom: 4, lineHeight: 1.6 }}>{formatInline(m[1])}</li>);
+        i++;
+      }
+      elements.push(<ul key={`ul-${i}`} style={{ margin: "8px 0", paddingLeft: 20, listStyleType: "disc" }}>{listItems}</ul>);
+      continue;
+    }
+
+    elements.push(<p key={i} style={{ margin: "4px 0", lineHeight: 1.65 }}>{formatInline(trimmed)}</p>);
+    i++;
+  }
+  return <>{elements}</>;
+}
+
+function formatInline(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+}
+
 function TypingDots() {
   return (
     <div style={{ display: "flex", gap: 4, padding: "12px 16px", alignItems: "center" }}>
@@ -83,7 +139,7 @@ export default function MessageList({ messages, isStreaming }: MessageListProps)
                   : "0.5px solid var(--border-secondary)",
             }}
           >
-            {msg.content}
+            {msg.role === "assistant" ? renderMarkdown(msg.content) : msg.content}
             {msg.streaming && (
               <span style={{
                 display: "inline-block", width: 2, height: 14,

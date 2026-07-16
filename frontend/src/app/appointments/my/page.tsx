@@ -221,11 +221,12 @@ function NotificationBell({ userId, isMobile }: { userId: string; isMobile: bool
                     width: 36, height: 36, borderRadius: 10, flexShrink: 0,
                     background: n.type === "appointment_confirmed" ? "rgba(34,197,94,0.15)"
                       : n.type === "appointment_cancelled" ? "rgba(239,68,68,0.12)"
+                      : n.type === "new_message" ? "rgba(59,130,246,0.15)"
                       : "rgba(59,130,246,0.12)",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 16,
                   }}>
-                    {n.type === "appointment_confirmed" ? "✅" : n.type === "appointment_cancelled" ? "❌" : "📅"}
+                    {n.type === "appointment_confirmed" ? "✅" : n.type === "appointment_cancelled" ? "❌" : n.type === "new_message" ? "💬" : "📅"}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{

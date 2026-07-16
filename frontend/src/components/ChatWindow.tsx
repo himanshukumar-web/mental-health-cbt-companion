@@ -7,6 +7,89 @@ import type { AgentStatus, ChatMessage, WSState } from "@/hooks/useWebSocket";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeSelector from "@/components/ThemeSelector";
 
+// ── Lightweight Markdown renderer for Sera AI messages ─────────────────────────
+function renderMarkdown(text: string) {
+  if (!text) return null;
+  const lines = text.split("\n");
+  const elements: React.ReactNode[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Skip empty lines
+    if (!trimmed) { i++; continue; }
+
+    // Numbered list: 1. or 1) pattern
+    const numMatch = trimmed.match(/^(\d+)[.)\-]\s+(.+)/);
+    if (numMatch) {
+      const listItems: React.ReactNode[] = [];
+      while (i < lines.length) {
+        const cur = lines[i].trim();
+        const m = cur.match(/^(\d+)[.)\-]\s+(.+)/);
+        if (!m) break;
+        listItems.push(
+          <li key={i} style={{ marginBottom: 6, lineHeight: 1.6 }}>
+            {formatInline(m[2])}
+          </li>
+        );
+        i++;
+      }
+      elements.push(
+        <ol key={`ol-${i}`} style={{ margin: "8px 0", paddingLeft: 20, listStyleType: "decimal" }}>
+          {listItems}
+        </ol>
+      );
+      continue;
+    }
+
+    // Bullet list: - or * or • pattern
+    const bulletMatch = trimmed.match(/^[-*•]\s+(.+)/);
+    if (bulletMatch) {
+      const listItems: React.ReactNode[] = [];
+      while (i < lines.length) {
+        const cur = lines[i].trim();
+        const m = cur.match(/^[-*•]\s+(.+)/);
+        if (!m) break;
+        listItems.push(
+          <li key={i} style={{ marginBottom: 4, lineHeight: 1.6 }}>
+            {formatInline(m[1])}
+          </li>
+        );
+        i++;
+      }
+      elements.push(
+        <ul key={`ul-${i}`} style={{ margin: "8px 0", paddingLeft: 20, listStyleType: "disc" }}>
+          {listItems}
+        </ul>
+      );
+      continue;
+    }
+
+    // Regular paragraph
+    elements.push(
+      <p key={i} style={{ margin: "4px 0", lineHeight: 1.65 }}>
+        {formatInline(trimmed)}
+      </p>
+    );
+    i++;
+  }
+
+  return <>{elements}</>;
+}
+
+// Format inline markdown: **bold**
+function formatInline(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+}
+
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/^http/, "ws") ?? "ws://localhost:8000";
 const HTTP_API_URL = API_URL.replace(/^ws/, "http");
@@ -473,7 +556,7 @@ export default function ChatWindow({
                   ? "0.5px solid var(--color-border-info)"
                   : "0.5px solid var(--border-secondary)",
               }}>
-                {msg.content}
+                {msg.role === "assistant" ? renderMarkdown(msg.content) : msg.content}
                 {msg.streaming && (
                   <span style={{
                     display: "inline-block", width: 2, height: 14,

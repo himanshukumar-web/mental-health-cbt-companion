@@ -248,11 +248,13 @@ function AdminNotificationBell({ userId, isMobile }: { userId: string; isMobile:
                 >
                   <div style={{
                     width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                    background: n.type === "new_appointment" ? "rgba(245,158,11,0.15)" : "rgba(59,130,246,0.12)",
+                    background: n.type === "new_appointment" ? "rgba(245,158,11,0.15)"
+                      : n.type === "new_message" ? "rgba(59,130,246,0.15)"
+                      : "rgba(59,130,246,0.12)",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 16,
                   }}>
-                    {n.type === "new_appointment" ? "📅" : "💬"}
+                    {n.type === "new_appointment" ? "📅" : n.type === "new_message" ? "💬" : "🔔"}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{

@@ -321,6 +321,48 @@ async def send_direct_message(body: DirectMessageCreate):
     )
     if not msg:
         raise HTTPException(status_code=500, detail="Failed to send message")
+    
+    # Auto-create notification for the receiver
+    try:
+        # Check if sender is a doctor
+        sender_doctor = await crud.get_doctor_by_user_id(body.sender_id)
+        if sender_doctor:
+            # Doctor sent message → notify patient
+            doctor_name = sender_doctor.get("full_name", "Your doctor")
+            preview = body.content[:80] + "..." if len(body.content) > 80 else body.content
+            await crud.create_notification(
+                user_id=body.receiver_id,
+                notif_type="new_message",
+                title=f"Dr. {doctor_name} replied 💬",
+                message=preview,
+                link="/appointments/my?tab=chat",
+            )
+        else:
+            # Patient sent message → notify doctor
+            # Find patient name from appointments
+            receiver_doctor = await crud.get_doctor_by_user_id(body.receiver_id)
+            if receiver_doctor:
+                # Get patient name from appointments
+                patient_name = "A patient"
+                try:
+                    appts = await crud.get_doctor_appointments(receiver_doctor["id"])
+                    for appt in appts:
+                        if appt.get("patient_id") == body.sender_id:
+                            patient_name = appt.get("patient_name", "A patient")
+                            break
+                except Exception:
+                    pass
+                preview = body.content[:80] + "..." if len(body.content) > 80 else body.content
+                await crud.create_notification(
+                    user_id=body.receiver_id,
+                    notif_type="new_message",
+                    title=f"New message from {patient_name} 💬",
+                    message=preview,
+                    link="/admin?tab=chat",
+                )
+    except Exception as e:
+        print(f"Message notification failed: {e}")
+    
     return msg
 
 
