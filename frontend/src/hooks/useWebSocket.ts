@@ -26,6 +26,13 @@ const API_URL =
 
 const HTTP_API_URL = API_URL.replace(/^ws/, "http");
 
+// Ping interval to keep WebSocket alive on proxy environments (Render/Vercel)
+const PING_INTERVAL_MS = 25_000;
+
+// Exponential backoff constants
+const RECONNECT_BASE_MS = 2_000;
+const RECONNECT_MAX_MS = 30_000;
+
 export function useWebSocket(sessionId: string, userId?: string) {
   const wsRef = useRef<WebSocket | null>(null);
   const [wsState, setWsState] = useState<WSState>({
@@ -45,6 +52,8 @@ export function useWebSocket(sessionId: string, userId?: string) {
   ]);
   const [crisis, setCrisis] = useState(false);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const reconnectAttempts = useRef(0);
 
   // History ref so sendMessage always reads latest
   const historyRef = useRef<{ role: string; content: string }[]>([]);
@@ -91,6 +100,29 @@ export function useWebSocket(sessionId: string, userId?: string) {
     };
   }, [sessionId]);
 
+  // Clear ping interval helper
+  const clearPing = useCallback(() => {
+    if (pingTimer.current) {
+      clearInterval(pingTimer.current);
+      pingTimer.current = null;
+    }
+  }, []);
+
+  // Start ping interval — keeps WS alive on Render/Vercel proxies
+  const startPing = useCallback(() => {
+    clearPing();
+    pingTimer.current = setInterval(() => {
+      const ws = wsRef.current;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(JSON.stringify({ type: "ping" }));
+        } catch {
+          // Ignore — connection may have just closed
+        }
+      }
+    }, PING_INTERVAL_MS);
+  }, [clearPing]);
+
   const connect = useCallback(() => {
     if (!sessionId) return;
     setWsState({
@@ -104,13 +136,22 @@ export function useWebSocket(sessionId: string, userId?: string) {
     const ws = new WebSocket(`${API_URL}/ws/${sessionId}${queryParams}`);
     wsRef.current = ws;
 
-    ws.onopen = () =>
+    ws.onopen = () => {
+      reconnectAttempts.current = 0; // Reset backoff on successful connect
       setWsState((s) => ({ ...s, isConnected: true, monitorStatus: "active", therapistStatus: "active" }));
+      startPing();
+    };
 
     ws.onclose = () => {
+      clearPing();
       setWsState((s) => ({ ...s, isConnected: false, monitorStatus: "idle", therapistStatus: "idle" }));
-      // Reconnect after 3 s
-      reconnectTimer.current = setTimeout(connect, 3000);
+      // Exponential backoff: 2s → 4s → 8s → 16s → max 30s
+      const delay = Math.min(
+        RECONNECT_BASE_MS * Math.pow(2, reconnectAttempts.current),
+        RECONNECT_MAX_MS,
+      );
+      reconnectAttempts.current += 1;
+      reconnectTimer.current = setTimeout(connect, delay);
     };
 
     ws.onerror = () => ws.close();
@@ -122,6 +163,9 @@ export function useWebSocket(sessionId: string, userId?: string) {
         threat_level?: string;
         agent?: string;
       };
+
+      // Ignore pong messages (keep-alive responses)
+      if (data.type === "pong") return;
 
       switch (data.type) {
         case "monitor_result": {
@@ -198,11 +242,12 @@ export function useWebSocket(sessionId: string, userId?: string) {
           break;
       }
     };
-  }, [sessionId]);
+  }, [sessionId, userId, startPing, clearPing]);
 
   useEffect(() => {
     connect();
     return () => {
+      clearPing();
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
       const ws = wsRef.current;
       if (ws) {
