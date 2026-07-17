@@ -332,27 +332,28 @@ export default function BookAppointmentPage() {
                           <button
                             onClick={() => { setSelectedDoctor(doc); setStep(2); }}
                             style={{
-                              flex: 1, padding: "10px", borderRadius: 10, border: "none",
+                              flex: 1, padding: isMobile ? "12px 8px" : "10px", borderRadius: 10, border: "none",
                               background: "linear-gradient(135deg, #22c55e, #16a34a)",
-                              color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer",
-                              boxShadow: "0 2px 10px rgba(34,197,94,0.2)", textAlign: "center"
+                              color: "white", fontSize: isMobile ? 16 : 13, fontWeight: 600, cursor: "pointer",
+                              boxShadow: "0 2px 10px rgba(34,197,94,0.2)", textAlign: "center",
+                              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
                             }}
                           >
-                            📅 Book
+                            📅{!isMobile && " Book"}
                           </button>
                           
                           <Link
                             href={`/appointments/my?tab=chat&doctorUserId=${doc.user_id}`}
                             style={{
-                              flex: 1, padding: "10px", borderRadius: 10,
+                              flex: 1, padding: isMobile ? "12px 8px" : "10px", borderRadius: 10,
                               border: "0.5px solid var(--border-secondary)",
                               background: "rgba(255,255,255,0.04)",
-                              color: "var(--text-secondary)", fontSize: 13, fontWeight: 500,
+                              color: "var(--text-secondary)", fontSize: isMobile ? 16 : 13, fontWeight: 500,
                               cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                               gap: 4
                             }}
                           >
-                            💬 Chat
+                            💬{!isMobile && " Chat"}
                           </Link>
                         </div>
                       </div>
