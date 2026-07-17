@@ -13,6 +13,7 @@ WebSocket protocol (JSON frames):
 import uuid
 import time
 import json
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
@@ -48,10 +49,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Parse CORS origins — support wildcard patterns
+_raw_origins = settings.cors_origins.split(",")
+_has_wildcard = any("*" in o for o in _raw_origins)
+_cors_origins = ["*"] if _has_wildcard else [o.strip() for o in _raw_origins]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins.split(","),
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=not _has_wildcard,  # credentials can't be used with wildcard
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -459,11 +465,25 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str
 
     try:
         while True:
-            raw = await websocket.receive_text()
+            # Use a timeout so we can detect stale connections on serverless/proxy environments
+            try:
+                raw = await asyncio.wait_for(websocket.receive_text(), timeout=120)
+            except asyncio.TimeoutError:
+                # Connection idle too long — send a server-side ping to keep alive
+                try:
+                    await websocket.send_json({"type": "pong"})
+                except Exception:
+                    break
+                continue
 
             try:
                 data = json.loads(raw)
             except json.JSONDecodeError:
+                continue
+
+            # ── Ping/pong keep-alive ──────────────────────────────────────────
+            if data.get("type") == "ping":
+                await websocket.send_json({"type": "pong"})
                 continue
 
             if data.get("type") != "message":
