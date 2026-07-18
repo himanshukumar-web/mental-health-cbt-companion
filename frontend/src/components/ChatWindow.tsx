@@ -280,8 +280,9 @@ export default function ChatWindow({
 
       {/* Sidebar */}
       <div style={{
-        width: 220, borderRight: "0.5px solid var(--border-secondary)",
-        display: "flex", flexDirection: "column", padding: "16px 12px",
+        width: isMobile ? "75vw" : 220, maxWidth: isMobile ? 260 : "none",
+        borderRight: "0.5px solid var(--border-secondary)",
+        display: "flex", flexDirection: "column", padding: isMobile ? "14px 10px" : "16px 12px",
         background: "var(--bg-secondary)", flexShrink: 0,
         transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         position: isMobile ? "absolute" : "relative",
@@ -289,6 +290,7 @@ export default function ChatWindow({
         zIndex: 100,
         transform: isMobile ? (sidebarOpen ? "translateX(0)" : "translateX(-100%)") : "none",
         boxShadow: isMobile && sidebarOpen ? "5px 0 25px rgba(0,0,0,0.5)" : "none",
+        overflowY: "auto", WebkitOverflowScrolling: "touch" as any,
       }}>
         {/* Brand & Go to Home */}
         <div style={{ marginBottom: 16 }}>
@@ -601,7 +603,12 @@ export default function ChatWindow({
         {messages.length <= 1 && (
           <div style={{
             padding: "0 16px 10px",
-            display: "flex", gap: 6, flexWrap: "wrap",
+            display: "flex", gap: 6,
+            flexWrap: isMobile ? "nowrap" : "wrap",
+            overflowX: isMobile ? "auto" : "visible",
+            WebkitOverflowScrolling: "touch" as any,
+            scrollbarWidth: "none" as any,
+            msOverflowStyle: "none" as any,
           }}>
             {QUICK_PROMPTS.map((p, i) => (
               <button
@@ -614,6 +621,7 @@ export default function ChatWindow({
                   background: "var(--bg-glass)",
                   color: "var(--text-secondary)", cursor: "pointer",
                   transition: "all 0.15s",
+                  whiteSpace: "nowrap", flexShrink: 0,
                 }}
               >
                 {p}
@@ -635,13 +643,14 @@ export default function ChatWindow({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKey}
             placeholder={crisis ? "Crisis support mode active…" : "Share what's on your mind…"}
-            rows={2}
+            rows={isMobile ? 1 : 2}
             disabled={isStreaming || crisis}
             style={{
-              flex: 1, padding: "10px 14px", borderRadius: 12,
+              flex: 1, padding: isMobile ? "10px 12px" : "10px 14px", borderRadius: 12,
               border: "0.5px solid var(--border-secondary)",
               background: "var(--bg-primary)",
-              color: "var(--text-primary)", fontSize: 14,
+              color: "var(--text-primary)",
+              fontSize: isMobile ? 16 : 14,
               fontFamily: "var(--font-sans)", lineHeight: 1.5,
               opacity: isStreaming || crisis ? 0.45 : 1,
               transition: "opacity 0.2s",

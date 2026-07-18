@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeSelector from "@/components/ThemeSelector";
@@ -32,12 +32,21 @@ const FEATURES = [
 export default function LandingPage() {
   const router = useRouter();
   const { user, userRole, signOut, loading } = useAuth();
-  const [starting, setStarting] = useState(false);
+
+  // Prefetch the chat route for instant navigation
+  useEffect(() => {
+    router.prefetch("/chat");
+  }, [router]);
 
   const startSession = () => {
-    setStarting(true);
-    const localId = crypto.randomUUID();
-    router.push(`/chat?session=${localId}`);
+    if (user) {
+      // Logged-in users: continue their existing session (uses user.id internally)
+      router.push("/chat");
+    } else {
+      // Guests: create a new anonymous session
+      const localId = crypto.randomUUID();
+      router.push(`/chat?session=${localId}`);
+    }
   };
 
   return (
@@ -163,23 +172,17 @@ export default function LandingPage() {
             <button
               id="start-session-btn"
               onClick={startSession}
-              disabled={starting}
               className="hero-cta-button"
               style={{
                 padding: "14px 28px", borderRadius: 14, border: "none",
-                background: starting ? "rgba(34,197,94,0.4)" : "linear-gradient(135deg, #22c55e, #16a34a)",
+                background: "linear-gradient(135deg, #22c55e, #16a34a)",
                 color: "white", fontSize: 15, fontWeight: 600,
-                cursor: starting ? "default" : "pointer",
+                cursor: "pointer",
                 boxShadow: "0 4px 24px rgba(34,197,94,0.35)",
                 transition: "all 0.2s",
               }}
             >
-              {starting ? (
-                <>
-                  <span style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "white", borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite" }} />
-                  Starting…
-                </>
-              ) : user ? "Continue Session →" : "Try it free →"}
+              {user ? "Continue Session →" : "Try it free →"}
             </button>
 
             {user && userRole === "admin" && (

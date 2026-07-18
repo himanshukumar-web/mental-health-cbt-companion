@@ -380,3 +380,52 @@ button { cursor: pointer; font-family: var(--font-sans); }
   justify-content: flex-end;
 }
 
+/* ── Enhanced Mobile Optimizations ────────────────────────────────────────── */
+
+/* Fix: Use dynamic viewport height for mobile browsers with address bar */
+@supports (height: 100dvh) {
+  html, body {
+    height: 100dvh;
+  }
+}
+
+/* Safe area insets for notched phones (iPhone X+, etc.) */
+@supports (padding: env(safe-area-inset-bottom)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Hide scrollbar on quick prompts horizontal scroll */
+.quick-prompts-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Small phone screens (≤ 400px) ────────────────────────────────────────── */
+@media (max-width: 400px) {
+  .hero-cta-button {
+    padding: 11px 16px !important;
+    font-size: 13px !important;
+  }
+  .nav-btn {
+    padding: 4px 8px !important;
+    font-size: 10px !important;
+  }
+  .nav-logo-icon {
+    width: 24px !important;
+    height: 24px !important;
+    font-size: 11px !important;
+  }
+  .nav-logo-text {
+    font-size: 14px !important;
+  }
+}
+
+/* ── Prevent iOS auto-zoom on input focus ─────────────────────────────────── */
+@media screen and (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}

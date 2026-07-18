@@ -106,7 +106,7 @@ function ChatPageInner() {
   }
 
   return (
-    <div style={{
+    <div className="chat-root" style={{
       display: "flex",
       height: "100vh",
       fontFamily: "var(--font-sans)",
@@ -120,6 +120,9 @@ function ChatPageInner() {
         @keyframes slideUp { from{transform:translateY(24px);opacity:0} to{transform:translateY(0);opacity:1} }
         @keyframes fadeIn  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
         @keyframes spin    { to{transform:rotate(360deg)} }
+        @supports (height: 100dvh) {
+          .chat-root { height: 100dvh !important; }
+        }
       `}</style>
 
       {/* Crisis overlay */}
