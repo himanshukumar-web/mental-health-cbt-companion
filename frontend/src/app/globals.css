@@ -429,3 +429,34 @@ button { cursor: pointer; font-family: var(--font-sans); }
     font-size: 16px !important;
   }
 }
+
+/* ── PWA Standalone Mode ──────────────────────────────────────────────────── */
+@media (display-mode: standalone) {
+  /* Extra top padding for iOS status bar when in standalone mode */
+  body {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  /* Hide any "open in browser" hints */
+  .browser-only {
+    display: none !important;
+  }
+}
+
+/* iOS standalone detection (fallback) */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  /* Ensure the app fills the screen properly */
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+  /* Compensate for the notch/status bar area */
+  nav, header, .chat-root {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+/* ── PWA Install Banner animation ─────────────────────────────────────────── */
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

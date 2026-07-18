@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b0f1a">
+  <title>Sera — Offline</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Outfit:wght@600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      background: #0b0f1a;
+      color: #e8edf5;
+      font-family: 'Inter', -apple-system, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .container {
+      text-align: center;
+      max-width: 400px;
+      animation: fadeIn 0.6s ease;
+    }
+    .icon {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: linear-gradient(135deg, #a7f3d0, #6ee7b7);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px; margin: 0 auto 24px;
+      box-shadow: 0 0 40px rgba(34,197,94,0.2);
+    }
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 28px; font-weight: 700;
+      margin-bottom: 12px;
+    }
+    p {
+      color: #8b95a7; font-size: 15px;
+      line-height: 1.7; margin-bottom: 32px;
+    }
+    .retry-btn {
+      padding: 14px 32px; border-radius: 14px; border: none;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: white; font-size: 15px; font-weight: 600;
+      cursor: pointer; box-shadow: 0 4px 24px rgba(34,197,94,0.35);
+      transition: all 0.2s; font-family: 'Inter', sans-serif;
+    }
+    .retry-btn:active { transform: scale(0.97); }
+    .crisis {
+      margin-top: 40px; padding: 16px 20px; border-radius: 12px;
+      background: rgba(239,68,68,0.08);
+      border: 0.5px solid rgba(239,68,68,0.25);
+      font-size: 13px; color: #fca5a5; line-height: 1.6;
+    }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">🌿</div>
+    <h1>You're Offline</h1>
+    <p>
+      It looks like you've lost your internet connection.
+      Sera needs an active connection to provide therapy support.
+      Please check your connection and try again.
+    </p>
+    <button class="retry-btn" onclick="window.location.reload()">
+      Try Again
+    </button>
+    <div class="crisis">
+      <strong>In crisis?</strong> Call iCall: 9152987821 (India) — this number works even without internet via phone call.
+    </div>
+  </div>
+</body>
+</html>
