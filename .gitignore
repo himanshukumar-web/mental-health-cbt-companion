@@ -1,1 +1,7 @@
 .vercel
+.artifacts/
+.gradle/
+.idea/
+.android/
+.venv/
+.venv-1/
