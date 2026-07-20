@@ -1,7 +1,12 @@
+import asyncio
+import logging
 from typing import AsyncIterator
+
 import anthropic
 from groq import AsyncGroq
 from app.config import settings
+
+logger = logging.getLogger("sera.therapist")
 
 
 SYSTEM_PROMPT = """
@@ -59,6 +64,10 @@ DISTRESS_ADDENDUM = (
     "before offering any CBT techniques."
 )
 
+# Retry constants for transient API failures
+MAX_RETRIES = 2
+RETRY_DELAY_SECONDS = 1.0
+
 
 def _get_client():
     """
@@ -68,10 +77,15 @@ def _get_client():
 
     key = settings.anthropic_api_key
 
+    if not key:
+        logger.error("[Sera] No API key configured! Set ANTHROPIC_API_KEY in .env")
+        raise ValueError("No API key configured. Set ANTHROPIC_API_KEY in .env")
+
     # GROQ (Recommended)
     if key.startswith("gsk_"):
         client = AsyncGroq(api_key=key)
         model = "llama-3.3-70b-versatile"
+        logger.info("[Sera] Using Groq provider with model: %s", model)
 
     # OpenRouter
     elif key.startswith("sk-or-"):
@@ -80,11 +94,13 @@ def _get_client():
             base_url="https://openrouter.ai/api/v1",
         )
         model = "meta-llama/llama-3.3-70b-instruct:free"
+        logger.info("[Sera] Using OpenRouter provider with model: %s", model)
 
     # Anthropic Claude
     else:
         client = anthropic.AsyncAnthropic(api_key=key)
         model = "claude-sonnet-4-20250514"
+        logger.info("[Sera] Using Anthropic provider with model: %s", model)
 
     return client, model
 
@@ -94,48 +110,81 @@ async def stream_response(
     threat_level: str = "normal",
 ) -> AsyncIterator[str]:
     """
-    Therapist Agent streaming response
+    Therapist Agent streaming response with retry logic for transient failures.
     """
-
-    client, model = _get_client()
 
     system = SYSTEM_PROMPT
 
     if threat_level == "distress":
         system += DISTRESS_ADDENDUM
 
-    # ==========================
-    # GROQ STREAMING
-    # ==========================
-    if settings.anthropic_api_key.startswith("gsk_"):
+    last_error = None
 
-        stream = await client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system},
-                *messages,
-            ],
-            temperature=0.7,
-            max_tokens=500,
-            stream=True,
-        )
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            client, model = _get_client()
 
-        async for chunk in stream:
-            if chunk.choices:
-                content = chunk.choices[0].delta.content
-                if content:
-                    yield content
+            # ==========================
+            # GROQ STREAMING
+            # ==========================
+            if settings.anthropic_api_key.startswith("gsk_"):
+                logger.debug("[Sera] Groq streaming attempt %d, messages=%d", attempt + 1, len(messages))
 
-    # ==========================
-    # ANTHROPIC / OPENROUTER
-    # ==========================
-    else:
-        async with client.messages.stream(
-            model=model,
-            max_tokens=1000,
-            system=system,
-            messages=messages,
-        ) as stream:
+                stream = await client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": system},
+                        *messages,
+                    ],
+                    temperature=0.7,
+                    max_tokens=500,
+                    stream=True,
+                )
 
-            async for text in stream.text_stream:
-                yield text
+                async for chunk in stream:
+                    if chunk.choices:
+                        content = chunk.choices[0].delta.content
+                        if content:
+                            yield content
+
+            # ==========================
+            # ANTHROPIC / OPENROUTER
+            # ==========================
+            else:
+                logger.debug("[Sera] Anthropic streaming attempt %d, messages=%d", attempt + 1, len(messages))
+
+                async with client.messages.stream(
+                    model=model,
+                    max_tokens=1000,
+                    system=system,
+                    messages=messages,
+                ) as stream:
+
+                    async for text in stream.text_stream:
+                        yield text
+
+            # If we got here without error, streaming was successful
+            return
+
+        except Exception as exc:
+            last_error = exc
+            error_name = type(exc).__name__
+            logger.error(
+                "[Sera] Therapist stream error (attempt %d/%d): %s: %s",
+                attempt + 1, MAX_RETRIES + 1, error_name, str(exc)
+            )
+
+            # Don't retry on auth errors — they won't fix themselves
+            error_msg = str(exc).lower()
+            if "auth" in error_msg or "api_key" in error_msg or "invalid" in error_msg:
+                logger.error("[Sera] Authentication error — not retrying")
+                break
+
+            if attempt < MAX_RETRIES:
+                delay = RETRY_DELAY_SECONDS * (attempt + 1)
+                logger.info("[Sera] Retrying in %.1fs...", delay)
+                await asyncio.sleep(delay)
+
+    # All retries exhausted
+    if last_error:
+        raise last_error

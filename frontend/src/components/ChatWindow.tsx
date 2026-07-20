@@ -90,9 +90,8 @@ function formatInline(text: string): React.ReactNode {
   });
 }
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/^http/, "ws") ?? "ws://localhost:8000";
-const HTTP_API_URL = API_URL.replace(/^ws/, "http");
+const HTTP_API_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
@@ -165,6 +164,7 @@ interface ChatWindowProps {
   crisis: boolean;
   onSend: (text: string) => void;
   onDismissCrisis: () => void;
+  onReconnect?: () => void;
   user?: User | null;
   sessionId: string;
 }
@@ -181,7 +181,7 @@ const QUICK_PROMPTS = [
 const MOOD_LABELS = ["Very low 😔", "Low 😟", "Neutral 😐", "Good 🙂", "Great 😊"];
 
 export default function ChatWindow({
-  messages, wsState, isStreaming, crisis, onSend, onDismissCrisis, user, sessionId,
+  messages, wsState, isStreaming, crisis, onSend, onDismissCrisis, onReconnect, user, sessionId,
 }: ChatWindowProps) {
   const { signOut, userRole } = useAuth();
   const router = useRouter();
@@ -514,6 +514,44 @@ export default function ChatWindow({
             <ThemeSelector />
           </div>
         </div>
+
+        {/* Connection error banner */}
+        {wsState.connectionError && (
+          <div style={{
+            padding: "12px 16px", margin: "12px 16px 0",
+            borderRadius: 12,
+            background: "rgba(239, 68, 68, 0.1)",
+            border: "1px solid rgba(239, 68, 68, 0.3)",
+            display: "flex", flexDirection: "column", gap: 8,
+            animation: "fadeIn 0.3s ease",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 16 }}>⚠️</span>
+              <span style={{ fontSize: 13, color: "#fca5a5", fontWeight: 500 }}>
+                Connection Issue
+              </span>
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+              {wsState.connectionError}
+            </div>
+            {onReconnect && (
+              <button
+                id="reconnect-btn"
+                onClick={onReconnect}
+                style={{
+                  alignSelf: "flex-start",
+                  padding: "6px 14px", borderRadius: 8,
+                  background: "rgba(239, 68, 68, 0.2)",
+                  border: "1px solid rgba(239, 68, 68, 0.4)",
+                  color: "#fca5a5", fontSize: 12, fontWeight: 600,
+                  cursor: "pointer", transition: "all 0.2s",
+                }}
+              >
+                🔄 Retry Connection
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Messages */}
         <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>

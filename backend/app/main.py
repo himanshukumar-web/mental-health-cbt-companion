@@ -14,6 +14,7 @@ import uuid
 import time
 import json
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
@@ -26,6 +27,9 @@ from app.agents.therapist import stream_response
 from app.database import crud
 
 from typing import Dict, Tuple
+
+logger = logging.getLogger("sera.api")
+logging.basicConfig(level=logging.INFO)
 
 # In-memory online presence tracker: { user_id: last_heartbeat_timestamp }
 online_users: Dict[str, float] = {}
@@ -462,6 +466,7 @@ async def mark_all_read(user_id: str):
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str | None = None):
     await websocket.accept()
+    logger.info("[WS] Connected: session=%s user=%s", session_id, user_id or "guest")
 
     try:
         while True:
@@ -479,6 +484,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str
             try:
                 data = json.loads(raw)
             except json.JSONDecodeError:
+                logger.warning("[WS] Received invalid JSON from session=%s", session_id)
                 continue
 
             # ── Ping/pong keep-alive ──────────────────────────────────────────
@@ -495,6 +501,8 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str
             if not content:
                 continue
 
+            logger.info("[WS] Message from session=%s: %s...", session_id, content[:50])
+
             # ── Agent 2: Monitor ──────────────────────────────────────────────
             threat_level = await analyze_threat_level(content)
 
@@ -504,6 +512,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str
 
             # ── Crisis intercept ──────────────────────────────────────────────
             if threat_level == "crisis":
+                logger.warning("[WS] Crisis detected for session=%s", session_id)
                 await websocket.send_json({"type": "crisis"})
                 await crud.save_message(session_id, "user", content, "crisis", user_id)
                 continue
@@ -519,8 +528,11 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str
                     full_response += token
                     await websocket.send_json({"type": "token", "content": token})
             except Exception as exc:
-                import traceback
-                traceback.print_exc()
+                error_name = type(exc).__name__
+                logger.error(
+                    "[WS] Therapist stream failed for session=%s: %s: %s",
+                    session_id, error_name, str(exc)
+                )
                 await websocket.send_json(
                     {
                         "type": "error",
@@ -532,6 +544,8 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str
                 )
                 continue
 
+            logger.info("[WS] Response complete for session=%s (%d chars)", session_id, len(full_response))
+
             await websocket.send_json(
                 {"type": "stream_end", "threat_level": threat_level}
             )
@@ -541,6 +555,6 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str
             await crud.save_message(session_id, "assistant", full_response, "normal", user_id)
 
     except WebSocketDisconnect:
-        pass
-    except Exception:
-        pass
+        logger.info("[WS] Disconnected: session=%s", session_id)
+    except Exception as exc:
+        logger.error("[WS] Unexpected error for session=%s: %s", session_id, str(exc))

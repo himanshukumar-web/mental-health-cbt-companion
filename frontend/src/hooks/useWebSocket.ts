@@ -19,12 +19,36 @@ export interface WSState {
   monitorStatus: AgentStatus;
   therapistStatus: AgentStatus;
   threatLevel: ThreatLevel;
+  connectionError: string | null;
 }
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/^http/, "ws") ?? "ws://localhost:8000";
+// ── Smart backend URL detection ─────────────────────────────────────────────
+// Handles: Web browser, Capacitor on physical device, Android emulator
 
-const HTTP_API_URL = API_URL.replace(/^ws/, "http");
+function getBackendUrls(): { wsUrl: string; httpUrl: string } {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL || "";
+
+  // Running in a browser (Next.js dev or production)
+  if (typeof window !== "undefined") {
+    // Check if running inside Capacitor native app
+    const isCapacitor =
+      (window as any).Capacitor !== undefined ||
+      window.location.protocol === "capacitor:";
+
+    if (isCapacitor) {
+      // In Capacitor, use the env URL (should point to the backend server IP)
+      // If no env URL, try common local dev addresses
+      const baseUrl = envUrl || "http://10.0.2.2:8000";
+      const wsBase = baseUrl.replace(/^http/, "ws");
+      return { wsUrl: wsBase, httpUrl: baseUrl };
+    }
+  }
+
+  // Default: use env URL or localhost
+  const baseUrl = envUrl || "http://localhost:8000";
+  const wsBase = baseUrl.replace(/^http/, "ws");
+  return { wsUrl: wsBase, httpUrl: baseUrl };
+}
 
 // Ping interval to keep WebSocket alive on proxy environments (Render/Vercel)
 const PING_INTERVAL_MS = 25_000;
@@ -41,6 +65,7 @@ export function useWebSocket(sessionId: string, userId?: string) {
     monitorStatus: "idle",
     therapistStatus: "idle",
     threatLevel: "normal",
+    connectionError: null,
   });
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -57,6 +82,13 @@ export function useWebSocket(sessionId: string, userId?: string) {
 
   // History ref so sendMessage always reads latest
   const historyRef = useRef<{ role: string; content: string }[]>([]);
+
+  // Resolve URLs once
+  const urlsRef = useRef<{ wsUrl: string; httpUrl: string } | null>(null);
+  if (typeof window !== "undefined" && !urlsRef.current) {
+    urlsRef.current = getBackendUrls();
+    console.log("[Sera WS] Backend URLs:", urlsRef.current);
+  }
 
   // Load session history on mount or when sessionId changes
   useEffect(() => {
@@ -78,8 +110,10 @@ export function useWebSocket(sessionId: string, userId?: string) {
     let active = true;
 
     const loadHistory = async () => {
+      const urls = urlsRef.current;
+      if (!urls) return;
       try {
-        const res = await fetch(`${HTTP_API_URL}/sessions/${sessionId}/history`);
+        const res = await fetch(`${urls.httpUrl}/sessions/${sessionId}/history`);
         if (res.ok) {
           const data = await res.json();
           if (active && data.messages && data.messages.length > 0) {
@@ -89,7 +123,7 @@ export function useWebSocket(sessionId: string, userId?: string) {
         }
       } catch (err) {
         if (active) {
-          console.error("Failed to load session history:", err);
+          console.error("[Sera WS] Failed to load session history:", err);
         }
       }
     };
@@ -125,36 +159,79 @@ export function useWebSocket(sessionId: string, userId?: string) {
 
   const connect = useCallback(() => {
     if (!sessionId) return;
+
+    const urls = urlsRef.current;
+    if (!urls) return;
+
     setWsState({
       isConnected: false,
       isStreaming: false,
       monitorStatus: "idle",
       therapistStatus: "idle",
       threatLevel: "normal",
+      connectionError: null,
     });
+
     const queryParams = userId ? `?user_id=${userId}` : "";
-    const ws = new WebSocket(`${API_URL}/ws/${sessionId}${queryParams}`);
+    const wsUrl = `${urls.wsUrl}/ws/${sessionId}${queryParams}`;
+    console.log("[Sera WS] Connecting to:", wsUrl);
+
+    let ws: WebSocket;
+    try {
+      ws = new WebSocket(wsUrl);
+    } catch (err) {
+      console.error("[Sera WS] WebSocket constructor failed:", err);
+      setWsState((s) => ({
+        ...s,
+        connectionError: `Failed to create WebSocket connection to ${urls.wsUrl}. Make sure the backend is running.`,
+      }));
+      return;
+    }
     wsRef.current = ws;
 
     ws.onopen = () => {
+      console.log("[Sera WS] Connected successfully!");
       reconnectAttempts.current = 0; // Reset backoff on successful connect
-      setWsState((s) => ({ ...s, isConnected: true, monitorStatus: "active", therapistStatus: "active" }));
+      setWsState((s) => ({
+        ...s,
+        isConnected: true,
+        monitorStatus: "active",
+        therapistStatus: "active",
+        connectionError: null,
+      }));
       startPing();
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
+      console.log("[Sera WS] Connection closed:", event.code, event.reason);
       clearPing();
-      setWsState((s) => ({ ...s, isConnected: false, monitorStatus: "idle", therapistStatus: "idle" }));
+      setWsState((s) => ({
+        ...s,
+        isConnected: false,
+        monitorStatus: "idle",
+        therapistStatus: "idle",
+      }));
       // Exponential backoff: 2s → 4s → 8s → 16s → max 30s
       const delay = Math.min(
         RECONNECT_BASE_MS * Math.pow(2, reconnectAttempts.current),
         RECONNECT_MAX_MS,
       );
       reconnectAttempts.current += 1;
+
+      if (reconnectAttempts.current >= 3) {
+        setWsState((s) => ({
+          ...s,
+          connectionError: `Cannot connect to backend at ${urls.wsUrl}. Please ensure the backend server is running.`,
+        }));
+      }
+
       reconnectTimer.current = setTimeout(connect, delay);
     };
 
-    ws.onerror = () => ws.close();
+    ws.onerror = (event) => {
+      console.error("[Sera WS] WebSocket error:", event);
+      ws.close();
+    };
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data) as {
@@ -282,5 +359,19 @@ export function useWebSocket(sessionId: string, userId?: string) {
     setWsState((s) => ({ ...s, monitorStatus: "active", threatLevel: "normal" }));
   }, []);
 
-  return { messages, wsState, crisis, sendMessage, dismissCrisis };
+  // Manual reconnect — allows user to retry from the UI
+  const manualReconnect = useCallback(() => {
+    console.log("[Sera WS] Manual reconnect triggered");
+    reconnectAttempts.current = 0;
+    if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+    const ws = wsRef.current;
+    if (ws) {
+      ws.onclose = null;
+      ws.close();
+    }
+    connect();
+  }, [connect]);
+
+  return { messages, wsState, crisis, sendMessage, dismissCrisis, manualReconnect };
 }
+

@@ -82,7 +82,7 @@ function ChatPageInner() {
     }
   }, [user, loading, params]);
 
-  const { messages, wsState, crisis, sendMessage, dismissCrisis } =
+  const { messages, wsState, crisis, sendMessage, dismissCrisis, manualReconnect } =
     useWebSocket(sessionId, user?.id);
 
   if (!sessionId) {
@@ -135,6 +135,7 @@ function ChatPageInner() {
         crisis={crisis}
         onSend={sendMessage}
         onDismissCrisis={dismissCrisis}
+        onReconnect={manualReconnect}
         user={user}
         sessionId={sessionId}
       />
