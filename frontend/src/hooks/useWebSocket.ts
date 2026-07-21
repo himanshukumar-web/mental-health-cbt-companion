@@ -56,6 +56,7 @@ const PING_INTERVAL_MS = 25_000;
 // Exponential backoff constants
 const RECONNECT_BASE_MS = 2_000;
 const RECONNECT_MAX_MS = 30_000;
+const MAX_RECONNECT_ATTEMPTS = 10;
 
 export function useWebSocket(sessionId: string, userId?: string) {
   const wsRef = useRef<WebSocket | null>(null);
@@ -79,6 +80,10 @@ export function useWebSocket(sessionId: string, userId?: string) {
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const reconnectAttempts = useRef(0);
+  // Track if we intentionally closed the connection (cleanup / manual reconnect)
+  const intentionalClose = useRef(false);
+  // Track the sessionId that the current WS connection belongs to
+  const activeSessionRef = useRef<string>("");
 
   // History ref so sendMessage always reads latest
   const historyRef = useRef<{ role: string; content: string }[]>([]);
@@ -157,24 +162,59 @@ export function useWebSocket(sessionId: string, userId?: string) {
     }, PING_INTERVAL_MS);
   }, [clearPing]);
 
+  // Close existing WS cleanly (without triggering auto-reconnect)
+  const closeExistingWs = useCallback(() => {
+    clearPing();
+    if (reconnectTimer.current) {
+      clearTimeout(reconnectTimer.current);
+      reconnectTimer.current = null;
+    }
+    const ws = wsRef.current;
+    if (ws) {
+      intentionalClose.current = true;
+      ws.onclose = null;
+      ws.onerror = null;
+      ws.onmessage = null;
+      ws.onopen = null;
+      ws.close();
+      wsRef.current = null;
+    }
+  }, [clearPing]);
+
   const connect = useCallback(() => {
-    if (!sessionId) return;
+    // Skip if sessionId is empty — wait for it to be set
+    if (!sessionId) {
+      console.log("[Sera WS] Skipping connect — no sessionId yet");
+      return;
+    }
 
     const urls = urlsRef.current;
     if (!urls) return;
 
-    setWsState({
+    // Close any existing connection cleanly before creating a new one
+    closeExistingWs();
+
+    // Mark this session as active
+    activeSessionRef.current = sessionId;
+    intentionalClose.current = false;
+
+    // Reset reconnect counter for fresh connections (but not for auto-reconnects)
+    // This is handled by the caller
+
+    setWsState((s) => ({
+      ...s,
       isConnected: false,
       isStreaming: false,
       monitorStatus: "idle",
       therapistStatus: "idle",
-      threatLevel: "normal",
-      connectionError: null,
-    });
+      // Preserve existing connectionError during reconnect attempts
+      // so the user can still see the error message
+      connectionError: reconnectAttempts.current === 0 ? null : s.connectionError,
+    }));
 
     const queryParams = userId ? `?user_id=${userId}` : "";
     const wsUrl = `${urls.wsUrl}/ws/${sessionId}${queryParams}`;
-    console.log("[Sera WS] Connecting to:", wsUrl);
+    console.log("[Sera WS] Connecting to:", wsUrl, `(attempt ${reconnectAttempts.current + 1})`);
 
     let ws: WebSocket;
     try {
@@ -183,13 +223,20 @@ export function useWebSocket(sessionId: string, userId?: string) {
       console.error("[Sera WS] WebSocket constructor failed:", err);
       setWsState((s) => ({
         ...s,
-        connectionError: `Failed to create WebSocket connection to ${urls.wsUrl}. Make sure the backend is running.`,
+        connectionError: `Failed to create WebSocket connection. Make sure the backend is running at ${urls.wsUrl}.`,
       }));
       return;
     }
     wsRef.current = ws;
 
     ws.onopen = () => {
+      // If session changed while we were connecting, discard this connection
+      if (activeSessionRef.current !== sessionId) {
+        console.log("[Sera WS] Session changed during connect, closing stale WS");
+        ws.close();
+        return;
+      }
+
       console.log("[Sera WS] Connected successfully!");
       reconnectAttempts.current = 0; // Reset backoff on successful connect
       setWsState((s) => ({
@@ -205,12 +252,37 @@ export function useWebSocket(sessionId: string, userId?: string) {
     ws.onclose = (event) => {
       console.log("[Sera WS] Connection closed:", event.code, event.reason);
       clearPing();
+
+      // If we intentionally closed, don't auto-reconnect
+      if (intentionalClose.current) {
+        console.log("[Sera WS] Intentional close — not reconnecting");
+        return;
+      }
+
+      // If session changed, don't reconnect for the old session
+      if (activeSessionRef.current !== sessionId) {
+        console.log("[Sera WS] Session changed — not reconnecting old session");
+        return;
+      }
+
       setWsState((s) => ({
         ...s,
         isConnected: false,
+        isStreaming: false,
         monitorStatus: "idle",
         therapistStatus: "idle",
       }));
+
+      // Check if we've exhausted reconnect attempts
+      if (reconnectAttempts.current >= MAX_RECONNECT_ATTEMPTS) {
+        console.log("[Sera WS] Max reconnect attempts reached, giving up");
+        setWsState((s) => ({
+          ...s,
+          connectionError: `Unable to connect to backend after ${MAX_RECONNECT_ATTEMPTS} attempts. Please check if the backend is running and click "Retry Connection".`,
+        }));
+        return;
+      }
+
       // Exponential backoff: 2s → 4s → 8s → 16s → max 30s
       const delay = Math.min(
         RECONNECT_BASE_MS * Math.pow(2, reconnectAttempts.current),
@@ -221,19 +293,24 @@ export function useWebSocket(sessionId: string, userId?: string) {
       if (reconnectAttempts.current >= 3) {
         setWsState((s) => ({
           ...s,
-          connectionError: `Cannot connect to backend at ${urls.wsUrl}. Please ensure the backend server is running.`,
+          connectionError: `Trying to connect to backend... (attempt ${reconnectAttempts.current}/${MAX_RECONNECT_ATTEMPTS})`,
         }));
       }
 
+      console.log(`[Sera WS] Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current}/${MAX_RECONNECT_ATTEMPTS})`);
       reconnectTimer.current = setTimeout(connect, delay);
     };
 
     ws.onerror = (event) => {
       console.error("[Sera WS] WebSocket error:", event);
-      ws.close();
+      // Don't manually close — let the browser fire onclose naturally after onerror
+      // This prevents double-reconnect issues
     };
 
     ws.onmessage = (event) => {
+      // Ignore messages from stale sessions
+      if (activeSessionRef.current !== sessionId) return;
+
       const data = JSON.parse(event.data) as {
         type: string;
         content?: string;
@@ -319,20 +396,26 @@ export function useWebSocket(sessionId: string, userId?: string) {
           break;
       }
     };
-  }, [sessionId, userId, startPing, clearPing]);
+  }, [sessionId, userId, startPing, clearPing, closeExistingWs]);
 
+  // Connect when sessionId changes (and is non-empty)
   useEffect(() => {
+    if (!sessionId) {
+      // Don't attempt connection with empty sessionId
+      return;
+    }
+
+    // Reset reconnect counter for a fresh session
+    reconnectAttempts.current = 0;
     connect();
+
     return () => {
-      clearPing();
-      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
-      const ws = wsRef.current;
-      if (ws) {
-        ws.onclose = null;
-        ws.close();
-      }
+      closeExistingWs();
     };
-  }, [connect]);
+  }, [sessionId, userId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Note: We intentionally exclude `connect` and `closeExistingWs` from deps
+  // because they change on every sessionId/userId change, which would cause
+  // an infinite loop. The effect already re-runs when sessionId/userId changes.
 
   const sendMessage = useCallback(
     (content: string) => {
@@ -363,15 +446,17 @@ export function useWebSocket(sessionId: string, userId?: string) {
   const manualReconnect = useCallback(() => {
     console.log("[Sera WS] Manual reconnect triggered");
     reconnectAttempts.current = 0;
-    if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
-    const ws = wsRef.current;
-    if (ws) {
-      ws.onclose = null;
-      ws.close();
-    }
-    connect();
-  }, [connect]);
+    closeExistingWs();
+    // Clear error state before reconnecting
+    setWsState((s) => ({
+      ...s,
+      connectionError: null,
+    }));
+    // Small delay to ensure cleanup is complete
+    setTimeout(() => {
+      connect();
+    }, 100);
+  }, [connect, closeExistingWs]);
 
   return { messages, wsState, crisis, sendMessage, dismissCrisis, manualReconnect };
 }
-

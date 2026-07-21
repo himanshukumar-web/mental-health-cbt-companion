@@ -453,14 +453,27 @@ export default function ChatWindow({
           )}
           <div style={{
             display: "flex", alignItems: "center", gap: 5,
-            fontSize: 10, color: wsState.isConnected ? "#22c55e" : "#ef4444",
+            fontSize: 10, color: wsState.isConnected ? "#22c55e" : wsState.connectionError ? "#ef4444" : "#eab308",
             marginBottom: 8,
           }}>
             <div style={{
               width: 5, height: 5, borderRadius: "50%",
-              background: wsState.isConnected ? "#22c55e" : "#ef4444",
+              background: wsState.isConnected ? "#22c55e" : wsState.connectionError ? "#ef4444" : "#eab308",
+              animation: !wsState.isConnected && !wsState.connectionError ? "pulse 1.5s infinite" : "none",
             }} />
-            {wsState.isConnected ? "Connected" : "Reconnecting…"}
+            {wsState.isConnected ? "Connected" : wsState.connectionError ? "Disconnected" : "Connecting…"}
+            {!wsState.isConnected && wsState.connectionError && onReconnect && (
+              <button
+                onClick={onReconnect}
+                style={{
+                  marginLeft: 4, fontSize: 9, color: "#fca5a5",
+                  background: "none", border: "none", cursor: "pointer",
+                  textDecoration: "underline", padding: 0,
+                }}
+              >
+                Retry
+              </button>
+            )}
           </div>
           <div style={{ fontSize: 10, color: "var(--text-tertiary)", lineHeight: 1.5 }}>
             Not a replacement for professional therapy. Crisis? Call 9152987821
@@ -515,26 +528,38 @@ export default function ChatWindow({
           </div>
         </div>
 
-        {/* Connection error banner */}
-        {wsState.connectionError && (
+        {/* Connection status banner */}
+        {!wsState.isConnected && (
           <div style={{
             padding: "12px 16px", margin: "12px 16px 0",
             borderRadius: 12,
-            background: "rgba(239, 68, 68, 0.1)",
-            border: "1px solid rgba(239, 68, 68, 0.3)",
+            background: wsState.connectionError
+              ? "rgba(239, 68, 68, 0.1)"
+              : "rgba(234, 179, 8, 0.1)",
+            border: wsState.connectionError
+              ? "1px solid rgba(239, 68, 68, 0.3)"
+              : "1px solid rgba(234, 179, 8, 0.3)",
             display: "flex", flexDirection: "column", gap: 8,
             animation: "fadeIn 0.3s ease",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 16 }}>⚠️</span>
-              <span style={{ fontSize: 13, color: "#fca5a5", fontWeight: 500 }}>
-                Connection Issue
+              <span style={{ fontSize: 16 }}>
+                {wsState.connectionError ? "⚠️" : "🔄"}
+              </span>
+              <span style={{
+                fontSize: 13,
+                color: wsState.connectionError ? "#fca5a5" : "#fde68a",
+                fontWeight: 500,
+              }}>
+                {wsState.connectionError ? "Connection Issue" : "Connecting to Sera..."}
               </span>
             </div>
             <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5 }}>
-              {wsState.connectionError}
+              {wsState.connectionError
+                ? wsState.connectionError
+                : "Establishing connection to the AI backend. This may take a moment if the server is warming up..."}
             </div>
-            {onReconnect && (
+            {wsState.connectionError && onReconnect && (
               <button
                 id="reconnect-btn"
                 onClick={onReconnect}
