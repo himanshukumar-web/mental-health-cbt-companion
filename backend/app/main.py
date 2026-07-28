@@ -906,6 +906,19 @@ async def get_analytics_endpoint(user_id: str, start_date: str | None = None, en
 
 # ── Data Export / Delete ──────────────────────────────────────────────────────
 
+class CrisisLogRequest(BaseModel):
+    user_id: str | None = None
+    session_id: str | None = None
+    content: str
+    threat_level: str = "crisis"
+
+
+@app.post("/crisis-log")
+async def log_crisis_endpoint(req: CrisisLogRequest):
+    res = await crud.create_crisis_log(req.user_id, req.session_id, req.content, req.threat_level)
+    return {"status": "logged", "log": res}
+
+
 @app.get("/export/{user_id}")
 async def export_data_endpoint(user_id: str):
     data = await crud.export_all_user_data(user_id)

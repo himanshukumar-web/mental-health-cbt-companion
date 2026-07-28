@@ -130,7 +130,7 @@ function ChatPageInner() {
       <Sidebar />
 
       {/* Crisis overlay */}
-      {crisis && <CrisisPanel onDismiss={dismissCrisis} />}
+      {crisis && <CrisisPanel onDismiss={dismissCrisis} userId={user?.id} sessionId={sessionId} />}
 
       <div style={{ flex: 1, marginLeft: user ? 260 : 0, height: "100%", overflow: "hidden" }}>
         <ChatWindow

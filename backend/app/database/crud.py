@@ -2159,7 +2159,50 @@ async def upsert_user_settings(user_id: str, data: dict) -> dict | None:
         conn.close()
 
 
-# ── Data Export / Delete ───────────────────────────────────────────────────────
+# ── Crisis Logging ────────────────────────────────────────────────────────────
+
+async def create_crisis_log(user_id: str | None, session_id: str | None, content: str, threat_level: str = "crisis") -> dict | None:
+    now = datetime.now(timezone.utc).isoformat()
+    log_id = str(uuid.uuid4())
+    entry = {
+        "id": log_id,
+        "user_id": user_id or "anonymous",
+        "session_id": session_id or "",
+        "content_preview": content[:100],
+        "threat_level": threat_level,
+        "created_at": now,
+    }
+    db = get_supabase()
+    if db:
+        try:
+            db.table("notifications").insert({
+                "user_id": user_id or "00000000-0000-0000-0000-000000000000",
+                "type": "crisis_alert",
+                "title": "Crisis Protocol Intercepted",
+                "message": f"Safety monitor flagged crisis event: {content[:60]}...",
+                "is_read": False,
+                "created_at": now,
+            }).execute()
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS crisis_logs (
+            id TEXT PRIMARY KEY, user_id TEXT, session_id TEXT,
+            content_preview TEXT, threat_level TEXT, created_at TEXT
+        )""")
+        cursor.execute("""
+        INSERT INTO crisis_logs (id, user_id, session_id, content_preview, threat_level, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)""", (log_id, user_id or "anonymous", session_id or "", content[:100], threat_level, now))
+        conn.commit()
+    except Exception as e:
+        print("SQLite crisis log error:", e)
+    finally:
+        conn.close()
+    return entry
 
 async def export_all_user_data(user_id: str) -> dict:
     """Export all user data for download."""
