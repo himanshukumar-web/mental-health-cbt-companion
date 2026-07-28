@@ -517,14 +517,15 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str
                 await crud.save_message(session_id, "user", content, "crisis", user_id)
                 continue
 
-            # ── Agent 1: Therapist (streaming) ────────────────────────────────
+            # ── Agent 1: Therapist (streaming with memory context) ────────────
             await websocket.send_json({"type": "stream_start", "agent": "therapist"})
 
+            user_memory = await crud.build_user_memory_context(user_id)
             messages = history + [{"role": "user", "content": content}]
             full_response = ""
 
             try:
-                async for token in stream_response(messages, threat_level):
+                async for token in stream_response(messages, threat_level, user_memory):
                     full_response += token
                     await websocket.send_json({"type": "token", "content": token})
             except Exception as exc:

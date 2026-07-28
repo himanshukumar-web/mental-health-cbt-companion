@@ -580,6 +580,58 @@ async def get_user_xp(user_id: str) -> dict:
         conn.close()
 
 
+async def build_user_memory_context(user_id: str | None) -> str:
+    """
+    Retrieve long-term memory context for a user to inject into Sera AI system prompt.
+    Includes profile goals, recent mood average, CBT patterns, habits, and meditation minutes.
+    """
+    if not user_id or user_id == "anonymous":
+        return ""
+
+    memory_parts = []
+    try:
+        # Profile goals
+        profile = await get_user_profile(user_id)
+        if profile and profile.get("wellness_goals"):
+            memory_parts.append(f"- User Goals: {profile['wellness_goals']}")
+        if profile and profile.get("display_name"):
+            memory_parts.append(f"- Preferred Name: {profile['display_name']}")
+
+        # Recent Moods
+        moods = await get_mood_entries(user_id)
+        if moods:
+            avg_mood = sum(m.get("mood_score", 3) for m in moods[:7]) / len(moods[:7])
+            memory_parts.append(f"- Recent 7-Day Average Mood: {avg_mood:.1f} / 5.0")
+            if moods[0].get("notes"):
+                memory_parts.append(f"- Latest Mood Note ({moods[0]['date']}): \"{moods[0]['notes'][:100]}\"")
+
+        # Recent CBT Worksheets
+        worksheets = await get_cbt_worksheets(user_id, limit=3)
+        if worksheets:
+            thoughts = [w.get("automatic_thought", "")[:60] for w in worksheets if w.get("automatic_thought")]
+            if thoughts:
+                memory_parts.append(f"- Recent Automatic Thoughts Reframed: {'; '.join(thoughts)}")
+
+        # Meditation Minutes
+        med_mins = await get_user_meditation_minutes(user_id)
+        if med_mins > 0:
+            memory_parts.append(f"- Total Meditation Completed: {med_mins} minutes")
+
+    except Exception as e:
+        print("Error constructing memory context:", e)
+
+    if not memory_parts:
+        return ""
+
+    return (
+        "\n\n=========================================\n"
+        "USER LONG-TERM MEMORY & CONTEXT:\n"
+        + "\n".join(memory_parts) + "\n"
+        "Use this context naturally in conversation when appropriate to show that you remember their journey.\n"
+        "=========================================\n"
+    )
+
+
 # ── Core API Handlers ─────────────────────────────────────────────────────────
 
 async def create_session(session_id: str, mood_score: int | None = None, user_id: str | None = None) -> bool:

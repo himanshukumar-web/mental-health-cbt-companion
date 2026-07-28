@@ -108,12 +108,16 @@ def _get_client():
 async def stream_response(
     messages: list[dict],
     threat_level: str = "normal",
+    user_memory: str = "",
 ) -> AsyncIterator[str]:
     """
     Therapist Agent streaming response with retry logic for transient failures.
     """
 
     system = SYSTEM_PROMPT
+
+    if user_memory:
+        system += user_memory
 
     if threat_level == "distress":
         system += DISTRESS_ADDENDUM
