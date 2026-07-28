@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
+import { requestNotificationPermission, scheduleSmartReminders } from "@/utils/notifications";
 import toast from "react-hot-toast";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -62,6 +63,10 @@ export default function RemindersPage() {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
+    await requestNotificationPermission();
+    scheduleSmartReminders({
+      waterIntervalMinutes: waterEnabled ? waterInterval : undefined,
+    });
     try {
       const res = await fetch(`${API_URL}/reminders/${user.id}`, {
         method: "PUT",
