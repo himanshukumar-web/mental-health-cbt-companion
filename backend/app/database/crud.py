@@ -481,6 +481,105 @@ def sqlite_get_session_history(session_id, limit=20):
         conn.close()
 
 
+# ── Meditation Sessions & XP Gamification ──────────────────────────────────────
+
+async def create_meditation_session(user_id: str, category: str, title: str, duration_minutes: int) -> dict:
+    now = datetime.now(timezone.utc).isoformat()
+    session_id = str(uuid.uuid4())
+    entry = {
+        "id": session_id, "user_id": user_id, "category": category,
+        "title": title, "duration_minutes": duration_minutes, "completed_at": now,
+    }
+    db = get_supabase()
+    if db:
+        try:
+            db.table("notifications").insert({
+                "user_id": user_id, "type": "meditation_completed",
+                "title": "Meditation Completed! 🧘",
+                "message": f"Completed {duration_minutes}m of '{title}' (+150 XP)",
+                "is_read": False, "created_at": now,
+            }).execute()
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS meditation_sessions (
+            id TEXT PRIMARY KEY, user_id TEXT NOT NULL, category TEXT,
+            title TEXT, duration_minutes INTEGER, completed_at TEXT
+        )""")
+        cursor.execute("""
+        INSERT INTO meditation_sessions (id, user_id, category, title, duration_minutes, completed_at)
+        VALUES (?, ?, ?, ?, ?, ?)""", (session_id, user_id, category, title, duration_minutes, now))
+        conn.commit()
+    except Exception as e:
+        print("SQLite meditation session error:", e)
+    finally:
+        conn.close()
+
+    # Award +150 XP for completing meditation
+    await add_user_xp(user_id, 150, "meditation_session")
+    return entry
+
+
+async def get_user_meditation_minutes(user_id: str) -> int:
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT SUM(duration_minutes) FROM meditation_sessions WHERE user_id=?", (user_id,))
+        res = cursor.fetchone()
+        return res[0] or 0 if res else 0
+    except Exception:
+        return 0
+    finally:
+        conn.close()
+
+
+async def add_user_xp(user_id: str, xp_amount: int, source: str) -> dict:
+    now = datetime.now(timezone.utc).isoformat()
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_xp (
+            user_id TEXT PRIMARY KEY, total_xp INTEGER DEFAULT 0, updated_at TEXT
+        )""")
+        cursor.execute("SELECT total_xp FROM user_xp WHERE user_id=?", (user_id,))
+        row = cursor.fetchone()
+        current_xp = row[0] if row else 0
+        new_xp = current_xp + xp_amount
+
+        cursor.execute("""
+        INSERT INTO user_xp (user_id, total_xp, updated_at) VALUES (?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET total_xp=excluded.total_xp, updated_at=excluded.updated_at
+        """, (user_id, new_xp, now))
+        conn.commit()
+        level = (new_xp // 500) + 1
+        return {"user_id": user_id, "total_xp": new_xp, "level": level, "xp_gained": xp_amount}
+    except Exception as e:
+        print("SQLite XP error:", e)
+        return {"user_id": user_id, "total_xp": 0, "level": 1, "xp_gained": xp_amount}
+    finally:
+        conn.close()
+
+
+async def get_user_xp(user_id: str) -> dict:
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT total_xp FROM user_xp WHERE user_id=?", (user_id,))
+        row = cursor.fetchone()
+        xp = row[0] if row else 0
+        level = (xp // 500) + 1
+        return {"user_id": user_id, "total_xp": xp, "level": level, "next_level_xp": level * 500}
+    except Exception:
+        return {"user_id": user_id, "total_xp": 0, "level": 1, "next_level_xp": 500}
+    finally:
+        conn.close()
+
+
 # ── Core API Handlers ─────────────────────────────────────────────────────────
 
 async def create_session(session_id: str, mood_score: int | None = None, user_id: str | None = None) -> bool:

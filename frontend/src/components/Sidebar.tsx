@@ -21,6 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "habits", label: "Habits", icon: "✅", path: "/habits", category: "wellness" },
   { id: "analytics", label: "Analytics", icon: "📊", path: "/analytics", category: "wellness" },
   { id: "cbt", label: "CBT Tools", icon: "🧠", path: "/cbt", category: "tools" },
+  { id: "meditation", label: "Meditation", icon: "🧘", path: "/meditation", category: "tools" },
   { id: "emotions", label: "Emotions", icon: "💭", path: "/emotions", category: "tools" },
   { id: "appointments", label: "Appointments", icon: "📅", path: "/appointments", category: "care" },
   { id: "profile", label: "Profile", icon: "👤", path: "/profile", category: "account" },

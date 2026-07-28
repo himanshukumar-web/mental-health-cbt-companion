@@ -906,6 +906,25 @@ async def get_analytics_endpoint(user_id: str, start_date: str | None = None, en
 
 # ── Data Export / Delete ──────────────────────────────────────────────────────
 
+class MeditationSessionRequest(BaseModel):
+    user_id: str
+    category: str
+    title: str
+    duration_minutes: int
+
+
+@app.post("/meditation/session")
+async def create_meditation_session_endpoint(req: MeditationSessionRequest):
+    res = await crud.create_meditation_session(req.user_id, req.category, req.title, req.duration_minutes)
+    return {"session": res}
+
+
+@app.get("/gamification/xp/{user_id}")
+async def get_user_xp_endpoint(user_id: str):
+    res = await crud.get_user_xp(user_id)
+    return {"xp": res}
+
+
 class CrisisLogRequest(BaseModel):
     user_id: str | None = None
     session_id: str | None = None
