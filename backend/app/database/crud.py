@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import json
 import uuid
 import sqlite3
 import os
@@ -1239,3 +1240,966 @@ async def get_appointment_by_id(appointment_id: str) -> dict | None:
             pass
 
     return sqlite_get_appointment_by_id(appointment_id)
+
+
+# ── Mood Entries CRUD ──────────────────────────────────────────────────────────
+
+def _init_sqlite_v2():
+    """Initialize V2 tables in SQLite."""
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    tables = [
+        """CREATE TABLE IF NOT EXISTS mood_entries (
+            id TEXT PRIMARY KEY, user_id TEXT NOT NULL, date TEXT NOT NULL,
+            mood_score INTEGER NOT NULL, mood_emoji TEXT DEFAULT '😐',
+            stress_level INTEGER, anxiety_level INTEGER, energy_level INTEGER,
+            sleep_hours REAL, water_intake INTEGER,
+            exercise_done INTEGER DEFAULT 0, meditation_done INTEGER DEFAULT 0,
+            notes TEXT, created_at TEXT, updated_at TEXT,
+            UNIQUE(user_id, date))""",
+        """CREATE TABLE IF NOT EXISTS journal_entries (
+            id TEXT PRIMARY KEY, user_id TEXT NOT NULL, title TEXT DEFAULT '',
+            content TEXT DEFAULT '', content_html TEXT,
+            sentiment TEXT, sentiment_score REAL, emotions TEXT DEFAULT '{}',
+            ai_summary TEXT, word_count INTEGER DEFAULT 0,
+            is_favorite INTEGER DEFAULT 0,
+            created_at TEXT, updated_at TEXT)""",
+        """CREATE TABLE IF NOT EXISTS habit_definitions (
+            id TEXT PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL,
+            icon TEXT DEFAULT '✅', color TEXT DEFAULT '#22c55e',
+            is_active INTEGER DEFAULT 1, sort_order INTEGER DEFAULT 0,
+            created_at TEXT)""",
+        """CREATE TABLE IF NOT EXISTS habit_completions (
+            id TEXT PRIMARY KEY, user_id TEXT NOT NULL,
+            habit_definition_id TEXT NOT NULL, date TEXT NOT NULL,
+            completed INTEGER DEFAULT 1, created_at TEXT,
+            UNIQUE(user_id, habit_definition_id, date))""",
+        """CREATE TABLE IF NOT EXISTS cbt_worksheets (
+            id TEXT PRIMARY KEY, user_id TEXT NOT NULL,
+            situation TEXT NOT NULL, automatic_thought TEXT NOT NULL,
+            emotion TEXT NOT NULL, emotion_intensity INTEGER,
+            thinking_errors TEXT DEFAULT '[]', alternative_thought TEXT,
+            action_plan TEXT, ai_generated INTEGER DEFAULT 0,
+            created_at TEXT)""",
+        """CREATE TABLE IF NOT EXISTS action_plans (
+            id TEXT PRIMARY KEY, user_id TEXT NOT NULL, session_id TEXT,
+            breathing_exercise TEXT, walking_goal TEXT, hydration_goal TEXT,
+            meditation_rec TEXT, journal_prompt TEXT, sleep_rec TEXT,
+            motivational_msg TEXT, created_at TEXT)""",
+        """CREATE TABLE IF NOT EXISTS user_profiles (
+            id TEXT PRIMARY KEY, user_id TEXT NOT NULL UNIQUE,
+            display_name TEXT, avatar_url TEXT, age INTEGER,
+            gender TEXT, timezone TEXT DEFAULT 'Asia/Kolkata',
+            goals TEXT DEFAULT '[]', preferred_reminder_time TEXT DEFAULT '09:00',
+            wellness_goals TEXT, created_at TEXT, updated_at TEXT)""",
+        """CREATE TABLE IF NOT EXISTS reminders (
+            id TEXT PRIMARY KEY, user_id TEXT NOT NULL UNIQUE,
+            journal_enabled INTEGER DEFAULT 1, journal_time TEXT DEFAULT '20:00',
+            meditation_enabled INTEGER DEFAULT 1, meditation_time TEXT DEFAULT '07:00',
+            water_enabled INTEGER DEFAULT 1, water_interval INTEGER DEFAULT 60,
+            sleep_enabled INTEGER DEFAULT 1, sleep_time TEXT DEFAULT '22:30',
+            mood_enabled INTEGER DEFAULT 1, mood_time TEXT DEFAULT '21:00',
+            created_at TEXT, updated_at TEXT)""",
+        """CREATE TABLE IF NOT EXISTS user_settings (
+            id TEXT PRIMARY KEY, user_id TEXT NOT NULL UNIQUE,
+            theme TEXT DEFAULT 'dark', notifications_enabled INTEGER DEFAULT 1,
+            email_notifications INTEGER DEFAULT 0, language TEXT DEFAULT 'en',
+            data_sharing INTEGER DEFAULT 0, analytics_enabled INTEGER DEFAULT 1,
+            created_at TEXT, updated_at TEXT)""",
+    ]
+    for sql in tables:
+        cursor.execute(sql)
+    conn.commit()
+    conn.close()
+
+_init_sqlite_v2()
+
+
+DEFAULT_HABITS = [
+    {"name": "Drink Water", "icon": "💧", "color": "#3b82f6"},
+    {"name": "Exercise", "icon": "🏃", "color": "#22c55e"},
+    {"name": "Meditation", "icon": "🧘", "color": "#8b5cf6"},
+    {"name": "Journal", "icon": "📝", "color": "#f59e0b"},
+    {"name": "Walk", "icon": "🚶", "color": "#06b6d4"},
+    {"name": "Sleep Before 11 PM", "icon": "🌙", "color": "#6366f1"},
+]
+
+
+async def create_mood_entry(user_id: str, data: dict) -> dict | None:
+    now = datetime.now(timezone.utc).isoformat()
+    entry_id = str(uuid.uuid4())
+    entry = {
+        "id": entry_id, "user_id": user_id,
+        "date": data.get("date", datetime.now(timezone.utc).strftime("%Y-%m-%d")),
+        "mood_score": data["mood_score"], "mood_emoji": data.get("mood_emoji", "😐"),
+        "stress_level": data.get("stress_level"), "anxiety_level": data.get("anxiety_level"),
+        "energy_level": data.get("energy_level"), "sleep_hours": data.get("sleep_hours"),
+        "water_intake": data.get("water_intake"),
+        "exercise_done": data.get("exercise_done", False),
+        "meditation_done": data.get("meditation_done", False),
+        "notes": data.get("notes", ""), "created_at": now, "updated_at": now,
+    }
+    db = get_supabase()
+    if db:
+        try:
+            result = db.table("mood_entries").upsert(entry, on_conflict="user_id,date").execute()
+            if result.data:
+                return result.data[0]
+        except Exception as e:
+            print(f"Supabase mood entry error: {e}")
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        INSERT INTO mood_entries (id,user_id,date,mood_score,mood_emoji,stress_level,anxiety_level,
+        energy_level,sleep_hours,water_intake,exercise_done,meditation_done,notes,created_at,updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(user_id,date) DO UPDATE SET
+        mood_score=excluded.mood_score,mood_emoji=excluded.mood_emoji,
+        stress_level=excluded.stress_level,anxiety_level=excluded.anxiety_level,
+        energy_level=excluded.energy_level,sleep_hours=excluded.sleep_hours,
+        water_intake=excluded.water_intake,exercise_done=excluded.exercise_done,
+        meditation_done=excluded.meditation_done,notes=excluded.notes,updated_at=excluded.updated_at
+        """, (entry_id, user_id, entry["date"], entry["mood_score"], entry["mood_emoji"],
+              entry["stress_level"], entry["anxiety_level"], entry["energy_level"],
+              entry["sleep_hours"], entry["water_intake"],
+              1 if entry["exercise_done"] else 0, 1 if entry["meditation_done"] else 0,
+              entry["notes"], now, now))
+        conn.commit()
+        return entry
+    except Exception as e:
+        print(f"SQLite mood entry error: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+async def get_mood_entries(user_id: str, start_date: str | None = None, end_date: str | None = None) -> list[dict]:
+    db = get_supabase()
+    if db:
+        try:
+            query = db.table("mood_entries").select("*").eq("user_id", user_id)
+            if start_date:
+                query = query.gte("date", start_date)
+            if end_date:
+                query = query.lte("date", end_date)
+            result = query.order("date", desc=True).execute()
+            return result.data or []
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        sql = "SELECT * FROM mood_entries WHERE user_id=?"
+        params: list = [user_id]
+        if start_date:
+            sql += " AND date>=?"
+            params.append(start_date)
+        if end_date:
+            sql += " AND date<=?"
+            params.append(end_date)
+        sql += " ORDER BY date DESC"
+        cursor.execute(sql, params)
+        cols = [d[0] for d in cursor.description]
+        rows = cursor.fetchall()
+        return [dict(zip(cols, r)) for r in rows]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+async def delete_mood_entry(entry_id: str, user_id: str) -> bool:
+    db = get_supabase()
+    if db:
+        try:
+            db.table("mood_entries").delete().eq("id", entry_id).eq("user_id", user_id).execute()
+            return True
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM mood_entries WHERE id=? AND user_id=?", (entry_id, user_id))
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
+
+# ── Journal Entries CRUD ───────────────────────────────────────────────────────
+
+async def create_journal_entry(user_id: str, data: dict) -> dict | None:
+    now = datetime.now(timezone.utc).isoformat()
+    entry_id = str(uuid.uuid4())
+    content = data.get("content", "")
+    entry = {
+        "id": entry_id, "user_id": user_id,
+        "title": data.get("title", ""),
+        "content": content,
+        "content_html": data.get("content_html"),
+        "sentiment": data.get("sentiment"),
+        "sentiment_score": data.get("sentiment_score"),
+        "emotions": json.dumps(data.get("emotions", {})) if isinstance(data.get("emotions"), dict) else data.get("emotions", "{}"),
+        "ai_summary": data.get("ai_summary"),
+        "word_count": len(content.split()) if content else 0,
+        "is_favorite": data.get("is_favorite", False),
+        "created_at": now, "updated_at": now,
+    }
+    db = get_supabase()
+    if db:
+        try:
+            sb_entry = {**entry}
+            if isinstance(sb_entry.get("emotions"), str):
+                sb_entry["emotions"] = json.loads(sb_entry["emotions"])
+            result = db.table("journal_entries").insert(sb_entry).execute()
+            if result.data:
+                return result.data[0]
+        except Exception as e:
+            print(f"Supabase journal entry error: {e}")
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        INSERT INTO journal_entries (id,user_id,title,content,content_html,sentiment,
+        sentiment_score,emotions,ai_summary,word_count,is_favorite,created_at,updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (entry_id, user_id, entry["title"], entry["content"], entry["content_html"],
+              entry["sentiment"], entry["sentiment_score"], entry["emotions"],
+              entry["ai_summary"], entry["word_count"],
+              1 if entry["is_favorite"] else 0, now, now))
+        conn.commit()
+        return entry
+    except Exception as e:
+        print(f"SQLite journal entry error: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+async def get_journal_entries(user_id: str, search: str | None = None, sentiment: str | None = None, limit: int = 50) -> list[dict]:
+    db = get_supabase()
+    if db:
+        try:
+            query = db.table("journal_entries").select("*").eq("user_id", user_id)
+            if sentiment:
+                query = query.eq("sentiment", sentiment)
+            if search:
+                query = query.or_(f"title.ilike.%{search}%,content.ilike.%{search}%")
+            result = query.order("created_at", desc=True).limit(limit).execute()
+            return result.data or []
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        sql = "SELECT * FROM journal_entries WHERE user_id=?"
+        params: list = [user_id]
+        if sentiment:
+            sql += " AND sentiment=?"
+            params.append(sentiment)
+        if search:
+            sql += " AND (title LIKE ? OR content LIKE ?)"
+            params.extend([f"%{search}%", f"%{search}%"])
+        sql += " ORDER BY created_at DESC LIMIT ?"
+        params.append(limit)
+        cursor.execute(sql, params)
+        cols = [d[0] for d in cursor.description]
+        return [dict(zip(cols, r)) for r in cursor.fetchall()]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+async def update_journal_entry(entry_id: str, user_id: str, data: dict) -> dict | None:
+    now = datetime.now(timezone.utc).isoformat()
+    updates = {k: v for k, v in data.items() if k in (
+        "title", "content", "content_html", "sentiment", "sentiment_score",
+        "emotions", "ai_summary", "is_favorite"
+    )}
+    if "content" in updates:
+        updates["word_count"] = len(updates["content"].split()) if updates["content"] else 0
+    updates["updated_at"] = now
+
+    db = get_supabase()
+    if db:
+        try:
+            sb_updates = {**updates}
+            if isinstance(sb_updates.get("emotions"), str):
+                sb_updates["emotions"] = json.loads(sb_updates["emotions"])
+            result = db.table("journal_entries").update(sb_updates).eq("id", entry_id).eq("user_id", user_id).execute()
+            if result.data:
+                return result.data[0]
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        if isinstance(updates.get("emotions"), dict):
+            updates["emotions"] = json.dumps(updates["emotions"])
+        set_clause = ", ".join(f"{k}=?" for k in updates)
+        vals = list(updates.values()) + [entry_id, user_id]
+        cursor.execute(f"UPDATE journal_entries SET {set_clause} WHERE id=? AND user_id=?", vals)
+        conn.commit()
+        cursor.execute("SELECT * FROM journal_entries WHERE id=?", (entry_id,))
+        cols = [d[0] for d in cursor.description]
+        row = cursor.fetchone()
+        return dict(zip(cols, row)) if row else None
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
+async def delete_journal_entry(entry_id: str, user_id: str) -> bool:
+    db = get_supabase()
+    if db:
+        try:
+            db.table("journal_entries").delete().eq("id", entry_id).eq("user_id", user_id).execute()
+            return True
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM journal_entries WHERE id=? AND user_id=?", (entry_id, user_id))
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
+
+# ── Habits CRUD ────────────────────────────────────────────────────────────────
+
+async def get_habit_definitions(user_id: str) -> list[dict]:
+    db = get_supabase()
+    if db:
+        try:
+            result = db.table("habit_definitions").select("*").eq("user_id", user_id).eq("is_active", True).order("sort_order").execute()
+            if result.data:
+                return result.data
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM habit_definitions WHERE user_id=? AND is_active=1 ORDER BY sort_order", (user_id,))
+        cols = [d[0] for d in cursor.description]
+        return [dict(zip(cols, r)) for r in cursor.fetchall()]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+async def ensure_default_habits(user_id: str) -> list[dict]:
+    """Create default habits if user has none."""
+    existing = await get_habit_definitions(user_id)
+    if existing:
+        return existing
+
+    now = datetime.now(timezone.utc).isoformat()
+    created = []
+    for i, h in enumerate(DEFAULT_HABITS):
+        habit_id = str(uuid.uuid4())
+        entry = {
+            "id": habit_id, "user_id": user_id,
+            "name": h["name"], "icon": h["icon"], "color": h["color"],
+            "is_active": True, "sort_order": i, "created_at": now,
+        }
+        db = get_supabase()
+        if db:
+            try:
+                result = db.table("habit_definitions").insert(entry).execute()
+                if result.data:
+                    created.append(result.data[0])
+                    continue
+            except Exception:
+                pass
+
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+            INSERT INTO habit_definitions (id,user_id,name,icon,color,is_active,sort_order,created_at)
+            VALUES (?,?,?,?,?,1,?,?)
+            """, (habit_id, user_id, h["name"], h["icon"], h["color"], i, now))
+            conn.commit()
+            created.append(entry)
+        except Exception:
+            pass
+        finally:
+            conn.close()
+
+    return created
+
+
+async def complete_habit(user_id: str, habit_definition_id: str, date: str, completed: bool = True) -> dict | None:
+    now = datetime.now(timezone.utc).isoformat()
+    comp_id = str(uuid.uuid4())
+    entry = {
+        "id": comp_id, "user_id": user_id,
+        "habit_definition_id": habit_definition_id,
+        "date": date, "completed": completed, "created_at": now,
+    }
+    db = get_supabase()
+    if db:
+        try:
+            if not completed:
+                db.table("habit_completions").delete().eq("user_id", user_id).eq("habit_definition_id", habit_definition_id).eq("date", date).execute()
+                return {"deleted": True}
+            result = db.table("habit_completions").upsert(entry, on_conflict="user_id,habit_definition_id,date").execute()
+            if result.data:
+                return result.data[0]
+        except Exception as e:
+            print(f"Supabase habit completion error: {e}")
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        if not completed:
+            cursor.execute("DELETE FROM habit_completions WHERE user_id=? AND habit_definition_id=? AND date=?",
+                           (user_id, habit_definition_id, date))
+            conn.commit()
+            return {"deleted": True}
+        cursor.execute("""
+        INSERT INTO habit_completions (id,user_id,habit_definition_id,date,completed,created_at)
+        VALUES (?,?,?,?,1,?)
+        ON CONFLICT(user_id,habit_definition_id,date) DO UPDATE SET completed=1
+        """, (comp_id, user_id, habit_definition_id, date, now))
+        conn.commit()
+        return entry
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
+async def get_habit_completions(user_id: str, start_date: str | None = None, end_date: str | None = None) -> list[dict]:
+    db = get_supabase()
+    if db:
+        try:
+            query = db.table("habit_completions").select("*").eq("user_id", user_id)
+            if start_date:
+                query = query.gte("date", start_date)
+            if end_date:
+                query = query.lte("date", end_date)
+            result = query.order("date", desc=True).execute()
+            return result.data or []
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        sql = "SELECT * FROM habit_completions WHERE user_id=?"
+        params: list = [user_id]
+        if start_date:
+            sql += " AND date>=?"
+            params.append(start_date)
+        if end_date:
+            sql += " AND date<=?"
+            params.append(end_date)
+        sql += " ORDER BY date DESC"
+        cursor.execute(sql, params)
+        cols = [d[0] for d in cursor.description]
+        return [dict(zip(cols, r)) for r in cursor.fetchall()]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+async def get_habit_streaks(user_id: str) -> dict:
+    """Calculate current and longest streaks per habit."""
+    definitions = await get_habit_definitions(user_id)
+    completions = await get_habit_completions(user_id)
+
+    comp_by_habit: dict[str, set[str]] = {}
+    for c in completions:
+        hid = c.get("habit_definition_id", "")
+        if hid not in comp_by_habit:
+            comp_by_habit[hid] = set()
+        comp_by_habit[hid].add(c.get("date", ""))
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    streaks: dict[str, dict] = {}
+
+    for hdef in definitions:
+        hid = hdef["id"]
+        dates = sorted(comp_by_habit.get(hid, set()), reverse=True)
+        current = 0
+        longest = 0
+        if dates:
+            from datetime import timedelta
+            check_date = datetime.strptime(today, "%Y-%m-%d")
+            streak = 0
+            for _ in range(365):
+                ds = check_date.strftime("%Y-%m-%d")
+                if ds in comp_by_habit.get(hid, set()):
+                    streak += 1
+                else:
+                    if check_date.strftime("%Y-%m-%d") == today:
+                        check_date -= timedelta(days=1)
+                        continue
+                    break
+                check_date -= timedelta(days=1)
+            current = streak
+            temp_streak = 0
+            for i, d in enumerate(dates):
+                if i == 0:
+                    temp_streak = 1
+                else:
+                    prev = datetime.strptime(dates[i - 1], "%Y-%m-%d")
+                    curr = datetime.strptime(d, "%Y-%m-%d")
+                    if (prev - curr).days == 1:
+                        temp_streak += 1
+                    else:
+                        longest = max(longest, temp_streak)
+                        temp_streak = 1
+            longest = max(longest, temp_streak, current)
+
+        streaks[hid] = {"current": current, "longest": longest}
+
+    return streaks
+
+
+# ── CBT Worksheets CRUD ────────────────────────────────────────────────────────
+
+async def create_cbt_worksheet(user_id: str, data: dict) -> dict | None:
+    now = datetime.now(timezone.utc).isoformat()
+    ws_id = str(uuid.uuid4())
+    entry = {
+        "id": ws_id, "user_id": user_id,
+        "situation": data["situation"],
+        "automatic_thought": data["automatic_thought"],
+        "emotion": data["emotion"],
+        "emotion_intensity": data.get("emotion_intensity"),
+        "thinking_errors": json.dumps(data.get("thinking_errors", [])) if isinstance(data.get("thinking_errors"), list) else data.get("thinking_errors", "[]"),
+        "alternative_thought": data.get("alternative_thought"),
+        "action_plan": data.get("action_plan"),
+        "ai_generated": data.get("ai_generated", False),
+        "created_at": now,
+    }
+    db = get_supabase()
+    if db:
+        try:
+            sb_entry = {**entry}
+            if isinstance(sb_entry.get("thinking_errors"), str):
+                sb_entry["thinking_errors"] = json.loads(sb_entry["thinking_errors"])
+            result = db.table("cbt_worksheets").insert(sb_entry).execute()
+            if result.data:
+                return result.data[0]
+        except Exception as e:
+            print(f"Supabase CBT worksheet error: {e}")
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        INSERT INTO cbt_worksheets (id,user_id,situation,automatic_thought,emotion,
+        emotion_intensity,thinking_errors,alternative_thought,action_plan,ai_generated,created_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)
+        """, (ws_id, user_id, entry["situation"], entry["automatic_thought"],
+              entry["emotion"], entry["emotion_intensity"], entry["thinking_errors"],
+              entry["alternative_thought"], entry["action_plan"],
+              1 if entry["ai_generated"] else 0, now))
+        conn.commit()
+        return entry
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
+async def get_cbt_worksheets(user_id: str, limit: int = 20) -> list[dict]:
+    db = get_supabase()
+    if db:
+        try:
+            result = db.table("cbt_worksheets").select("*").eq("user_id", user_id).order("created_at", desc=True).limit(limit).execute()
+            return result.data or []
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM cbt_worksheets WHERE user_id=? ORDER BY created_at DESC LIMIT ?", (user_id, limit))
+        cols = [d[0] for d in cursor.description]
+        return [dict(zip(cols, r)) for r in cursor.fetchall()]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+async def delete_cbt_worksheet(ws_id: str, user_id: str) -> bool:
+    db = get_supabase()
+    if db:
+        try:
+            db.table("cbt_worksheets").delete().eq("id", ws_id).eq("user_id", user_id).execute()
+            return True
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM cbt_worksheets WHERE id=? AND user_id=?", (ws_id, user_id))
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
+
+# ── Action Plans CRUD ──────────────────────────────────────────────────────────
+
+async def create_action_plan(user_id: str, data: dict) -> dict | None:
+    now = datetime.now(timezone.utc).isoformat()
+    plan_id = str(uuid.uuid4())
+    entry = {
+        "id": plan_id, "user_id": user_id,
+        "session_id": data.get("session_id"),
+        "breathing_exercise": data.get("breathing_exercise"),
+        "walking_goal": data.get("walking_goal"),
+        "hydration_goal": data.get("hydration_goal"),
+        "meditation_rec": data.get("meditation_rec"),
+        "journal_prompt": data.get("journal_prompt"),
+        "sleep_rec": data.get("sleep_rec"),
+        "motivational_msg": data.get("motivational_msg"),
+        "created_at": now,
+    }
+    db = get_supabase()
+    if db:
+        try:
+            result = db.table("action_plans").insert(entry).execute()
+            if result.data:
+                return result.data[0]
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        INSERT INTO action_plans (id,user_id,session_id,breathing_exercise,walking_goal,
+        hydration_goal,meditation_rec,journal_prompt,sleep_rec,motivational_msg,created_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)
+        """, (plan_id, user_id, entry["session_id"], entry["breathing_exercise"],
+              entry["walking_goal"], entry["hydration_goal"], entry["meditation_rec"],
+              entry["journal_prompt"], entry["sleep_rec"], entry["motivational_msg"], now))
+        conn.commit()
+        return entry
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
+async def get_action_plans(user_id: str, limit: int = 10) -> list[dict]:
+    db = get_supabase()
+    if db:
+        try:
+            result = db.table("action_plans").select("*").eq("user_id", user_id).order("created_at", desc=True).limit(limit).execute()
+            return result.data or []
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM action_plans WHERE user_id=? ORDER BY created_at DESC LIMIT ?", (user_id, limit))
+        cols = [d[0] for d in cursor.description]
+        return [dict(zip(cols, r)) for r in cursor.fetchall()]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+# ── User Profile CRUD ─────────────────────────────────────────────────────────
+
+async def get_user_profile(user_id: str) -> dict | None:
+    db = get_supabase()
+    if db:
+        try:
+            result = db.table("user_profiles").select("*").eq("user_id", user_id).limit(1).execute()
+            if result.data:
+                return result.data[0]
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM user_profiles WHERE user_id=?", (user_id,))
+        cols = [d[0] for d in cursor.description]
+        row = cursor.fetchone()
+        return dict(zip(cols, row)) if row else None
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
+async def upsert_user_profile(user_id: str, data: dict) -> dict | None:
+    now = datetime.now(timezone.utc).isoformat()
+    profile_id = str(uuid.uuid4())
+    entry = {
+        "id": profile_id, "user_id": user_id,
+        "display_name": data.get("display_name"),
+        "avatar_url": data.get("avatar_url"),
+        "age": data.get("age"),
+        "gender": data.get("gender"),
+        "timezone": data.get("timezone", "Asia/Kolkata"),
+        "goals": json.dumps(data.get("goals", [])) if isinstance(data.get("goals"), list) else data.get("goals", "[]"),
+        "preferred_reminder_time": data.get("preferred_reminder_time", "09:00"),
+        "wellness_goals": data.get("wellness_goals"),
+        "created_at": now, "updated_at": now,
+    }
+    db = get_supabase()
+    if db:
+        try:
+            sb_entry = {**entry}
+            if isinstance(sb_entry.get("goals"), str):
+                sb_entry["goals"] = json.loads(sb_entry["goals"])
+            result = db.table("user_profiles").upsert(sb_entry, on_conflict="user_id").execute()
+            if result.data:
+                return result.data[0]
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        INSERT INTO user_profiles (id,user_id,display_name,avatar_url,age,gender,timezone,
+        goals,preferred_reminder_time,wellness_goals,created_at,updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(user_id) DO UPDATE SET
+        display_name=excluded.display_name,avatar_url=excluded.avatar_url,
+        age=excluded.age,gender=excluded.gender,timezone=excluded.timezone,
+        goals=excluded.goals,preferred_reminder_time=excluded.preferred_reminder_time,
+        wellness_goals=excluded.wellness_goals,updated_at=excluded.updated_at
+        """, (profile_id, user_id, entry["display_name"], entry["avatar_url"],
+              entry["age"], entry["gender"], entry["timezone"], entry["goals"],
+              entry["preferred_reminder_time"], entry["wellness_goals"], now, now))
+        conn.commit()
+        return entry
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
+# ── Reminders CRUD ─────────────────────────────────────────────────────────────
+
+async def get_reminders(user_id: str) -> dict | None:
+    db = get_supabase()
+    if db:
+        try:
+            result = db.table("reminders").select("*").eq("user_id", user_id).limit(1).execute()
+            if result.data:
+                return result.data[0]
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM reminders WHERE user_id=?", (user_id,))
+        cols = [d[0] for d in cursor.description]
+        row = cursor.fetchone()
+        return dict(zip(cols, row)) if row else None
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
+async def upsert_reminders(user_id: str, data: dict) -> dict | None:
+    now = datetime.now(timezone.utc).isoformat()
+    rem_id = str(uuid.uuid4())
+    entry = {
+        "id": rem_id, "user_id": user_id,
+        "journal_enabled": data.get("journal_enabled", True),
+        "journal_time": data.get("journal_time", "20:00"),
+        "meditation_enabled": data.get("meditation_enabled", True),
+        "meditation_time": data.get("meditation_time", "07:00"),
+        "water_enabled": data.get("water_enabled", True),
+        "water_interval": data.get("water_interval", 60),
+        "sleep_enabled": data.get("sleep_enabled", True),
+        "sleep_time": data.get("sleep_time", "22:30"),
+        "mood_enabled": data.get("mood_enabled", True),
+        "mood_time": data.get("mood_time", "21:00"),
+        "created_at": now, "updated_at": now,
+    }
+    db = get_supabase()
+    if db:
+        try:
+            result = db.table("reminders").upsert(entry, on_conflict="user_id").execute()
+            if result.data:
+                return result.data[0]
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        INSERT INTO reminders (id,user_id,journal_enabled,journal_time,meditation_enabled,
+        meditation_time,water_enabled,water_interval,sleep_enabled,sleep_time,
+        mood_enabled,mood_time,created_at,updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(user_id) DO UPDATE SET
+        journal_enabled=excluded.journal_enabled,journal_time=excluded.journal_time,
+        meditation_enabled=excluded.meditation_enabled,meditation_time=excluded.meditation_time,
+        water_enabled=excluded.water_enabled,water_interval=excluded.water_interval,
+        sleep_enabled=excluded.sleep_enabled,sleep_time=excluded.sleep_time,
+        mood_enabled=excluded.mood_enabled,mood_time=excluded.mood_time,updated_at=excluded.updated_at
+        """, (rem_id, user_id,
+              1 if entry["journal_enabled"] else 0, entry["journal_time"],
+              1 if entry["meditation_enabled"] else 0, entry["meditation_time"],
+              1 if entry["water_enabled"] else 0, entry["water_interval"],
+              1 if entry["sleep_enabled"] else 0, entry["sleep_time"],
+              1 if entry["mood_enabled"] else 0, entry["mood_time"], now, now))
+        conn.commit()
+        return entry
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
+# ── User Settings CRUD ─────────────────────────────────────────────────────────
+
+async def get_user_settings(user_id: str) -> dict | None:
+    db = get_supabase()
+    if db:
+        try:
+            result = db.table("user_settings").select("*").eq("user_id", user_id).limit(1).execute()
+            if result.data:
+                return result.data[0]
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM user_settings WHERE user_id=?", (user_id,))
+        cols = [d[0] for d in cursor.description]
+        row = cursor.fetchone()
+        return dict(zip(cols, row)) if row else None
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
+async def upsert_user_settings(user_id: str, data: dict) -> dict | None:
+    now = datetime.now(timezone.utc).isoformat()
+    settings_id = str(uuid.uuid4())
+    entry = {
+        "id": settings_id, "user_id": user_id,
+        "theme": data.get("theme", "dark"),
+        "notifications_enabled": data.get("notifications_enabled", True),
+        "email_notifications": data.get("email_notifications", False),
+        "language": data.get("language", "en"),
+        "data_sharing": data.get("data_sharing", False),
+        "analytics_enabled": data.get("analytics_enabled", True),
+        "created_at": now, "updated_at": now,
+    }
+    db = get_supabase()
+    if db:
+        try:
+            result = db.table("user_settings").upsert(entry, on_conflict="user_id").execute()
+            if result.data:
+                return result.data[0]
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        INSERT INTO user_settings (id,user_id,theme,notifications_enabled,
+        email_notifications,language,data_sharing,analytics_enabled,created_at,updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(user_id) DO UPDATE SET
+        theme=excluded.theme,notifications_enabled=excluded.notifications_enabled,
+        email_notifications=excluded.email_notifications,language=excluded.language,
+        data_sharing=excluded.data_sharing,analytics_enabled=excluded.analytics_enabled,
+        updated_at=excluded.updated_at
+        """, (settings_id, user_id, entry["theme"],
+              1 if entry["notifications_enabled"] else 0,
+              1 if entry["email_notifications"] else 0,
+              entry["language"],
+              1 if entry["data_sharing"] else 0,
+              1 if entry["analytics_enabled"] else 0, now, now))
+        conn.commit()
+        return entry
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
+# ── Data Export / Delete ───────────────────────────────────────────────────────
+
+async def export_all_user_data(user_id: str) -> dict:
+    """Export all user data for download."""
+    return {
+        "mood_entries": await get_mood_entries(user_id),
+        "journal_entries": await get_journal_entries(user_id),
+        "habit_definitions": await get_habit_definitions(user_id),
+        "habit_completions": await get_habit_completions(user_id),
+        "cbt_worksheets": await get_cbt_worksheets(user_id),
+        "action_plans": await get_action_plans(user_id),
+        "profile": await get_user_profile(user_id),
+        "reminders": await get_reminders(user_id),
+        "settings": await get_user_settings(user_id),
+    }
+
+
+async def delete_all_user_data(user_id: str) -> bool:
+    """Delete all user data from all tables."""
+    tables = [
+        "mood_entries", "journal_entries", "habit_completions",
+        "habit_definitions", "cbt_worksheets", "action_plans",
+        "user_profiles", "reminders", "user_settings", "notifications",
+    ]
+    db = get_supabase()
+    if db:
+        try:
+            for table in tables:
+                db.table(table).delete().eq("user_id", user_id).execute()
+            return True
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        for table in tables:
+            cursor.execute(f"DELETE FROM {table} WHERE user_id=?", (user_id,))
+        conn.commit()
+        return True
+    except Exception:
+        return False
+    finally:
+        conn.close()

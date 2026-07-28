@@ -13,9 +13,13 @@
     "@capacitor/cli": "^8.4.2",
     "@capacitor/core": "^8.4.2",
     "@supabase/supabase-js": "^2.105.4",
+    "date-fns": "^4.4.0",
+    "framer-motion": "^12.42.2",
     "next": "^16.2.10",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-hot-toast": "^2.6.0",
+    "recharts": "^3.10.1"
   },
   "devDependencies": {
     "@types/node": "^20",

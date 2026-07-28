@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import InstallPrompt from "@/components/InstallPrompt";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import ToastProvider from "@/components/ui/ToastProvider";
 import Script from "next/script";
 
 export const metadata: Metadata = {
@@ -45,10 +47,13 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
       </head>
       <body>
-        <AuthProvider>
-          {children}
-          <InstallPrompt />
-        </AuthProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <ToastProvider />
+            {children}
+            <InstallPrompt />
+          </AuthProvider>
+        </ErrorBoundary>
 
         {/* Register Service Worker */}
         <Script id="sw-register" strategy="afterInteractive">

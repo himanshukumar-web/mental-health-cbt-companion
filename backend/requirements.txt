@@ -11,3 +11,4 @@ cryptography==43.0.3
 pydantic==2.10.3
 pydantic-settings==2.6.1
 groq
+textblob>=0.18.0

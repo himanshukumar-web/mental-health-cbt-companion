@@ -6,6 +6,7 @@ import { useWebSocket } from "@/hooks/useWebSocket";
 import { useAuth } from "@/contexts/AuthContext";
 import ChatWindow from "@/components/ChatWindow";
 import CrisisPanel from "@/components/CrisisPanel";
+import Sidebar from "@/components/Sidebar";
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -125,20 +126,25 @@ function ChatPageInner() {
         }
       `}</style>
 
+      {/* Sidebar */}
+      <Sidebar />
+
       {/* Crisis overlay */}
       {crisis && <CrisisPanel onDismiss={dismissCrisis} />}
 
-      <ChatWindow
-        messages={messages}
-        wsState={wsState}
-        isStreaming={wsState.isStreaming}
-        crisis={crisis}
-        onSend={sendMessage}
-        onDismissCrisis={dismissCrisis}
-        onReconnect={manualReconnect}
-        user={user}
-        sessionId={sessionId}
-      />
+      <div style={{ flex: 1, marginLeft: user ? 260 : 0, height: "100%", overflow: "hidden" }}>
+        <ChatWindow
+          messages={messages}
+          wsState={wsState}
+          isStreaming={wsState.isStreaming}
+          crisis={crisis}
+          onSend={sendMessage}
+          onDismissCrisis={dismissCrisis}
+          onReconnect={manualReconnect}
+          user={user}
+          sessionId={sessionId}
+        />
+      </div>
     </div>
   );
 }

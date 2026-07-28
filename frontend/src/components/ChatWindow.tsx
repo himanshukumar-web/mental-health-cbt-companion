@@ -100,10 +100,10 @@ function AgentStatusBadge({ label, status, pulse }: {
 }) {
   const dotColor =
     status === "active" ? "#22c55e" :
-    status === "alert"  ? "#ef4444" : "#555";
+      status === "alert" ? "#ef4444" : "#555";
   const dotShadow =
     status === "active" ? "0 0 0 3px rgba(34,197,94,0.15)" :
-    status === "alert"  ? "0 0 0 3px rgba(239,68,68,0.15)" : "none";
+      status === "alert" ? "0 0 0 3px rgba(239,68,68,0.15)" : "none";
 
   return (
     <div style={{
@@ -269,7 +269,7 @@ export default function ChatWindow({
     <>
       {/* Mobile Sidebar Overlay */}
       {isMobile && sidebarOpen && (
-        <div 
+        <div
           onClick={() => setSidebarOpen(false)}
           style={{
             position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)",
@@ -303,7 +303,7 @@ export default function ChatWindow({
             }}>🌿</div>
             <span style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)" }}>Sera</span>
           </div>
-          
+
           <button
             onClick={() => router.push("/")}
             style={{

@@ -558,3 +558,363 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str
         logger.info("[WS] Disconnected: session=%s", session_id)
     except Exception as exc:
         logger.error("[WS] Unexpected error for session=%s: %s", session_id, str(exc))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# V2 API Endpoints — Mood, Journal, Habits, CBT, Emotions, Analytics, Profile
+# ══════════════════════════════════════════════════════════════════════════════
+
+from app.agents.analyzer import (
+    detect_emotions_local,
+    detect_emotions_ai,
+    analyze_sentiment_local,
+    generate_ai_summary,
+    generate_mood_insights,
+    generate_cbt_worksheet,
+    generate_action_plan,
+)
+
+
+# ── Mood Entries ──────────────────────────────────────────────────────────────
+
+class MoodEntryRequest(BaseModel):
+    user_id: str
+    date: str | None = None
+    mood_score: int
+    mood_emoji: str = "😐"
+    stress_level: int | None = None
+    anxiety_level: int | None = None
+    energy_level: int | None = None
+    sleep_hours: float | None = None
+    water_intake: int | None = None
+    exercise_done: bool = False
+    meditation_done: bool = False
+    notes: str = ""
+
+
+@app.post("/mood-entries")
+async def create_mood_entry_endpoint(req: MoodEntryRequest):
+    entry = await crud.create_mood_entry(req.user_id, req.model_dump())
+    if not entry:
+        raise HTTPException(status_code=500, detail="Failed to save mood entry")
+    return {"mood_entry": entry}
+
+
+@app.get("/mood-entries/{user_id}")
+async def get_mood_entries_endpoint(user_id: str, start_date: str | None = None, end_date: str | None = None):
+    entries = await crud.get_mood_entries(user_id, start_date, end_date)
+    return {"mood_entries": entries}
+
+
+@app.delete("/mood-entries/{entry_id}")
+async def delete_mood_entry_endpoint(entry_id: str, user_id: str):
+    ok = await crud.delete_mood_entry(entry_id, user_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    return {"deleted": True}
+
+
+# ── Journal Entries ───────────────────────────────────────────────────────────
+
+class JournalEntryRequest(BaseModel):
+    user_id: str
+    title: str = ""
+    content: str = ""
+    content_html: str | None = None
+    is_favorite: bool = False
+
+
+@app.post("/journal")
+async def create_journal_entry_endpoint(req: JournalEntryRequest):
+    data = req.model_dump()
+    # Auto-analyze sentiment
+    if data["content"]:
+        sentiment, score = analyze_sentiment_local(data["content"])
+        data["sentiment"] = sentiment
+        data["sentiment_score"] = score
+        data["emotions"] = detect_emotions_local(data["content"])
+    entry = await crud.create_journal_entry(req.user_id, data)
+    if not entry:
+        raise HTTPException(status_code=500, detail="Failed to save journal entry")
+    return {"journal_entry": entry}
+
+
+@app.get("/journal/{user_id}")
+async def get_journal_entries_endpoint(user_id: str, search: str | None = None, sentiment: str | None = None, limit: int = 50):
+    entries = await crud.get_journal_entries(user_id, search, sentiment, limit)
+    return {"journal_entries": entries}
+
+
+class JournalUpdateRequest(BaseModel):
+    user_id: str
+    title: str | None = None
+    content: str | None = None
+    content_html: str | None = None
+    is_favorite: bool | None = None
+
+
+@app.put("/journal/{entry_id}")
+async def update_journal_entry_endpoint(entry_id: str, req: JournalUpdateRequest):
+    data = {k: v for k, v in req.model_dump().items() if v is not None and k != "user_id"}
+    if "content" in data and data["content"]:
+        sentiment, score = analyze_sentiment_local(data["content"])
+        data["sentiment"] = sentiment
+        data["sentiment_score"] = score
+        data["emotions"] = detect_emotions_local(data["content"])
+    entry = await crud.update_journal_entry(entry_id, req.user_id, data)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    return {"journal_entry": entry}
+
+
+@app.delete("/journal/{entry_id}")
+async def delete_journal_entry_endpoint(entry_id: str, user_id: str):
+    ok = await crud.delete_journal_entry(entry_id, user_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    return {"deleted": True}
+
+
+@app.post("/journal/{entry_id}/analyze")
+async def analyze_journal_entry_endpoint(entry_id: str, user_id: str):
+    entries = await crud.get_journal_entries(user_id)
+    entry = next((e for e in entries if e.get("id") == entry_id), None)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    content = entry.get("content", "")
+    if not content:
+        raise HTTPException(status_code=400, detail="No content to analyze")
+
+    emotions = await detect_emotions_ai(content)
+    sentiment, score = analyze_sentiment_local(content)
+    summary = await generate_ai_summary(content)
+
+    update_data = {
+        "sentiment": sentiment,
+        "sentiment_score": score,
+        "emotions": emotions,
+        "ai_summary": summary,
+    }
+    updated = await crud.update_journal_entry(entry_id, user_id, update_data)
+    return {"analysis": {"sentiment": sentiment, "sentiment_score": score, "emotions": emotions, "ai_summary": summary}, "journal_entry": updated}
+
+
+# ── Habits ────────────────────────────────────────────────────────────────────
+
+@app.get("/habits/{user_id}/definitions")
+async def get_habit_definitions_endpoint(user_id: str):
+    habits = await crud.ensure_default_habits(user_id)
+    return {"habits": habits}
+
+
+class HabitCompleteRequest(BaseModel):
+    user_id: str
+    habit_definition_id: str
+    date: str
+    completed: bool = True
+
+
+@app.post("/habits/complete")
+async def complete_habit_endpoint(req: HabitCompleteRequest):
+    result = await crud.complete_habit(req.user_id, req.habit_definition_id, req.date, req.completed)
+    return {"result": result}
+
+
+@app.get("/habits/{user_id}/progress")
+async def get_habit_progress_endpoint(user_id: str, start_date: str | None = None, end_date: str | None = None):
+    definitions = await crud.ensure_default_habits(user_id)
+    completions = await crud.get_habit_completions(user_id, start_date, end_date)
+    streaks = await crud.get_habit_streaks(user_id)
+    return {"definitions": definitions, "completions": completions, "streaks": streaks}
+
+
+# ── CBT Worksheets ────────────────────────────────────────────────────────────
+
+class CBTWorksheetRequest(BaseModel):
+    user_id: str
+    situation: str
+    automatic_thought: str
+    emotion: str
+    emotion_intensity: int | None = None
+    ai_generate: bool = True
+
+
+@app.post("/cbt-worksheets")
+async def create_cbt_worksheet_endpoint(req: CBTWorksheetRequest):
+    data = req.model_dump()
+    if req.ai_generate:
+        ai_result = await generate_cbt_worksheet(req.situation, req.automatic_thought, req.emotion)
+        data["thinking_errors"] = ai_result.get("thinking_errors", [])
+        data["alternative_thought"] = ai_result.get("alternative_thought", "")
+        data["action_plan"] = ai_result.get("action_plan", "")
+        data["ai_generated"] = True
+    ws = await crud.create_cbt_worksheet(req.user_id, data)
+    if not ws:
+        raise HTTPException(status_code=500, detail="Failed to create worksheet")
+    return {"worksheet": ws}
+
+
+@app.get("/cbt-worksheets/{user_id}")
+async def get_cbt_worksheets_endpoint(user_id: str, limit: int = 20):
+    worksheets = await crud.get_cbt_worksheets(user_id, limit)
+    return {"worksheets": worksheets}
+
+
+@app.delete("/cbt-worksheets/{worksheet_id}")
+async def delete_cbt_worksheet_endpoint(worksheet_id: str, user_id: str):
+    ok = await crud.delete_cbt_worksheet(worksheet_id, user_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Worksheet not found")
+    return {"deleted": True}
+
+
+# ── Action Plans ──────────────────────────────────────────────────────────────
+
+class ActionPlanRequest(BaseModel):
+    user_id: str
+    session_id: str | None = None
+
+
+@app.post("/action-plans")
+async def create_action_plan_endpoint(req: ActionPlanRequest):
+    chat_history = []
+    if req.session_id:
+        chat_history = await crud.get_session_history(req.session_id)
+    plan_data = await generate_action_plan(chat_history)
+    plan_data["session_id"] = req.session_id
+    plan = await crud.create_action_plan(req.user_id, plan_data)
+    if not plan:
+        raise HTTPException(status_code=500, detail="Failed to create action plan")
+    return {"action_plan": plan}
+
+
+@app.get("/action-plans/{user_id}")
+async def get_action_plans_endpoint(user_id: str, limit: int = 10):
+    plans = await crud.get_action_plans(user_id, limit)
+    return {"action_plans": plans}
+
+
+# ── Emotion Detection ─────────────────────────────────────────────────────────
+
+class EmotionDetectRequest(BaseModel):
+    text: str
+    use_ai: bool = False
+
+
+@app.post("/emotions/detect")
+async def detect_emotions_endpoint(req: EmotionDetectRequest):
+    if req.use_ai:
+        emotions = await detect_emotions_ai(req.text)
+    else:
+        emotions = detect_emotions_local(req.text)
+    return {"emotions": emotions}
+
+
+# ── User Profile ──────────────────────────────────────────────────────────────
+
+class ProfileRequest(BaseModel):
+    display_name: str | None = None
+    avatar_url: str | None = None
+    age: int | None = None
+    gender: str | None = None
+    timezone: str | None = None
+    goals: list[str] | None = None
+    preferred_reminder_time: str | None = None
+    wellness_goals: str | None = None
+
+
+@app.get("/profile/{user_id}")
+async def get_profile_endpoint(user_id: str):
+    profile = await crud.get_user_profile(user_id)
+    return {"profile": profile}
+
+
+@app.put("/profile/{user_id}")
+async def update_profile_endpoint(user_id: str, req: ProfileRequest):
+    data = {k: v for k, v in req.model_dump().items() if v is not None}
+    profile = await crud.upsert_user_profile(user_id, data)
+    return {"profile": profile}
+
+
+# ── User Settings ─────────────────────────────────────────────────────────────
+
+class SettingsRequest(BaseModel):
+    theme: str | None = None
+    notifications_enabled: bool | None = None
+    email_notifications: bool | None = None
+    language: str | None = None
+    data_sharing: bool | None = None
+    analytics_enabled: bool | None = None
+
+
+@app.get("/settings/{user_id}")
+async def get_settings_endpoint(user_id: str):
+    s = await crud.get_user_settings(user_id)
+    return {"settings": s}
+
+
+@app.put("/settings/{user_id}")
+async def update_settings_endpoint(user_id: str, req: SettingsRequest):
+    data = {k: v for k, v in req.model_dump().items() if v is not None}
+    s = await crud.upsert_user_settings(user_id, data)
+    return {"settings": s}
+
+
+# ── Reminders ─────────────────────────────────────────────────────────────────
+
+class RemindersRequest(BaseModel):
+    journal_enabled: bool | None = None
+    journal_time: str | None = None
+    meditation_enabled: bool | None = None
+    meditation_time: str | None = None
+    water_enabled: bool | None = None
+    water_interval: int | None = None
+    sleep_enabled: bool | None = None
+    sleep_time: str | None = None
+    mood_enabled: bool | None = None
+    mood_time: str | None = None
+
+
+@app.get("/reminders/{user_id}")
+async def get_reminders_endpoint(user_id: str):
+    r = await crud.get_reminders(user_id)
+    return {"reminders": r}
+
+
+@app.put("/reminders/{user_id}")
+async def update_reminders_endpoint(user_id: str, req: RemindersRequest):
+    data = {k: v for k, v in req.model_dump().items() if v is not None}
+    r = await crud.upsert_reminders(user_id, data)
+    return {"reminders": r}
+
+
+# ── Analytics ─────────────────────────────────────────────────────────────────
+
+@app.get("/analytics/{user_id}")
+async def get_analytics_endpoint(user_id: str, start_date: str | None = None, end_date: str | None = None):
+    mood_entries = await crud.get_mood_entries(user_id, start_date, end_date)
+    insights = await generate_mood_insights(mood_entries)
+    habits = await crud.ensure_default_habits(user_id)
+    completions = await crud.get_habit_completions(user_id, start_date, end_date)
+    return {
+        "mood_entries": mood_entries,
+        "insights": insights,
+        "habit_definitions": habits,
+        "habit_completions": completions,
+    }
+
+
+# ── Data Export / Delete ──────────────────────────────────────────────────────
+
+@app.get("/export/{user_id}")
+async def export_data_endpoint(user_id: str):
+    data = await crud.export_all_user_data(user_id)
+    return {"data": data}
+
+
+@app.delete("/delete-data/{user_id}")
+async def delete_data_endpoint(user_id: str):
+    ok = await crud.delete_all_user_data(user_id)
+    if not ok:
+        raise HTTPException(status_code=500, detail="Failed to delete data")
+    return {"deleted": True}

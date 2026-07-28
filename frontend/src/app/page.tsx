@@ -8,24 +8,44 @@ import ThemeSelector from "@/components/ThemeSelector";
 
 const FEATURES = [
   {
+    icon: "💬",
+    title: "AI CBT Therapy Chat",
+    desc: "A dual-agent (Therapist + Safety Monitor) streaming experience for evidence-based CBT reframing.",
+  },
+  {
+    icon: "😊",
+    title: "Daily Mood Tracker",
+    desc: "Track daily mood, stress, anxiety, energy, sleep, and water intake with visual histories.",
+  },
+  {
+    icon: "📝",
+    title: "AI-Powered Journal",
+    desc: "Write freely while Sera automatically analyzes sentiment, emotional tones, and key insights.",
+  },
+  {
+    icon: "✅",
+    title: "Mindful Habit Tracker",
+    desc: "Build consistency with habit completion rings, streak counters, and weekly grids.",
+  },
+  {
+    icon: "📊",
+    title: "Wellness Analytics",
+    desc: "Visualize correlations between sleep, stress, and mood with interactive Recharts charts.",
+  },
+  {
     icon: "🧠",
-    title: "CBT-Based Techniques",
-    desc: "Cognitive distortion identification, thought challenging, and evidence-based reframing.",
+    title: "CBT Thought Challenging",
+    desc: "Identify cognitive distortions and generate structured balanced alternative thoughts.",
   },
   {
-    icon: "🤝",
-    title: "Two-Agent Architecture",
-    desc: "A Therapist agent and a real-time Safety Monitor run in parallel on every message.",
-  },
-  {
-    icon: "🛡",
-    title: "Crisis Intercept Protocol",
-    desc: "Instant UI pivot with grounding techniques and emergency resources when distress is detected.",
+    icon: "💭",
+    title: "Nuanced Emotion Detection",
+    desc: "Detect complex underlying emotions like anxiety, burnout, loneliness, and confidence.",
   },
   {
     icon: "📅",
     title: "Doctor Appointments",
-    desc: "Book appointments with mental health professionals easily. Track and manage your sessions.",
+    desc: "Book direct consultations with human specialists and manage your appointment calendar.",
   },
 ];
 
