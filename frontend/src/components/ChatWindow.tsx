@@ -6,6 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import type { AgentStatus, ChatMessage, WSState } from "@/hooks/useWebSocket";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeSelector from "@/components/ThemeSelector";
+import VoiceController from "@/components/VoiceController";
 
 // ── Lightweight Markdown renderer for Sera AI messages ─────────────────────────
 function renderMarkdown(text: string) {
@@ -718,6 +719,11 @@ export default function ChatWindow({
               opacity: isStreaming || crisis ? 0.45 : 1,
               transition: "opacity 0.2s",
             }}
+          />
+          <VoiceController
+            onTranscript={(text) => setInput(prev => prev ? `${prev} ${text}` : text)}
+            lastAssistantMessage={messages.length > 0 && messages[messages.length - 1].role === "assistant" ? messages[messages.length - 1].content : undefined}
+            isStreaming={isStreaming}
           />
           <button
             id="send-btn"
