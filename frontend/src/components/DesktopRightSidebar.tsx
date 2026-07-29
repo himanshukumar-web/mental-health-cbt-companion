@@ -88,7 +88,7 @@ export default function DesktopRightSidebar({
               gap: 4,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyValue: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span style={{ fontSize: 11, color: "var(--text-tertiary)", fontWeight: 600 }}>Mood</span>
               <span style={{ fontSize: 18 }}>{latestMood.mood_emoji}</span>
             </div>
@@ -109,7 +109,7 @@ export default function DesktopRightSidebar({
               gap: 4,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyValue: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span style={{ fontSize: 11, color: "var(--text-tertiary)", fontWeight: 600 }}>Sleep</span>
               <span style={{ fontSize: 18 }}>😴</span>
             </div>
@@ -130,7 +130,7 @@ export default function DesktopRightSidebar({
               gap: 4,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyValue: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span style={{ fontSize: 11, color: "var(--text-tertiary)", fontWeight: 600 }}>Water</span>
               <span style={{ fontSize: 18 }}>💧</span>
             </div>
@@ -151,7 +151,7 @@ export default function DesktopRightSidebar({
               gap: 4,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyValue: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span style={{ fontSize: 11, color: "var(--text-tertiary)", fontWeight: 600 }}>Meditation</span>
               <span style={{ fontSize: 18 }}>🧘</span>
             </div>
