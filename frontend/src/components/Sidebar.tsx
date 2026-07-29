@@ -1,33 +1,38 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeSelector from "@/components/ThemeSelector";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface NavItem {
   id: string;
   label: string;
   icon: string;
   path: string;
-  category: "main" | "wellness" | "tools" | "care";
+  category: "main" | "therapy" | "progress" | "wellness" | "tools" | "care";
 }
 
 const NAV_ITEMS: NavItem[] = [
-  // Main
+  // Main Dashboard
   { id: "dashboard", label: "Dashboard", icon: "🏠", path: "/dashboard", category: "main" },
-  { id: "chat", label: "AI Therapy", icon: "💬", path: "/chat", category: "main" },
-  { id: "timeline", label: "Timeline", icon: "📜", path: "/timeline", category: "main" },
+
+  // AI Therapy
+  { id: "chat", label: "AI Therapy", icon: "💬", path: "/chat", category: "therapy" },
+
+  // Progress
+  { id: "timeline", label: "Timeline", icon: "📜", path: "/timeline", category: "progress" },
+  { id: "analytics", label: "Analytics", icon: "📊", path: "/analytics", category: "progress" },
+  { id: "achievements", label: "Achievements", icon: "🏆", path: "/achievements", category: "progress" },
 
   // Wellness
   { id: "mood", label: "Mood Tracker", icon: "😊", path: "/mood", category: "wellness" },
   { id: "journal", label: "Journal", icon: "📝", path: "/journal", category: "wellness" },
   { id: "habits", label: "Habits", icon: "✅", path: "/habits", category: "wellness" },
-  { id: "analytics", label: "Analytics", icon: "📊", path: "/analytics", category: "wellness" },
 
-  // Tools
+  // AI Tools
   { id: "meditation", label: "Meditation", icon: "🧘", path: "/meditation", category: "tools" },
   { id: "breathing", label: "Breathing", icon: "🫁", path: "/breathing", category: "tools" },
   { id: "cbt", label: "CBT Tools", icon: "🧠", path: "/cbt", category: "tools" },
@@ -40,15 +45,16 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
-  main: "Main",
-  wellness: "Wellness",
-  tools: "AI Tools",
-  care: "Account & Care",
+  main: "Overview",
+  therapy: "AI Therapy",
+  progress: "Progress & Goals",
+  wellness: "Wellness Log",
+  tools: "AI Tools & Exercises",
+  care: "Care & Account",
 };
 
 export default function Sidebar() {
   const { user, signOut } = useAuth();
-  const router = useRouter();
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -66,38 +72,40 @@ export default function Sidebar() {
 
   if (!user) return null;
 
-  const categories = ["main", "wellness", "tools", "care"] as const;
+  const categories = ["main", "therapy", "progress", "wellness", "tools", "care"] as const;
 
   return (
     <>
-      {/* Mobile Menu Button */}
+      {/* Mobile Header Menu Button */}
       {isMobile && (
         <button
           onClick={() => setIsOpen(!isOpen)}
+          aria-label="Toggle Sidebar Menu"
           style={{
             position: "fixed",
-            top: 12,
-            left: 12,
+            top: 14,
+            left: 14,
             zIndex: 1001,
-            width: 40,
-            height: 40,
-            borderRadius: 12,
-            background: "rgba(17,24,39,0.85)",
-            backdropFilter: "blur(12px)",
+            width: 42,
+            height: 42,
+            borderRadius: 14,
+            background: "rgba(17,24,39,0.88)",
+            backdropFilter: "blur(16px)",
             border: "1px solid var(--border-secondary)",
             color: "var(--text-primary)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: 18,
+            fontSize: 20,
             cursor: "pointer",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.3)",
           }}
         >
           {isOpen ? "✕" : "☰"}
         </button>
       )}
 
-      {/* Backdrop */}
+      {/* Mobile Drawer Backdrop */}
       {isMobile && isOpen && (
         <div
           onClick={() => setIsOpen(false)}
@@ -105,7 +113,7 @@ export default function Sidebar() {
             position: "fixed",
             inset: 0,
             zIndex: 999,
-            background: "rgba(0,0,0,0.6)",
+            background: "rgba(0,0,0,0.65)",
             backdropFilter: "blur(4px)",
           }}
         />
@@ -121,9 +129,9 @@ export default function Sidebar() {
           bottom: 0,
           width: 250,
           zIndex: 1000,
-          background: "rgba(11, 15, 26, 0.92)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
+          background: "rgba(11, 15, 26, 0.94)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
           borderRight: "1px solid var(--border-secondary)",
           display: "flex",
           flexDirection: "column",
@@ -147,43 +155,51 @@ export default function Sidebar() {
         >
           <div
             style={{
-              width: 38,
-              height: 38,
-              borderRadius: 12,
+              width: 40,
+              height: 40,
+              borderRadius: 14,
               background: "linear-gradient(135deg, #22c55e, #16a34a)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 20,
+              fontSize: 22,
               color: "#fff",
-              boxShadow: "0 0 20px rgba(34,197,94,0.35)",
+              boxShadow: "0 0 24px rgba(34,197,94,0.35)",
             }}
           >
             🌿
           </div>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-display)" }}>
+            <div
+              style={{
+                fontSize: 17,
+                fontWeight: 800,
+                color: "var(--text-primary)",
+                fontFamily: "var(--font-display)",
+                letterSpacing: "-0.02em",
+              }}
+            >
               Sera AI
             </div>
-            <div style={{ fontSize: 11, color: "var(--text-tertiary)", fontWeight: 500 }}>
-              CBT Companion V2
+            <div style={{ fontSize: 11, color: "var(--text-tertiary)", fontWeight: 600 }}>
+              Mindful CBT SaaS
             </div>
           </div>
         </Link>
 
-        {/* Grouped Navigation */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
+        {/* Grouped Navigation List */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 18 }}>
           {categories.map((cat) => {
             const items = NAV_ITEMS.filter((item) => item.category === cat);
             return (
-              <div key={cat} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <div key={cat} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                 <div
                   style={{
                     fontSize: 10,
-                    fontWeight: 700,
+                    fontWeight: 800,
                     textTransform: "uppercase",
                     color: "var(--text-tertiary)",
-                    letterSpacing: "0.08em",
+                    letterSpacing: "0.09em",
                     padding: "0 8px 4px",
                   }}
                 >
@@ -193,37 +209,39 @@ export default function Sidebar() {
                 {items.map((item) => {
                   const isActive = pathname === item.path;
                   return (
-                    <Link
-                      key={item.id}
-                      href={item.path}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                        padding: "9px 12px",
-                        borderRadius: 12,
-                        textDecoration: "none",
-                        fontSize: 13,
-                        fontWeight: isActive ? 700 : 500,
-                        color: isActive ? "#22c55e" : "var(--text-secondary)",
-                        background: isActive ? "rgba(34,197,94,0.12)" : "transparent",
-                        border: isActive ? "1px solid rgba(34,197,94,0.25)" : "1px solid transparent",
-                        transition: "all 0.15s ease",
-                      }}
-                    >
-                      <span style={{ fontSize: 16 }}>{item.icon}</span>
-                      <span style={{ flex: 1 }}>{item.label}</span>
-                      {isActive && (
-                        <div
-                          style={{
-                            width: 6,
-                            height: 6,
-                            borderRadius: "50%",
-                            background: "#22c55e",
-                            boxShadow: "0 0 8px #22c55e",
-                          }}
-                        />
-                      )}
+                    <Link key={item.id} href={item.path} style={{ textDecoration: "none" }}>
+                      <motion.div
+                        whileHover={{ x: 3 }}
+                        whileTap={{ scale: 0.98 }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 12,
+                          padding: "9px 12px",
+                          borderRadius: 12,
+                          fontSize: 13,
+                          fontWeight: isActive ? 700 : 500,
+                          color: isActive ? "#22c55e" : "var(--text-secondary)",
+                          background: isActive ? "rgba(34,197,94,0.12)" : "transparent",
+                          border: isActive ? "1px solid rgba(34,197,94,0.25)" : "1px solid transparent",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        <span style={{ fontSize: 17 }}>{item.icon}</span>
+                        <span style={{ flex: 1 }}>{item.label}</span>
+                        {isActive && (
+                          <motion.div
+                            layoutId="activeDot"
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              background: "#22c55e",
+                              boxShadow: "0 0 8px #22c55e",
+                            }}
+                          />
+                        )}
+                      </motion.div>
                     </Link>
                   );
                 })}
@@ -254,7 +272,7 @@ export default function Sidebar() {
               display: "flex",
               alignItems: "center",
               gap: 8,
-              padding: "9px 12px",
+              padding: "10px 12px",
               borderRadius: 12,
               border: "1px solid rgba(239,68,68,0.2)",
               background: "rgba(239,68,68,0.08)",
@@ -263,6 +281,7 @@ export default function Sidebar() {
               fontWeight: 700,
               cursor: "pointer",
               width: "100%",
+              transition: "all 0.2s",
             }}
           >
             <span>🚪</span>
