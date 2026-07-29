@@ -7,10 +7,20 @@ import Sidebar from "@/components/Sidebar";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import PHQ9Wizard from "@/components/PHQ9Wizard";
 import GAD7Wizard from "@/components/GAD7Wizard";
+import EmptyState from "@/components/ui/EmptyState";
 import { useAssessments } from "@/hooks/useAssessments";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import { motion } from "framer-motion";
-import toast from "react-hot-toast";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  Legend,
+} from "recharts";
 
 export default function AssessmentsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -39,6 +49,23 @@ export default function AssessmentsPage() {
   const latestPHQ9 = phq9History.length > 0 ? phq9History[0] : null;
   const latestGAD7 = gad7History.length > 0 ? gad7History[0] : null;
 
+  // Prepare trend data combining both assessments
+  const trendDataMap: Record<string, { date: string; phq9?: number; gad7?: number }> = {};
+
+  phq9History.forEach((item) => {
+    const dStr = new Date(item.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    if (!trendDataMap[dStr]) trendDataMap[dStr] = { date: dStr };
+    trendDataMap[dStr].phq9 = item.score;
+  });
+
+  gad7History.forEach((item) => {
+    const dStr = new Date(item.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    if (!trendDataMap[dStr]) trendDataMap[dStr] = { date: dStr };
+    trendDataMap[dStr].gad7 = item.score;
+  });
+
+  const trendData = Object.values(trendDataMap);
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
       <Sidebar />
@@ -47,16 +74,17 @@ export default function AssessmentsPage() {
         <style>{`
           @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px 16px 80px !important; } }
         `}</style>
+        
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
           <span style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#8b5cf6", letterSpacing: "0.08em" }}>
             Clinical Tools & Assessment Hub
           </span>
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: "var(--text-primary)", margin: "4px 0 0" }}>
-            Mental Health Clinical Assessments
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: "var(--text-primary)", margin: "4px 0 0", fontFamily: "var(--font-display)" }}>
+            Clinical Health Assessments & Recovery Trends 📋
           </h1>
-          <p style={{ fontSize: 14, color: "var(--text-tertiary)", margin: "4px 0 0" }}>
-            Standardized clinical tools (PHQ-9 & GAD-7) to evaluate depression, anxiety, and monitor emotional progress over time.
+          <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: "4px 0 0" }}>
+            Standardized clinical tools (PHQ-9 & GAD-7) to evaluate depression, anxiety, and monitor recovery progress.
           </p>
         </div>
 
@@ -119,7 +147,7 @@ export default function AssessmentsPage() {
             }}
           >
             <span>📈</span>
-            <span>Reports & History</span>
+            <span>Reports & Trends</span>
           </button>
         </div>
 
@@ -139,7 +167,7 @@ export default function AssessmentsPage() {
                 }}
               >
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#3b82f6" }}>Assessment Comparison</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#3b82f6" }}>PHQ-9 Assessment Comparison</div>
                   <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
                     Current score: {phq9Comparison.current.score}/27 vs Previous score: {phq9Comparison.previous.score}/27
                   </div>
@@ -175,7 +203,7 @@ export default function AssessmentsPage() {
                 }}
               >
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#8b5cf6" }}>Anxiety Level Comparison</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#8b5cf6" }}>GAD-7 Anxiety Comparison</div>
                   <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
                     Current score: {gad7Comparison.current.score}/21 vs Previous score: {gad7Comparison.previous.score}/21
                   </div>
@@ -197,15 +225,42 @@ export default function AssessmentsPage() {
         )}
 
         {activeTab === "history" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <h3 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            {/* Recovery Trend Chart */}
+            {trendData.length > 0 && (
+              <div style={{ padding: 24, borderRadius: 20, background: "var(--bg-glass)", border: "1px solid var(--border-secondary)" }}>
+                <h3 style={{ fontSize: 17, fontWeight: 800, color: "var(--text-primary)", margin: "0 0 16px", fontFamily: "var(--font-display)" }}>
+                  📉 Clinical Recovery Trend
+                </h3>
+                <div style={{ height: 260, width: "100%" }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={trendData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-secondary)" opacity={0.5} />
+                      <XAxis dataKey="date" stroke="var(--text-tertiary)" fontSize={11} />
+                      <YAxis stroke="var(--text-tertiary)" fontSize={11} />
+                      <Tooltip contentStyle={{ background: "var(--bg-primary)", borderRadius: 10, border: "1px solid var(--border-secondary)" }} />
+                      <Legend />
+                      <Line type="monotone" dataKey="phq9" stroke="#3b82f6" strokeWidth={3} name="PHQ-9 (Depression)" dot={{ r: 5 }} />
+                      <Line type="monotone" dataKey="gad7" stroke="#8b5cf6" strokeWidth={3} name="GAD-7 (Anxiety)" dot={{ r: 5 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", margin: 0, fontFamily: "var(--font-display)" }}>
               Past Assessment Log & Clinical Reports
             </h3>
 
             {phq9History.length === 0 && gad7History.length === 0 ? (
-              <div style={{ padding: 40, textAlign: "center", color: "var(--text-tertiary)", fontSize: 13 }}>
-                No completed assessments yet. Complete a PHQ-9 or GAD-7 questionnaire to generate reports.
-              </div>
+              <EmptyState
+                icon="📋"
+                title="No Completed Assessments Yet"
+                description="Take your first PHQ-9 or GAD-7 assessment to unlock personalized clinical explanations, recovery trends, and doctor reports."
+                actionText="Take PHQ-9 Assessment"
+                onAction={() => setActiveTab("phq9")}
+                tip="Standard clinical tests are recommended every 2 weeks to measure treatment progress."
+              />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {phq9History.map((item) => (
@@ -214,18 +269,18 @@ export default function AssessmentsPage() {
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     style={{
-                      padding: 16,
-                      borderRadius: 16,
+                      padding: 18,
+                      borderRadius: 18,
                       background: "var(--bg-glass)",
                       backdropFilter: "blur(12px)",
                       border: "1px solid var(--border-secondary)",
                       display: "flex",
                       flexDirection: "column",
-                      gap: 6,
+                      gap: 8,
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: "#3b82f6", textTransform: "uppercase" }}>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: "#3b82f6", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                         PHQ-9 Depression Score: {item.score}/27
                       </span>
                       <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
@@ -233,8 +288,8 @@ export default function AssessmentsPage() {
                       </span>
                     </div>
 
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{item.risk_category}</div>
-                    <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.4 }}>{item.ai_explanation}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>{item.risk_category}</div>
+                    <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>{item.ai_explanation}</div>
                   </motion.div>
                 ))}
 
@@ -244,18 +299,18 @@ export default function AssessmentsPage() {
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     style={{
-                      padding: 16,
-                      borderRadius: 16,
+                      padding: 18,
+                      borderRadius: 18,
                       background: "var(--bg-glass)",
                       backdropFilter: "blur(12px)",
                       border: "1px solid var(--border-secondary)",
                       display: "flex",
                       flexDirection: "column",
-                      gap: 6,
+                      gap: 8,
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: "#8b5cf6", textTransform: "uppercase" }}>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: "#8b5cf6", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                         GAD-7 Anxiety Score: {item.score}/21
                       </span>
                       <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
@@ -263,8 +318,8 @@ export default function AssessmentsPage() {
                       </span>
                     </div>
 
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{item.anxiety_level}</div>
-                    <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.4 }}>{item.ai_explanation}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>{item.anxiety_level}</div>
+                    <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>{item.ai_explanation}</div>
                   </motion.div>
                 ))}
               </div>
@@ -272,6 +327,7 @@ export default function AssessmentsPage() {
           </div>
         )}
       </main>
+
       <MobileBottomNav />
     </div>
   );
