@@ -22,6 +22,12 @@ interface Badge {
   isUnlocked: boolean;
 }
 
+const WEEKLY_CHALLENGES = [
+  { id: "w1", title: "Complete 5 Mindful Check-Ins", reward: "100 XP", current: 4, max: 5, color: "#22c55e" },
+  { id: "w2", title: "Write 3 Reflective Journal Entries", reward: "75 XP", current: 2, max: 3, color: "#a855f7" },
+  { id: "w3", title: "Complete 1 CBT Thought Record", reward: "50 XP", current: 1, max: 1, color: "#06b6d4" },
+];
+
 export default function AchievementsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -170,16 +176,18 @@ export default function AchievementsPage() {
           <span style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#f59e0b", letterSpacing: "0.08em" }}>
             Gamification Engine
           </span>
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: "var(--text-primary)", margin: "4px 0 0" }}>
-            Achievements & Daily Quests
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: "var(--text-primary)", margin: "4px 0 0", fontFamily: "var(--font-display)" }}>
+            Achievements, Quests & Badges 🏆
           </h1>
-          <p style={{ fontSize: 14, color: "var(--text-tertiary)", margin: "4px 0 0" }}>
-            Earn XP, unlock achievement badges, maintain daily activity streaks, and reach new levels.
+          <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: "4px 0 0" }}>
+            Earn XP, unlock achievement badges, complete daily/weekly challenges, and level up your mental wellness.
           </p>
         </div>
 
-        {/* Level & XP Card */}
-        <div
+        {/* Level & XP Progress Card */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
           style={{
             padding: 24,
             borderRadius: 20,
@@ -191,12 +199,12 @@ export default function AchievementsPage() {
             gap: 16,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <div
                 style={{
-                  width: 54,
-                  height: 54,
+                  width: 56,
+                  height: 56,
                   borderRadius: "50%",
                   background: "linear-gradient(135deg, #f59e0b, #ea580c)",
                   display: "flex",
@@ -211,35 +219,99 @@ export default function AchievementsPage() {
                 {level}
               </div>
               <div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)" }}>Level {level} Explorer</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-display)" }}>
+                  Level {level} Explorer
+                </div>
                 <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Total Experience: {totalXP} XP</div>
               </div>
             </div>
 
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#f59e0b" }}>{currentLevelXP} / 100 XP</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#f59e0b" }}>{currentLevelXP} / 100 XP</div>
               <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>{100 - currentLevelXP} XP to Level {level + 1}</div>
             </div>
           </div>
 
-          <div style={{ height: 8, borderRadius: 4, background: "var(--bg-secondary)", overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${currentLevelXP}%`, background: "linear-gradient(90deg, #f59e0b, #ea580c)", borderRadius: 4 }} />
+          <div style={{ height: 10, borderRadius: 5, background: "var(--bg-secondary)", overflow: "hidden" }}>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${currentLevelXP}%` }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              style={{ height: "100%", background: "linear-gradient(90deg, #f59e0b, #ea580c)", borderRadius: 5 }}
+            />
           </div>
-        </div>
+        </motion.div>
 
-        {/* Daily Challenges Widget */}
-        <div style={{ marginBottom: 28 }}>
+        {/* Daily & Weekly Quests Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))", gap: 20, marginBottom: 28 }}>
+          {/* Daily Quests */}
           <DailyChallengesCard
             challenges={challenges}
             streak={streak}
             onCompleteChallenge={completeChallenge}
             loading={challengesLoading}
           />
+
+          {/* Weekly Quests */}
+          <div
+            style={{
+              padding: 24,
+              borderRadius: 20,
+              background: "var(--bg-glass)",
+              backdropFilter: "blur(16px)",
+              border: "1px solid var(--border-secondary)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
+            }}
+          >
+            <div>
+              <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#a855f7", letterSpacing: "0.08em" }}>
+                Weekly Target
+              </span>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", margin: "2px 0 0", fontFamily: "var(--font-display)" }}>
+                Weekly Mindfulness Challenges 🎯
+              </h3>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {WEEKLY_CHALLENGES.map((wc) => (
+                <div
+                  key={wc.id}
+                  style={{
+                    padding: 14,
+                    borderRadius: 14,
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{wc.title}</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: wc.color, padding: "2px 8px", borderRadius: 6, background: `${wc.color}20` }}>
+                      +{wc.reward}
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ flex: 1, height: 6, borderRadius: 3, background: "var(--bg-secondary)", overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${(wc.current / wc.max) * 100}%`, background: wc.color, borderRadius: 3 }} />
+                    </div>
+                    <span style={{ fontSize: 11, color: "var(--text-tertiary)", fontWeight: 600 }}>
+                      {wc.current}/{wc.max}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Badges Grid */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <h3 style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+          <h3 style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", margin: 0, fontFamily: "var(--font-display)" }}>
             🏅 Achievement Badges
           </h3>
 
@@ -247,26 +319,28 @@ export default function AchievementsPage() {
             {badges.map((b) => (
               <motion.div
                 key={b.id}
-                whileHover={{ y: -2 }}
+                whileHover={{ y: -3 }}
                 style={{
                   padding: 20,
                   borderRadius: 18,
-                  background: b.isUnlocked ? "var(--bg-glass)" : "var(--bg-secondary)",
+                  background: b.isUnlocked ? "var(--bg-glass)" : "rgba(255,255,255,0.02)",
                   backdropFilter: "blur(12px)",
                   border: b.isUnlocked ? `1px solid ${b.color}40` : "1px solid var(--border-secondary)",
                   opacity: b.isUnlocked ? 1 : 0.6,
                   display: "flex",
                   flexDirection: "column",
                   gap: 10,
+                  boxShadow: b.isUnlocked ? `0 4px 16px ${b.color}20` : "none",
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div
                     style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 12,
+                      width: 46,
+                      height: 46,
+                      borderRadius: 14,
                       background: b.isUnlocked ? `${b.color}20` : "var(--bg-primary)",
+                      border: `1px solid ${b.isUnlocked ? b.color : "transparent"}`,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -277,7 +351,7 @@ export default function AchievementsPage() {
                   </div>
                   <div>
                     <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>{b.title}</div>
-                    <div style={{ fontSize: 11, color: b.isUnlocked ? b.color : "var(--text-tertiary)", fontWeight: 600 }}>
+                    <div style={{ fontSize: 11, color: b.isUnlocked ? b.color : "var(--text-tertiary)", fontWeight: 700 }}>
                       {b.isUnlocked ? "✓ Unlocked" : "Locked"}
                     </div>
                   </div>
@@ -290,6 +364,7 @@ export default function AchievementsPage() {
           </div>
         </div>
       </main>
+
       <MobileBottomNav />
     </div>
   );
