@@ -134,7 +134,17 @@ export default function Sidebar() {
         }}
       >
         {/* Brand Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24, paddingLeft: 4 }}>
+        <Link
+          href="/dashboard"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 24,
+            paddingLeft: 4,
+            textDecoration: "none",
+          }}
+        >
           <div
             style={{
               width: 38,
@@ -159,7 +169,7 @@ export default function Sidebar() {
               CBT Companion V2
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* Grouped Navigation */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>

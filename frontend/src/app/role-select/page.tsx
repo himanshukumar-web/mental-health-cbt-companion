@@ -23,7 +23,7 @@ export default function RoleSelectPage() {
   useEffect(() => {
     if (!loading && user && userRole) {
       if (userRole === "admin") router.replace("/admin");
-      else router.replace("/");
+      else router.replace("/dashboard");
     }
   }, [user, userRole, loading, router]);
 
@@ -58,7 +58,7 @@ export default function RoleSelectPage() {
     }
 
     if (role === "admin") router.push("/admin");
-    else router.push("/");
+    else router.push("/dashboard");
   };
 
   if (loading || userRole) {

@@ -1,0 +1,282 @@
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import Link from "next/link";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+interface Notification {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  message: string;
+  link: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export default function PatientNotificationBell({ userId }: { userId: string }) {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const bellRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    const fetchNotifs = async () => {
+      try {
+        const res = await fetch(`${API_URL}/notifications/${userId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setNotifications(data.notifications || []);
+          setUnreadCount(data.unread_count || 0);
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+    fetchNotifs();
+    const t = setInterval(fetchNotifs, 6000);
+    return () => clearInterval(t);
+  }, [userId]);
+
+  const handleMarkRead = async (id: string) => {
+    try {
+      await fetch(`${API_URL}/notifications/${id}/read`, { method: "PATCH" });
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await fetch(`${API_URL}/notifications/read-all/${userId}`, { method: "PATCH" });
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const timeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  return (
+    <div ref={bellRef} style={{ position: "relative" }}>
+      <button
+        onClick={() => setShowDropdown(!showDropdown)}
+        style={{
+          position: "relative",
+          width: 42,
+          height: 42,
+          borderRadius: 14,
+          border: "1px solid var(--border-secondary)",
+          background: "var(--bg-glass)",
+          backdropFilter: "blur(12px)",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 18,
+          transition: "all 0.2s ease",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+        }}
+        title="Notifications"
+      >
+        🔔
+        {unreadCount > 0 && (
+          <span
+            style={{
+              position: "absolute",
+              top: -3,
+              right: -3,
+              width: 20,
+              height: 20,
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #ef4444, #dc2626)",
+              color: "white",
+              fontSize: 11,
+              fontWeight: 800,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 2px 8px rgba(239,68,68,0.4)",
+            }}
+          >
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {showDropdown && (
+        <div
+          style={{
+            position: "absolute",
+            top: 50,
+            right: 0,
+            width: 330,
+            maxHeight: 420,
+            borderRadius: 20,
+            background: "rgba(17, 24, 39, 0.96)",
+            backdropFilter: "blur(20px)",
+            border: "1px solid var(--border-secondary)",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(34,197,94,0.1)",
+            zIndex: 1000,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              padding: "16px 18px",
+              borderBottom: "1px solid var(--border-secondary)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              background: "rgba(255,255,255,0.02)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 16 }}>🔔</span>
+              <span
+                style={{
+                  fontSize: 15,
+                  fontWeight: 700,
+                  color: "var(--text-primary)",
+                  fontFamily: "var(--font-display)",
+                }}
+              >
+                Notifications
+              </span>
+            </div>
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllRead}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: 12,
+                  color: "#22c55e",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Mark all read
+              </button>
+            )}
+          </div>
+
+          {/* Body List */}
+          <div
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: "8px 0",
+            }}
+          >
+            {notifications.length === 0 ? (
+              <div
+                style={{
+                  padding: 32,
+                  textAlign: "center",
+                  color: "var(--text-tertiary)",
+                  fontSize: 13,
+                }}
+              >
+                <div style={{ fontSize: 28, marginBottom: 8 }}>🌿</div>
+                No notifications right now
+              </div>
+            ) : (
+              notifications.map((n) => (
+                <div
+                  key={n.id}
+                  onClick={() => !n.is_read && handleMarkRead(n.id)}
+                  style={{
+                    padding: "12px 18px",
+                    borderBottom: "1px solid rgba(255,255,255,0.04)",
+                    background: n.is_read ? "transparent" : "rgba(34,197,94,0.06)",
+                    cursor: "pointer",
+                    transition: "background 0.2s",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: 4,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: n.is_read ? 600 : 700,
+                        color: n.is_read ? "var(--text-secondary)" : "var(--text-primary)",
+                      }}
+                    >
+                      {n.title}
+                    </span>
+                    <span style={{ fontSize: 10, color: "var(--text-tertiary)" }}>
+                      {timeAgo(n.created_at)}
+                    </span>
+                  </div>
+                  <p
+                    style={{
+                      fontSize: 12,
+                      color: "var(--text-tertiary)",
+                      margin: "0 0 6px",
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {n.message}
+                  </p>
+                  {n.link && (
+                    <Link
+                      href={n.link}
+                      onClick={() => setShowDropdown(false)}
+                      style={{
+                        fontSize: 11,
+                        color: "#22c55e",
+                        fontWeight: 700,
+                        textDecoration: "none",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      View details →
+                    </Link>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -53,10 +53,15 @@ export default function LandingPage() {
   const router = useRouter();
   const { user, userRole, signOut, loading } = useAuth();
 
-  // Prefetch the chat route for instant navigation
+  // Redirect logged-in users to their respective dashboard
   useEffect(() => {
-    router.prefetch("/chat");
-  }, [router]);
+    if (!loading && user) {
+      if (userRole === "admin") router.replace("/admin");
+      else router.replace("/dashboard");
+    } else {
+      router.prefetch("/chat");
+    }
+  }, [user, userRole, loading, router]);
 
   const startSession = () => {
     if (user) {

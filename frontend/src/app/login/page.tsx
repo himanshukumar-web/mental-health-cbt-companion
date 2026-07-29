@@ -367,7 +367,7 @@ function AuthPageInner() {
     if (!loading && user) {
       if (userRole) {
         if (userRole === "admin") router.replace("/admin");
-        else router.replace("/");
+        else router.replace("/dashboard");
       } else {
         router.replace("/role-select");
       }
