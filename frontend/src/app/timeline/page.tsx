@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import TimelineFeed from "@/components/TimelineFeed";
+import ExportModal from "@/components/ExportModal";
 import { useTimeline } from "@/hooks/useTimeline";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 
@@ -14,6 +15,7 @@ export default function TimelinePage() {
 
   const [category, setCategory] = useState<string>("all");
   const [search, setSearch] = useState<string>("");
+  const [exportOpen, setExportOpen] = useState<boolean>(false);
 
   const { timeline, loading: timelineLoading } = useTimeline(user?.id, category, search);
 
@@ -49,6 +51,14 @@ export default function TimelinePage() {
           loading={timelineLoading}
           onFilterChange={(cat) => setCategory(cat)}
           onSearchChange={(q) => setSearch(q)}
+          onOpenExport={() => setExportOpen(true)}
+        />
+
+        {/* Export Modal */}
+        <ExportModal
+          isOpen={exportOpen}
+          onClose={() => setExportOpen(false)}
+          userId={user.id}
         />
       </main>
     </div>

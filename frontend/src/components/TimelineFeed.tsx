@@ -9,6 +9,7 @@ interface TimelineFeedProps {
   loading?: boolean;
   onFilterChange?: (category: string) => void;
   onSearchChange?: (query: string) => void;
+  onOpenExport?: () => void;
 }
 
 const CATEGORIES = [
@@ -25,17 +26,21 @@ export default function TimelineFeed({
   loading = false,
   onFilterChange,
   onSearchChange,
+  onOpenExport,
 }: TimelineFeedProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [visibleCount, setVisibleCount] = useState<number>(15);
 
   const handleCategorySelect = (cat: string) => {
     setSelectedCategory(cat);
+    setVisibleCount(15);
     if (onFilterChange) onFilterChange(cat);
   };
 
   const handleSearch = (q: string) => {
     setSearchQuery(q);
+    setVisibleCount(15);
     if (onSearchChange) onSearchChange(q);
   };
 
@@ -56,9 +61,31 @@ export default function TimelineFeed({
     }
   };
 
+  const visibleItems = items.slice(0, visibleCount);
+
+  // Group visible items by Date String (YYYY-MM-DD)
+  const groupedByDate: Record<string, TimelineItem[]> = {};
+  visibleItems.forEach((item) => {
+    const dStr = item.timestamp ? new Date(item.timestamp).toISOString().split("T")[0] : "Recent";
+    if (!groupedByDate[dStr]) groupedByDate[dStr] = [];
+    groupedByDate[dStr].push(item);
+  });
+
+  const dateKeys = Object.keys(groupedByDate);
+
+  const getDateHeaderLabel = (dateStr: string) => {
+    if (dateStr === "Recent") return "Recent Activity";
+    const today = new Date().toISOString().split("T")[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+
+    if (dateStr === today) return "Today";
+    if (dateStr === yesterday) return "Yesterday";
+    return new Date(dateStr).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric", year: "numeric" });
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
-      {/* Search & Filter Header */}
+      {/* Search & Filter & Export Header */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", justifyContent: "space-between" }}>
         <input
           type="text"
@@ -77,33 +104,56 @@ export default function TimelineFeed({
           }}
         />
 
-        {/* Category Pills */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {CATEGORIES.map((cat) => {
-            const isSelected = selectedCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => handleCategorySelect(cat.id)}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 10,
-                  border: isSelected ? "1px solid #22c55e" : "1px solid var(--border-secondary)",
-                  background: isSelected ? "rgba(34,197,94,0.12)" : "transparent",
-                  color: isSelected ? "#22c55e" : "var(--text-secondary)",
-                  fontSize: 12,
-                  fontWeight: isSelected ? 700 : 500,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                <span>{cat.icon}</span>
-                <span>{cat.label}</span>
-              </button>
-            );
-          })}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+          {/* Category Pills */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {CATEGORIES.map((cat) => {
+              const isSelected = selectedCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => handleCategorySelect(cat.id)}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 10,
+                    border: isSelected ? "1px solid #22c55e" : "1px solid var(--border-secondary)",
+                    background: isSelected ? "rgba(34,197,94,0.12)" : "transparent",
+                    color: isSelected ? "#22c55e" : "var(--text-secondary)",
+                    fontSize: 12,
+                    fontWeight: isSelected ? 700 : 500,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <span>{cat.icon}</span>
+                  <span>{cat.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {onOpenExport && (
+            <button
+              onClick={onOpenExport}
+              style={{
+                padding: "6px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(59,130,246,0.3)",
+                background: "rgba(59,130,246,0.12)",
+                color: "#3b82f6",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              📥 Export Data
+            </button>
+          )}
         </div>
       </div>
 
@@ -130,75 +180,111 @@ export default function TimelineFeed({
           </div>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <AnimatePresence>
-            {items.map((item) => {
-              const badge = getItemBadge(item.type);
-              const formattedDate = item.timestamp
-                ? new Date(item.timestamp).toLocaleString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : "Recent";
-
-              return (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {dateKeys.map((dateStr) => {
+            const dateGroupItems = groupedByDate[dateStr];
+            return (
+              <div key={dateStr} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {/* Date Group Header */}
+                <div
                   style={{
-                    padding: 16,
-                    borderRadius: 16,
-                    background: "var(--bg-glass)",
-                    backdropFilter: "blur(16px)",
-                    border: "1px solid var(--border-secondary)",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "#22c55e",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    borderBottom: "1px dashed var(--border-secondary)",
+                    paddingBottom: 4,
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        padding: "2px 8px",
-                        borderRadius: 6,
-                        background: badge.bg,
-                        color: badge.color,
-                        border: `1px solid ${badge.color}30`,
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {badge.label}
-                    </span>
+                  📅 {getDateHeaderLabel(dateStr)} ({dateGroupItems.length})
+                </div>
 
-                    <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>{formattedDate}</span>
-                  </div>
+                <AnimatePresence>
+                  {dateGroupItems.map((item) => {
+                    const badge = getItemBadge(item.type);
+                    const formattedTime = item.timestamp
+                      ? new Date(item.timestamp).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+                      : "";
 
-                  <h4 style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
-                    {item.title}
-                  </h4>
+                    return (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        style={{
+                          padding: 16,
+                          borderRadius: 16,
+                          background: "var(--bg-glass)",
+                          backdropFilter: "blur(16px)",
+                          border: "1px solid var(--border-secondary)",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 8,
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              padding: "2px 8px",
+                              borderRadius: 6,
+                              background: badge.bg,
+                              color: badge.color,
+                              border: `1px solid ${badge.color}30`,
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            {badge.label}
+                          </span>
 
-                  <p
-                    style={{
-                      fontSize: 13,
-                      color: "var(--text-secondary)",
-                      margin: 0,
-                      lineHeight: 1.5,
-                      whiteSpace: "pre-wrap",
-                    }}
-                  >
-                    {item.content}
-                  </p>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
+                          <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>{formattedTime}</span>
+                        </div>
+
+                        <h4 style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
+                          {item.title}
+                        </h4>
+
+                        <p
+                          style={{
+                            fontSize: 13,
+                            color: "var(--text-secondary)",
+                            margin: 0,
+                            lineHeight: 1.5,
+                            whiteSpace: "pre-wrap",
+                          }}
+                        >
+                          {item.content}
+                        </p>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
+            );
+          })}
+
+          {/* Infinite Scroll / Load More Button */}
+          {visibleCount < items.length && (
+            <button
+              onClick={() => setVisibleCount((prev) => prev + 15)}
+              style={{
+                padding: "12px 20px",
+                borderRadius: 14,
+                border: "1px solid var(--border-secondary)",
+                background: "var(--bg-secondary)",
+                color: "var(--text-primary)",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                margin: "12px auto 0",
+              }}
+            >
+              Load More Activity Logs ({items.length - visibleCount} remaining)...
+            </button>
+          )}
         </div>
       )}
     </div>

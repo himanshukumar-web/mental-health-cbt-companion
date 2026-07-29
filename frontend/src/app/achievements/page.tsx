@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
+import DailyChallengesCard from "@/components/DailyChallengesCard";
+import { useChallenges } from "@/hooks/useChallenges";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
-import toast from "react-hot-toast";
+import { motion } from "framer-motion";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -28,6 +30,8 @@ export default function AchievementsPage() {
   const [badges, setBadges] = useState<Badge[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const { challenges, streak, completeChallenge, loading: challengesLoading } = useChallenges(user?.id);
+
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
   }, [user, authLoading, router]);
@@ -35,12 +39,11 @@ export default function AchievementsPage() {
   const fetchData = useCallback(async () => {
     if (!user) return;
     try {
-      const [xpRes, moodRes, journalRes, cbtRes, habitRes] = await Promise.all([
+      const [xpRes, moodRes, journalRes, cbtRes] = await Promise.all([
         fetch(`${API_URL}/gamification/xp/${user.id}`),
         fetch(`${API_URL}/mood-entries/${user.id}`),
         fetch(`${API_URL}/journal/${user.id}`),
         fetch(`${API_URL}/cbt-worksheets/${user.id}`),
-        fetch(`${API_URL}/habits/${user.id}/progress`),
       ]);
 
       let xp = 0;
@@ -57,7 +60,6 @@ export default function AchievementsPage() {
       let moodCount = 0;
       let journalCount = 0;
       let cbtCount = 0;
-      let habitCompletions = 0;
 
       if (moodRes.ok) {
         const json = await moodRes.json();
@@ -71,12 +73,7 @@ export default function AchievementsPage() {
         const json = await cbtRes.json();
         cbtCount = (json.worksheets || []).length;
       }
-      if (habitRes.ok) {
-        const json = await habitRes.json();
-        habitCompletions = (json.completions || []).length;
-      }
 
-      // Compute Badges
       const badgeList: Badge[] = [
         {
           id: "mind_explorer",
@@ -154,221 +151,142 @@ export default function AchievementsPage() {
         </div>
       </>
     );
+
   if (!user) return null;
 
-  const currentLevelXP = totalXP % 500;
-  const progressPct = (currentLevelXP / 500) * 100;
+  const currentLevelXP = totalXP % 100;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-        background: "var(--bg-primary)",
-      }}
-    >
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
       <Sidebar />
-      <main
-        style={{
-          flex: 1,
-          marginLeft: 260,
-          padding: "32px 28px",
-          maxWidth: 900,
-          overflow: "auto",
-        }}
-      >
+      <main style={{ flex: 1, marginLeft: 260, padding: "32px 28px", maxWidth: 1080, overflow: "auto" }}>
         <style>{`
           @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px !important; } }
-          @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
         `}</style>
 
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
-          <h1
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "clamp(24px, 4vw, 32px)",
-              fontWeight: 700,
-              color: "var(--text-primary)",
-              marginBottom: 6,
-            }}
-          >
-            Achievements & Gamification 🏆
+          <span style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#f59e0b", letterSpacing: "0.08em" }}>
+            Gamification Engine
+          </span>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: "var(--text-primary)", margin: "4px 0 0" }}>
+            Achievements & Daily Quests
           </h1>
-          <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
-            Earn XP and unlock badges as you build healthy mental wellness habits
+          <p style={{ fontSize: 14, color: "var(--text-tertiary)", margin: "4px 0 0" }}>
+            Earn XP, unlock achievement badges, maintain daily activity streaks, and reach new levels.
           </p>
         </div>
 
-        {/* Level Banner */}
+        {/* Level & XP Card */}
         <div
           style={{
-            padding: "24px 28px",
+            padding: 24,
             borderRadius: 20,
-            background:
-              "linear-gradient(135deg, rgba(245,158,11,0.12), rgba(34,197,94,0.08))",
+            background: "linear-gradient(135deg, rgba(245,158,11,0.15), rgba(234,88,12,0.1))",
             border: "1px solid rgba(245,158,11,0.3)",
-            marginBottom: 32,
+            marginBottom: 28,
             display: "flex",
-            alignItems: "center",
-            gap: 24,
-            flexWrap: "wrap",
-          }}
-        >
-          <div
-            style={{
-              width: 72,
-              height: 72,
-              borderRadius: "50%",
-              background: "linear-gradient(135deg, #f59e0b, #d97706)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 28,
-              fontWeight: 800,
-              color: "white",
-              boxShadow: "0 0 24px rgba(245,158,11,0.4)",
-            }}
-          >
-            {level}
-          </div>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div
-              style={{
-                fontSize: 20,
-                fontWeight: 700,
-                color: "var(--text-primary)",
-                fontFamily: "var(--font-display)",
-                marginBottom: 4,
-              }}
-            >
-              Level {level} Wellness Champion
-            </div>
-            <div
-              style={{
-                fontSize: 13,
-                color: "var(--text-secondary)",
-                marginBottom: 10,
-              }}
-            >
-              {totalXP} Total XP Earned • {500 - currentLevelXP} XP until Level {level + 1}
-            </div>
-
-            {/* XP Progress Bar */}
-            <div
-              style={{
-                width: "100%",
-                height: 10,
-                borderRadius: 5,
-                background: "var(--bg-tertiary)",
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  width: `${progressPct}%`,
-                  height: "100%",
-                  background: "linear-gradient(90deg, #f59e0b, #22c55e)",
-                  borderRadius: 5,
-                  transition: "width 0.6s ease",
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Badges Grid */}
-        <h2
-          style={{
-            fontSize: 16,
-            fontWeight: 700,
-            color: "var(--text-primary)",
-            fontFamily: "var(--font-display)",
-            marginBottom: 16,
-          }}
-        >
-          Progress Badges
-        </h2>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            flexDirection: "column",
             gap: 16,
           }}
         >
-          {badges.map((b, i) => (
-            <div
-              key={b.id}
-              style={{
-                padding: "20px",
-                borderRadius: 16,
-                background: b.isUnlocked
-                  ? "var(--bg-glass)"
-                  : "rgba(255,255,255,0.02)",
-                border: b.isUnlocked
-                  ? `1px solid ${b.color}40`
-                  : "0.5px solid var(--border-secondary)",
-                opacity: b.isUnlocked ? 1 : 0.55,
-                display: "flex",
-                alignItems: "center",
-                gap: 16,
-                animation: `popIn 0.3s ease ${i * 0.05}s both`,
-              }}
-            >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <div
                 style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: 14,
-                  background: b.isUnlocked
-                    ? `${b.color}20`
-                    : "var(--bg-tertiary)",
+                  width: 54,
+                  height: 54,
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #f59e0b, #ea580c)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: 26,
-                  filter: b.isUnlocked ? "none" : "grayscale(100%)",
+                  fontSize: 24,
+                  color: "#fff",
+                  fontWeight: 900,
+                  boxShadow: "0 0 20px rgba(245,158,11,0.4)",
                 }}
               >
-                {b.icon}
+                {level}
               </div>
-              <div style={{ flex: 1 }}>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 700,
-                    color: b.isUnlocked ? "var(--text-primary)" : "var(--text-tertiary)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
-                >
-                  {b.title} {b.isUnlocked && "✓"}
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "var(--text-secondary)",
-                    lineHeight: 1.4,
-                    marginTop: 2,
-                    marginBottom: 6,
-                  }}
-                >
-                  {b.desc}
-                </div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: b.isUnlocked ? b.color : "var(--text-tertiary)",
-                  }}
-                >
-                  {b.isUnlocked ? "Unlocked 🎉" : b.reqText}
-                </div>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)" }}>Level {level} Explorer</div>
+                <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Total Experience: {totalXP} XP</div>
               </div>
             </div>
-          ))}
+
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#f59e0b" }}>{currentLevelXP} / 100 XP</div>
+              <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>{100 - currentLevelXP} XP to Level {level + 1}</div>
+            </div>
+          </div>
+
+          <div style={{ height: 8, borderRadius: 4, background: "var(--bg-secondary)", overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${currentLevelXP}%`, background: "linear-gradient(90deg, #f59e0b, #ea580c)", borderRadius: 4 }} />
+          </div>
+        </div>
+
+        {/* Daily Challenges Widget */}
+        <div style={{ marginBottom: 28 }}>
+          <DailyChallengesCard
+            challenges={challenges}
+            streak={streak}
+            onCompleteChallenge={completeChallenge}
+            loading={challengesLoading}
+          />
+        </div>
+
+        {/* Badges Grid */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <h3 style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+            🏅 Achievement Badges
+          </h3>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
+            {badges.map((b) => (
+              <motion.div
+                key={b.id}
+                whileHover={{ y: -2 }}
+                style={{
+                  padding: 20,
+                  borderRadius: 18,
+                  background: b.isUnlocked ? "var(--bg-glass)" : "var(--bg-secondary)",
+                  backdropFilter: "blur(12px)",
+                  border: b.isUnlocked ? `1px solid ${b.color}40` : "1px solid var(--border-secondary)",
+                  opacity: b.isUnlocked ? 1 : 0.6,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: b.isUnlocked ? `${b.color}20` : "var(--bg-primary)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 22,
+                    }}
+                  >
+                    {b.icon}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>{b.title}</div>
+                    <div style={{ fontSize: 11, color: b.isUnlocked ? b.color : "var(--text-tertiary)", fontWeight: 600 }}>
+                      {b.isUnlocked ? "✓ Unlocked" : "Locked"}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.4 }}>{b.desc}</div>
+                <div style={{ fontSize: 11, color: "var(--text-tertiary)", fontWeight: 600 }}>Requirement: {b.reqText}</div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </main>
     </div>
