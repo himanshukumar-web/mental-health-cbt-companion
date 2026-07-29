@@ -1204,3 +1204,47 @@ async def get_wellness_score_endpoint(user_id: str):
     history = await crud.get_wellness_score_history(user_id)
     return {"current": latest, "history": history}
 
+
+# ── Daily Challenges & Streaks Endpoints ─────────────────────────────────────
+
+@app.get("/challenges/{user_id}")
+async def get_daily_challenges_endpoint(user_id: str):
+    challenges = await crud.get_daily_challenges(user_id)
+    streak = await crud.get_user_streak(user_id)
+    return {"challenges": challenges, "streak": streak}
+
+
+@app.post("/challenges/{user_id}/complete/{challenge_id}")
+async def complete_challenge_endpoint(user_id: str, challenge_id: str):
+    res = await crud.complete_daily_challenge(user_id, challenge_id)
+    return res
+
+
+@app.get("/streaks/{user_id}")
+async def get_user_streak_endpoint(user_id: str):
+    streak = await crud.get_user_streak(user_id)
+    return {"streak": streak}
+
+
+# ── Calendar Heatmap & Day Details Endpoints ─────────────────────────────────
+
+@app.get("/heatmap/{user_id}")
+async def get_heatmap_endpoint(user_id: str):
+    data = await crud.get_calendar_heatmap_data(user_id)
+    return {"heatmap": data}
+
+
+@app.get("/heatmap/{user_id}/day")
+async def get_day_details_endpoint(user_id: str, date: str):
+    details = await crud.get_day_details(user_id, date)
+    return {"day_details": details}
+
+
+# ── AI Memory Summarizer Endpoint ───────────────────────────────────────────
+
+@app.post("/memories/summarize/{user_id}")
+async def summarize_memory_endpoint(user_id: str):
+    summary = await crud.generate_and_save_memory_summary(user_id)
+    return {"summary": summary}
+
+

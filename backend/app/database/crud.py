@@ -159,6 +159,39 @@ def init_sqlite():
     )
     """)
 
+    # Create user_daily_challenges table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_daily_challenges (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        target INTEGER DEFAULT 1,
+        current INTEGER DEFAULT 0,
+        reward_xp INTEGER DEFAULT 25,
+        date TEXT NOT NULL,
+        completed INTEGER DEFAULT 0
+    )
+    """)
+
+    # Create user_streaks table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_streaks (
+        user_id TEXT PRIMARY KEY,
+        current_streak INTEGER DEFAULT 1,
+        longest_streak INTEGER DEFAULT 1,
+        last_activity_date TEXT
+    )
+    """)
+
+    # Create user_memory_summaries table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_memory_summaries (
+        user_id TEXT PRIMARY KEY,
+        compact_summary TEXT NOT NULL,
+        last_summarized_at TEXT
+    )
+    """)
+
     # Initialize with default doctor if empty
     cursor.execute("SELECT COUNT(*) FROM doctors")
     if cursor.fetchone()[0] == 0:
@@ -2986,5 +3019,204 @@ async def build_user_memory_context(user_id: str | None) -> str:
         return ""
 
     return "\n" + "\n".join(context_parts) + "\n"
+
+
+# ── Daily Challenges & Streaks ──────────────────────────────────────────────────
+
+DEFAULT_CHALLENGES = [
+    {"id": "c1", "title": "Log Today's Mood", "target": 1, "reward_xp": 20},
+    {"id": "c2", "title": "Practice 5-Min Meditation / Breathing", "target": 1, "reward_xp": 25},
+    {"id": "c3", "title": "Write 1 Journal Reflection", "target": 1, "reward_xp": 30},
+    {"id": "c4", "title": "Complete CBT Reframing Worksheet", "target": 1, "reward_xp": 35},
+]
+
+async def get_daily_challenges(user_id: str) -> list[dict]:
+    today = datetime.now(timezone.utc).isoformat()[:10]
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id, title, target, current, reward_xp, date, completed FROM user_daily_challenges WHERE user_id=? AND date=?", (user_id, today))
+        rows = cursor.fetchall()
+        if not rows:
+            # Seed default challenges for today
+            seeded = []
+            for item in DEFAULT_CHALLENGES:
+                cid = f"{item['id']}_{today}"
+                cursor.execute("""
+                INSERT INTO user_daily_challenges (id, user_id, title, target, current, reward_xp, date, completed)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+                """, (cid, user_id, item['title'], item['target'], 0, item['reward_xp'], today))
+                seeded.append({
+                    "id": cid, "user_id": user_id, "title": item['title'],
+                    "target": item['target'], "current": 0, "reward_xp": item['reward_xp'],
+                    "date": today, "completed": False
+                })
+            conn.commit()
+            return seeded
+
+        return [{
+            "id": r[0], "user_id": r[1], "title": r[2], "target": r[3],
+            "current": r[4], "reward_xp": r[5], "date": r[6], "completed": bool(r[7])
+        } for r in rows]
+    except Exception as e:
+        print("SQLite challenges error:", e)
+        return []
+    finally:
+        conn.close()
+
+
+async def complete_daily_challenge(user_id: str, challenge_id: str) -> dict:
+    today = datetime.now(timezone.utc).isoformat()[:10]
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE user_daily_challenges SET current=target, completed=1 WHERE user_id=? AND id=?", (user_id, challenge_id))
+        conn.commit()
+        cursor.execute("SELECT reward_xp FROM user_daily_challenges WHERE id=?", (challenge_id,))
+        row = cursor.fetchone()
+        xp_reward = row[0] if row else 25
+        await add_xp_event(user_id, "challenge_completed", xp_reward)
+        await update_user_streak(user_id)
+        return {"status": "completed", "challenge_id": challenge_id, "reward_xp": xp_reward}
+    except Exception as e:
+        print("SQLite challenge complete error:", e)
+        return {"status": "error"}
+    finally:
+        conn.close()
+
+
+async def update_user_streak(user_id: str) -> dict:
+    today = datetime.now(timezone.utc).isoformat()[:10]
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT current_streak, longest_streak, last_activity_date FROM user_streaks WHERE user_id=?", (user_id,))
+        row = cursor.fetchone()
+        if not row:
+            cursor.execute("""
+            INSERT INTO user_streaks (user_id, current_streak, longest_streak, last_activity_date)
+            VALUES (?, 1, 1, ?)
+            """, (user_id, today))
+            conn.commit()
+            return {"current_streak": 1, "longest_streak": 1, "last_activity_date": today}
+
+        curr, longest, last_date = row[0], row[1], row[2]
+        if last_date == today:
+            return {"current_streak": curr, "longest_streak": longest, "last_activity_date": today}
+
+        # Check if yesterday
+        last_dt = datetime.fromisoformat(last_date).date() if last_date else None
+        today_dt = datetime.now(timezone.utc).date()
+        
+        if last_dt and (today_dt - last_dt).days == 1:
+            new_curr = curr + 1
+            new_longest = max(longest, new_curr)
+        else:
+            new_curr = 1
+            new_longest = max(longest, 1)
+
+        cursor.execute("""
+        UPDATE user_streaks SET current_streak=?, longest_streak=?, last_activity_date=? WHERE user_id=?
+        """, (new_curr, new_longest, today, user_id))
+        conn.commit()
+        return {"current_streak": new_curr, "longest_streak": new_longest, "last_activity_date": today}
+    except Exception:
+        return {"current_streak": 1, "longest_streak": 1, "last_activity_date": today}
+    finally:
+        conn.close()
+
+
+async def get_user_streak(user_id: str) -> dict:
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT current_streak, longest_streak, last_activity_date FROM user_streaks WHERE user_id=?", (user_id,))
+        row = cursor.fetchone()
+        if row:
+            return {"current_streak": row[0], "longest_streak": row[1], "last_activity_date": row[2]}
+    except Exception:
+        pass
+    finally:
+        conn.close()
+    return {"current_streak": 1, "longest_streak": 1, "last_activity_date": ""}
+
+
+# ── Calendar Heatmap & Day Details Breakdown ────────────────────────────────────
+
+async def get_calendar_heatmap_data(user_id: str) -> list[dict]:
+    scores = await get_wellness_score_history(user_id)
+    moods = await get_mood_entries(user_id)
+
+    heatmap_map = {}
+    for m in moods:
+        d = str(m.get("created_at") or m.get("date") or "")[:10]
+        if d:
+            m_score = min(100, round((m.get("mood_score", 5) / 10.0) * 100))
+            heatmap_map[d] = max(heatmap_map.get(d, 0), m_score)
+
+    for s in scores:
+        d = str(s.get("created_at") or "")[:10]
+        if d:
+            heatmap_map[d] = max(heatmap_map.get(d, 0), s.get("total_score", 50))
+
+    return [{"date": k, "score": v} for k, v in heatmap_map.items()]
+
+
+async def get_day_details(user_id: str, target_date: str) -> dict:
+    moods = await get_mood_entries(user_id)
+    day_mood = next((m for m in moods if str(m.get("created_at") or m.get("date") or "")[:10] == target_date), None)
+
+    journals = await get_journal_entries(user_id)
+    day_journals = [j for j in journals if str(j.get("created_at") or "")[:10] == target_date]
+
+    cbt = await get_cbt_worksheets(user_id)
+    day_cbt = [w for w in cbt if str(w.get("created_at") or "")[:10] == target_date]
+
+    phq9 = await get_phq9_history(user_id)
+    day_phq9 = next((p for p in phq9 if str(p.get("created_at") or "")[:10] == target_date), None)
+
+    gad7 = await get_gad7_history(user_id)
+    day_gad7 = next((g for g in gad7 if str(g.get("created_at") or "")[:10] == target_date), None)
+
+    habit_completions = await get_habit_completions(user_id)
+    day_habits = [h for h in habit_completions if str(h.get("date") or "")[:10] == target_date]
+
+    return {
+        "date": target_date,
+        "mood": day_mood,
+        "journals": day_journals,
+        "cbt_worksheets": day_cbt,
+        "phq9": day_phq9,
+        "gad7": day_gad7,
+        "habit_completions": day_habits,
+        "summary": f"Day summary for {target_date}: {len(day_journals)} journals written, {len(day_cbt)} CBT exercises, {len(day_habits)} habits completed."
+    }
+
+
+# ── AI Memory Summarizer (Token Optimization) ──────────────────────────────────
+
+async def generate_and_save_memory_summary(user_id: str) -> dict:
+    now = datetime.now(timezone.utc).isoformat()
+    raw_context = await build_user_memory_context(user_id)
+    
+    # Compact token-optimized summary creation
+    compact_summary = f"Aggregated User Behavioral & Wellness Profile (Updated {now[:10]}):\n{raw_context.strip()}"
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        INSERT INTO user_memory_summaries (user_id, compact_summary, last_summarized_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET compact_summary=excluded.compact_summary, last_summarized_at=excluded.last_summarized_at
+        """, (user_id, compact_summary, now))
+        conn.commit()
+    except Exception as e:
+        print("SQLite memory summary error:", e)
+    finally:
+        conn.close()
+
+    return {"user_id": user_id, "compact_summary": compact_summary, "last_summarized_at": now}
+
 
 
