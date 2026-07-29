@@ -387,7 +387,7 @@ function AuthPageInner() {
     <div style={{
       minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
       background: "linear-gradient(160deg, #0b0f1a 0%, #111827 50%, #0b0f1a 100%)",
-      padding: 20, fontFamily: "'system-ui', sans-serif", position: "relative", overflow: "hidden",
+      padding: 20, fontFamily: "'system-ui', sans-serif", position: "relative", overflowX: "hidden", overflowY: "auto",
     }}>
       <style>{`
         @keyframes spin      { to { transform: rotate(360deg); } }
