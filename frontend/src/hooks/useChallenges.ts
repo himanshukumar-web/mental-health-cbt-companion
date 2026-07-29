@@ -1,0 +1,58 @@
+"use client";
+
+import { useState, useCallback, useEffect } from "react";
+import { DailyChallenge, UserStreak } from "@/types/heatmap";
+import toast from "react-hot-toast";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+export function useChallenges(userId?: string) {
+  const [challenges, setChallenges] = useState<DailyChallenge[]>([]);
+  const [streak, setStreak] = useState<UserStreak>({ current_streak: 1, longest_streak: 1, last_activity_date: "" });
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const fetchChallenges = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/challenges/${userId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setChallenges(data.challenges || []);
+        if (data.streak) setStreak(data.streak);
+      }
+    } catch (err) {
+      console.error("Error fetching daily challenges:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    fetchChallenges();
+  }, [fetchChallenges]);
+
+  const completeChallenge = async (challengeId: string) => {
+    if (!userId) return;
+    try {
+      const res = await fetch(`${API_URL}/challenges/${userId}/complete/${challengeId}`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(`Challenge Completed! +${data.reward_xp || 25} XP`);
+        await fetchChallenges();
+      }
+    } catch (err) {
+      console.error("Error completing challenge:", err);
+    }
+  };
+
+  return {
+    challenges,
+    streak,
+    completeChallenge,
+    refetch: fetchChallenges,
+    loading,
+  };
+}

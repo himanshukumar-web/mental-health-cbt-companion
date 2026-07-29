@@ -1,0 +1,61 @@
+"use client";
+
+import { useState, useCallback, useEffect } from "react";
+import { HeatmapDay, DayDetails } from "@/types/heatmap";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+export function useHeatmap(userId?: string) {
+  const [heatmapData, setHeatmapData] = useState<HeatmapDay[]>([]);
+  const [selectedDayDetails, setSelectedDayDetails] = useState<DayDetails | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [modalLoading, setModalLoading] = useState<boolean>(false);
+
+  const fetchHeatmap = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/heatmap/${userId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setHeatmapData(data.heatmap || []);
+      }
+    } catch (err) {
+      console.error("Error fetching heatmap:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    fetchHeatmap();
+  }, [fetchHeatmap]);
+
+  const fetchDayDetails = async (date: string) => {
+    if (!userId) return;
+    setModalLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/heatmap/${userId}/day?date=${date}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedDayDetails(data.day_details);
+      }
+    } catch (err) {
+      console.error("Error fetching day details:", err);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const clearDayDetails = () => setSelectedDayDetails(null);
+
+  return {
+    heatmapData,
+    selectedDayDetails,
+    fetchDayDetails,
+    clearDayDetails,
+    refetch: fetchHeatmap,
+    loading,
+    modalLoading,
+  };
+}
