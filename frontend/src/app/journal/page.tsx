@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import EmptyState from "@/components/ui/EmptyState";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
+import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -24,10 +26,10 @@ interface JournalEntry {
 }
 
 const SENTIMENT_COLORS: Record<string, { bg: string; text: string; icon: string }> = {
-  positive: { bg: "rgba(34,197,94,0.1)", text: "#22c55e", icon: "😊" },
-  negative: { bg: "rgba(239,68,68,0.1)", text: "#ef4444", icon: "😔" },
-  neutral: { bg: "rgba(156,163,175,0.1)", text: "#9ca3af", icon: "😐" },
-  mixed: { bg: "rgba(168,85,247,0.1)", text: "#a855f7", icon: "🤔" },
+  positive: { bg: "rgba(34,197,94,0.12)", text: "#22c55e", icon: "😊" },
+  negative: { bg: "rgba(239,68,68,0.12)", text: "#ef4444", icon: "😔" },
+  neutral: { bg: "rgba(156,163,175,0.12)", text: "#9ca3af", icon: "😐" },
+  mixed: { bg: "rgba(168,85,247,0.12)", text: "#a855f7", icon: "🤔" },
 };
 
 export default function JournalPage() {
@@ -43,6 +45,7 @@ export default function JournalPage() {
   const [content, setContent] = useState("");
   const [search, setSearch] = useState("");
   const [filterSentiment, setFilterSentiment] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
@@ -59,11 +62,75 @@ export default function JournalPage() {
         const data = await res.json();
         setEntries(data.journal_entries || []);
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     setLoading(false);
   }, [user, search, filterSentiment]);
 
-  useEffect(() => { fetchEntries(); }, [fetchEntries]);
+  useEffect(() => {
+    fetchEntries();
+  }, [fetchEntries]);
+
+  // Speech-to-text Voice Journaling
+  const toggleVoiceRecording = () => {
+    if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
+      toast.error("Speech recognition is not supported in this browser.");
+      return;
+    }
+
+    if (recording) {
+      setRecording(false);
+      toast("Voice recording stopped.", { icon: "🎙️" });
+      return;
+    }
+
+    try {
+      const SpeechRecognition =
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      recognition.onstart = () => {
+        setRecording(true);
+        toast.success("Listening... Speak your thoughts freely 🎙️");
+      };
+
+      recognition.onresult = (event: any) => {
+        let transcript = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          transcript += event.results[i][0].transcript;
+        }
+        setContent((prev) => (prev ? prev + " " + transcript : transcript));
+      };
+
+      recognition.onerror = () => {
+        setRecording(false);
+        toast.error("Voice recognition error.");
+      };
+
+      recognition.onend = () => {
+        setRecording(false);
+      };
+
+      recognition.start();
+    } catch {
+      setRecording(false);
+    }
+  };
+
+  // AI Auto-Title Generator
+  const generateAiTitle = () => {
+    if (!content.trim()) {
+      toast.error("Write some content first!");
+      return;
+    }
+    const words = content.trim().split(/\s+/);
+    const autoTitle = words.slice(0, 5).join(" ") + (words.length > 5 ? "..." : "");
+    setTitle(autoTitle.charAt(0).toUpperCase() + autoTitle.slice(1));
+    toast.success("AI Generated Title! ✨");
+  };
 
   const handleSave = async () => {
     if (!user || !content.trim()) return;
@@ -71,20 +138,29 @@ export default function JournalPage() {
     try {
       const url = editId ? `${API_URL}/journal/${editId}` : `${API_URL}/journal`;
       const method = editId ? "PUT" : "POST";
-      const body = editId
-        ? { user_id: user.id, title, content }
-        : { user_id: user.id, title, content };
+      const body = {
+        user_id: user.id,
+        title: title || content.slice(0, 30) + "...",
+        content,
+      };
+
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+
       if (res.ok) {
         toast.success(editId ? "Entry updated!" : "Journal saved! 📝");
-        setShowEditor(false); setEditId(null); setTitle(""); setContent("");
+        setShowEditor(false);
+        setEditId(null);
+        setTitle("");
+        setContent("");
         fetchEntries();
       }
-    } catch { toast.error("Failed to save"); }
+    } catch {
+      toast.error("Failed to save");
+    }
     setSaving(false);
   };
 
@@ -92,8 +168,13 @@ export default function JournalPage() {
     if (!user) return;
     try {
       const res = await fetch(`${API_URL}/journal/${id}?user_id=${user.id}`, { method: "DELETE" });
-      if (res.ok) { toast.success("Deleted"); fetchEntries(); }
-    } catch { toast.error("Failed"); }
+      if (res.ok) {
+        toast.success("Entry deleted");
+        fetchEntries();
+      }
+    } catch {
+      toast.error("Failed to delete");
+    }
   };
 
   const handleAnalyze = async (id: string) => {
@@ -102,247 +183,414 @@ export default function JournalPage() {
     try {
       const res = await fetch(`${API_URL}/journal/${id}/analyze?user_id=${user.id}`, { method: "POST" });
       if (res.ok) {
-        toast.success("Analysis complete! ✨");
+        toast.success("AI Analysis Complete! ✨");
         fetchEntries();
       }
-    } catch { toast.error("Analysis failed"); }
+    } catch {
+      toast.error("Analysis failed");
+    }
     setAnalyzing(null);
   };
 
   const openEdit = (entry: JournalEntry) => {
-    setEditId(entry.id); setTitle(entry.title); setContent(entry.content);
+    setEditId(entry.id);
+    setTitle(entry.title);
+    setContent(entry.content);
     setShowEditor(true);
   };
 
   const parseEmotions = (emotions: Record<string, number> | string): Record<string, number> => {
     if (typeof emotions === "string") {
-      try { return JSON.parse(emotions); } catch { return {}; }
+      try {
+        return JSON.parse(emotions);
+      } catch {
+        return {};
+      }
     }
     return emotions || {};
   };
 
-  if (authLoading || loading) return <><Sidebar /><div style={{ marginLeft: 250 }}><PageSkeleton /></div></>;
+  if (authLoading || loading)
+    return (
+      <>
+        <Sidebar />
+        <div style={{ marginLeft: 250 }}>
+          <PageSkeleton />
+        </div>
+      </>
+    );
   if (!user) return null;
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)" }}>
       <Sidebar />
-      <main style={{ flex: 1, marginLeft: 250, padding: "32px 28px 80px", maxWidth: 900, overflow: "auto" }}>
+      <main style={{ flex: 1, marginLeft: 250, padding: "32px 28px 80px", maxWidth: 960, overflow: "auto" }}>
         <style>{`
           @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px 16px 80px !important; } }
-          @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-          @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         `}</style>
 
         <div style={{ marginBottom: 24 }}>
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(24px, 4vw, 32px)", fontWeight: 700, color: "var(--text-primary)", marginBottom: 6 }}>
-            AI Journal 📝
+          <span style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#a855f7", letterSpacing: "0.08em" }}>
+            Reflective Practice
+          </span>
+          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(24px, 4vw, 32px)", fontWeight: 800, color: "var(--text-primary)", margin: "4px 0 0" }}>
+            AI Reflective Journal 📝
           </h1>
-          <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
-            Write your thoughts — Sera will analyze sentiment and emotions
+          <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: "4px 0 0" }}>
+            Write or speak your thoughts freely — Sera performs automated sentiment, cognitive, and emotion breakdown.
           </p>
         </div>
 
-        {/* Search & Filter */}
+        {/* Search & Filter Bar */}
         <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
           <input
-            type="text" placeholder="Search entries..." value={search}
-            onChange={e => setSearch(e.target.value)}
+            type="text"
+            placeholder="🔍 Search journal entries..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             style={{
-              flex: 1, minWidth: 200, padding: "10px 14px", borderRadius: 10,
-              background: "var(--bg-secondary)", border: "0.5px solid var(--border-secondary)",
-              color: "var(--text-primary)", fontSize: 13, outline: "none",
-              fontFamily: "var(--font-body)",
+              flex: 1,
+              minWidth: 220,
+              padding: "11px 16px",
+              borderRadius: 14,
+              background: "var(--bg-glass)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid var(--border-secondary)",
+              color: "var(--text-primary)",
+              fontSize: 13,
+              outline: "none",
             }}
           />
-          {["positive", "negative", "neutral"].map(s => (
+
+          {["positive", "negative", "neutral"].map((s) => (
             <button
               key={s}
               onClick={() => setFilterSentiment(filterSentiment === s ? null : s)}
               style={{
-                padding: "8px 14px", borderRadius: 10,
-                background: filterSentiment === s ? SENTIMENT_COLORS[s].bg : "var(--bg-secondary)",
-                border: filterSentiment === s ? `1px solid ${SENTIMENT_COLORS[s].text}40` : "0.5px solid var(--border-secondary)",
+                padding: "8px 14px",
+                borderRadius: 12,
+                background: filterSentiment === s ? SENTIMENT_COLORS[s].bg : "var(--bg-glass)",
+                border: filterSentiment === s ? `1px solid ${SENTIMENT_COLORS[s].text}40` : "1px solid var(--border-secondary)",
                 color: filterSentiment === s ? SENTIMENT_COLORS[s].text : "var(--text-secondary)",
-                fontSize: 12, fontWeight: 500, cursor: "pointer",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
               }}
             >
-              {SENTIMENT_COLORS[s].icon} {s}
+              {SENTIMENT_COLORS[s].icon} {s.charAt(0).toUpperCase() + s.slice(1)}
             </button>
           ))}
         </div>
 
-        {/* New Entry Button */}
+        {/* New Entry CTA */}
         {!showEditor && (
-          <button
-            id="new-journal-entry"
-            onClick={() => { setEditId(null); setTitle(""); setContent(""); setShowEditor(true); }}
+          <motion.button
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => {
+              setEditId(null);
+              setTitle("");
+              setContent("");
+              setShowEditor(true);
+            }}
             style={{
-              width: "100%", padding: "18px", borderRadius: 14,
-              background: "linear-gradient(135deg, rgba(168,85,247,0.1), rgba(59,130,246,0.08))",
-              border: "1px dashed rgba(168,85,247,0.3)",
-              color: "#a855f7", fontSize: 14, fontWeight: 600,
-              cursor: "pointer", marginBottom: 24,
+              width: "100%",
+              padding: "18px",
+              borderRadius: 18,
+              background: "linear-gradient(135deg, rgba(168,85,247,0.12), rgba(59,130,246,0.08))",
+              border: "1px dashed rgba(168,85,247,0.4)",
+              color: "#a855f7",
+              fontSize: 15,
+              fontWeight: 700,
+              cursor: "pointer",
+              marginBottom: 24,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
             }}
           >
-            ✍️ Write New Entry
-          </button>
+            <span>✍️ Write or Voice New Journal Entry</span>
+          </motion.button>
         )}
 
-        {/* Editor */}
+        {/* Journal Editor Box */}
         {showEditor && (
-          <div style={{
-            padding: "24px", borderRadius: 20,
-            background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
-            marginBottom: 24, animation: "popIn 0.3s ease",
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-display)" }}>
-                {editId ? "Edit Entry" : "New Journal Entry"}
+          <div
+            style={{
+              padding: "24px",
+              borderRadius: 20,
+              background: "var(--bg-glass)",
+              backdropFilter: "blur(16px)",
+              border: "1px solid var(--border-secondary)",
+              marginBottom: 24,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-display)", margin: 0 }}>
+                {editId ? "Edit Journal Entry" : "New Journal Entry"}
               </h2>
-              <button onClick={() => setShowEditor(false)} style={{ width: 32, height: 32, borderRadius: 8, background: "var(--bg-tertiary)", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: 16 }}>✕</button>
+
+              <div style={{ display: "flex", gap: 8 }}>
+                {/* Voice Journaling Button */}
+                <button
+                  onClick={toggleVoiceRecording}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 10,
+                    border: recording ? "1px solid #ef4444" : "1px solid rgba(168,85,247,0.3)",
+                    background: recording ? "rgba(239,68,68,0.2)" : "rgba(168,85,247,0.12)",
+                    color: recording ? "#f87171" : "#a855f7",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  {recording ? "🔴 Stop Recording" : "🎙️ Voice Journal"}
+                </button>
+
+                {/* AI Title Generator */}
+                <button
+                  onClick={generateAiTitle}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(34,197,94,0.3)",
+                    background: "rgba(34,197,94,0.12)",
+                    color: "#22c55e",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  ✨ AI Title
+                </button>
+
+                <button
+                  onClick={() => setShowEditor(false)}
+                  style={{ background: "none", border: "none", color: "var(--text-tertiary)", fontSize: 16, cursor: "pointer" }}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
+
             <input
-              type="text" placeholder="Entry title (optional)" value={title}
-              onChange={e => setTitle(e.target.value)}
+              type="text"
+              placeholder="Entry Title..."
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               style={{
-                width: "100%", padding: "12px 14px", borderRadius: 10,
-                background: "var(--bg-secondary)", border: "0.5px solid var(--border-secondary)",
-                color: "var(--text-primary)", fontSize: 14, marginBottom: 12,
-                outline: "none", fontFamily: "var(--font-body)",
+                width: "100%",
+                padding: "12px 14px",
+                borderRadius: 12,
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border-secondary)",
+                color: "var(--text-primary)",
+                fontSize: 15,
+                fontWeight: 700,
+                marginBottom: 14,
+                outline: "none",
               }}
             />
+
             <textarea
-              value={content} onChange={e => setContent(e.target.value)}
-              placeholder="What's on your mind? Write freely..."
+              rows={6}
+              placeholder="What's on your mind today? Write freely..."
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
               style={{
-                width: "100%", minHeight: 180, padding: "14px",
-                borderRadius: 12, background: "var(--bg-secondary)",
-                border: "0.5px solid var(--border-secondary)",
-                color: "var(--text-primary)", fontSize: 14, lineHeight: 1.8,
-                resize: "vertical", fontFamily: "var(--font-body)", outline: "none",
+                width: "100%",
+                padding: "14px",
+                borderRadius: 14,
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border-secondary)",
+                color: "var(--text-primary)",
+                fontSize: 14,
+                lineHeight: 1.6,
+                marginBottom: 16,
+                outline: "none",
+                fontFamily: "inherit",
               }}
             />
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
-              <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-                {content.split(/\s+/).filter(Boolean).length} words
-              </span>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
               <button
-                onClick={handleSave} disabled={saving || !content.trim()}
+                onClick={() => setShowEditor(false)}
                 style={{
-                  padding: "12px 28px", borderRadius: 12,
-                  background: saving ? "var(--bg-tertiary)" : "linear-gradient(135deg, #a855f7, #8b5cf6)",
-                  border: "none", color: "white", fontSize: 14, fontWeight: 600,
-                  cursor: saving ? "default" : "pointer",
+                  padding: "10px 18px",
+                  borderRadius: 12,
+                  border: "1px solid var(--border-secondary)",
+                  background: "transparent",
+                  color: "var(--text-secondary)",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
                 }}
               >
-                {saving ? "Saving..." : editId ? "Update" : "Save Entry ✨"}
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={{
+                  padding: "10px 22px",
+                  borderRadius: 12,
+                  border: "none",
+                  background: "linear-gradient(135deg, #a855f7, #8b5cf6)",
+                  color: "white",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                {saving ? "Saving..." : "Save Entry"}
               </button>
             </div>
           </div>
         )}
 
-        {/* Entries List */}
+        {/* Entry List */}
         {entries.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "48px 24px", color: "var(--text-tertiary)" }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>📖</div>
-            {search || filterSentiment ? "No entries match your filter." : "Your journal is empty. Start writing!"}
-          </div>
+          <EmptyState
+            icon="📝"
+            title="No Journal Entries Yet"
+            description="Start writing or speaking your thoughts. Sera automatically analyzes emotions, cognitive patterns, and sentiment."
+            actionText="Write First Entry"
+            onAction={() => setShowEditor(true)}
+            tip="Daily journaling reduces intrusive thoughts by up to 40%."
+          />
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {entries.map((entry, i) => {
-              const emotions = parseEmotions(entry.emotions);
-              const sentimentInfo = SENTIMENT_COLORS[entry.sentiment || "neutral"];
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {entries.map((entry) => {
+              const sentimentInfo = entry.sentiment ? SENTIMENT_COLORS[entry.sentiment] || SENTIMENT_COLORS.neutral : null;
+              const emotionObj = parseEmotions(entry.emotions);
+
               return (
-                <div
+                <motion.div
                   key={entry.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
                   style={{
-                    padding: "20px", borderRadius: 16,
-                    background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
-                    animation: `popIn 0.3s ease ${i * 0.04}s both`,
+                    padding: 24,
+                    borderRadius: 20,
+                    background: "var(--bg-glass)",
+                    backdropFilter: "blur(16px)",
+                    border: "1px solid var(--border-secondary)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 12,
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                    <div>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 2 }}>
-                        {entry.title || "Untitled Entry"}
-                      </div>
-                      <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-                        {new Date(entry.created_at).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
-                        {" • "}{entry.word_count} words
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      {entry.sentiment && (
-                        <span style={{
-                          padding: "4px 10px", borderRadius: 8,
-                          background: sentimentInfo?.bg, color: sentimentInfo?.text,
-                          fontSize: 11, fontWeight: 600,
-                        }}>
-                          {sentimentInfo?.icon} {entry.sentiment}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      {sentimentInfo && (
+                        <span
+                          style={{
+                            padding: "4px 10px",
+                            borderRadius: 10,
+                            background: sentimentInfo.bg,
+                            color: sentimentInfo.text,
+                            fontSize: 12,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {sentimentInfo.icon} {entry.sentiment}
                         </span>
                       )}
+                      <h3 style={{ fontSize: 17, fontWeight: 800, color: "var(--text-primary)", margin: 0, fontFamily: "var(--font-display)" }}>
+                        {entry.title}
+                      </h3>
                     </div>
+
+                    <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
+                      {new Date(entry.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                    </span>
                   </div>
 
-                  <p style={{
-                    fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.7,
-                    marginBottom: 12, overflow: "hidden",
-                    display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" as const,
-                  }}>
+                  <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap" }}>
                     {entry.content}
                   </p>
 
-                  {/* Emotion badges */}
-                  {Object.keys(emotions).length > 0 && emotions["neutral"] === undefined && (
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
-                      {Object.entries(emotions).slice(0, 4).map(([name, pct]) => (
-                        <span key={name} style={{
-                          padding: "3px 8px", borderRadius: 6,
-                          background: "var(--bg-secondary)", fontSize: 11,
-                          color: "var(--text-secondary)",
-                        }}>
-                          {name} {typeof pct === 'number' ? `${Math.round(pct)}%` : ''}
+                  {/* AI Summary Box */}
+                  {entry.ai_summary && (
+                    <div
+                      style={{
+                        padding: "12px 16px",
+                        borderRadius: 14,
+                        background: "rgba(168,85,247,0.08)",
+                        border: "1px solid rgba(168,85,247,0.25)",
+                        fontSize: 12,
+                        color: "#d8b4fe",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      <strong style={{ color: "#a855f7" }}>✨ Sera AI Summary:</strong> {entry.ai_summary}
+                    </div>
+                  )}
+
+                  {/* Emotion Pills */}
+                  {Object.keys(emotionObj).length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {Object.entries(emotionObj).map(([eName, eScore]) => (
+                        <span
+                          key={eName}
+                          style={{
+                            padding: "3px 8px",
+                            borderRadius: 8,
+                            background: "rgba(255,255,255,0.04)",
+                            border: "1px solid rgba(255,255,255,0.08)",
+                            color: "var(--text-tertiary)",
+                            fontSize: 11,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {eName}: {Math.round(eScore * 100)}%
                         </span>
                       ))}
                     </div>
                   )}
 
-                  {/* AI Summary */}
-                  {entry.ai_summary && (
-                    <div style={{
-                      padding: "10px 14px", borderRadius: 10,
-                      background: "rgba(168,85,247,0.06)",
-                      border: "0.5px solid rgba(168,85,247,0.15)",
-                      fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6,
-                      marginBottom: 12,
-                    }}>
-                      🤖 {entry.ai_summary}
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={() => openEdit(entry)} style={{ padding: "6px 12px", borderRadius: 8, background: "var(--bg-tertiary)", border: "none", color: "var(--text-secondary)", fontSize: 12, cursor: "pointer" }}>
-                      ✏️ Edit
-                    </button>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
                     <button
                       onClick={() => handleAnalyze(entry.id)}
                       disabled={analyzing === entry.id}
-                      style={{ padding: "6px 12px", borderRadius: 8, background: "rgba(168,85,247,0.08)", border: "none", color: "#a855f7", fontSize: 12, cursor: analyzing === entry.id ? "default" : "pointer" }}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 10,
+                        border: "1px solid rgba(168,85,247,0.3)",
+                        background: "rgba(168,85,247,0.12)",
+                        color: "#a855f7",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
                     >
-                      {analyzing === entry.id ? "Analyzing..." : "🧠 AI Analyze"}
+                      {analyzing === entry.id ? "Analyzing..." : "✨ Run AI Emotion Analysis"}
                     </button>
-                    <button onClick={() => handleDelete(entry.id)} style={{ padding: "6px 12px", borderRadius: 8, background: "rgba(239,68,68,0.08)", border: "none", color: "#fca5a5", fontSize: 12, cursor: "pointer", marginLeft: "auto" }}>
-                      🗑
-                    </button>
+
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <button
+                        onClick={() => openEdit(entry)}
+                        style={{ background: "none", border: "none", color: "var(--text-secondary)", fontSize: 12, cursor: "pointer", fontWeight: 600 }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(entry.id)}
+                        style={{ background: "none", border: "none", color: "#ef4444", fontSize: 12, cursor: "pointer", fontWeight: 600 }}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
         )}
       </main>
+
       <MobileBottomNav />
     </div>
   );
