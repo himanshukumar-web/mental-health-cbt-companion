@@ -2,16 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
+import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export default function ProfilePage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
 
   const [displayName, setDisplayName] = useState("");
@@ -67,7 +69,7 @@ export default function ProfilePage() {
       });
 
       if (res.ok) {
-        toast.success("Profile saved! 👤");
+        toast.success("Profile updated! 👤");
       } else {
         toast.error("Failed to update profile");
       }
@@ -75,6 +77,12 @@ export default function ProfilePage() {
       toast.error("Network error");
     }
     setSaving(false);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Signed out successfully");
+    router.replace("/login");
   };
 
   if (authLoading || loading)
@@ -86,229 +94,167 @@ export default function ProfilePage() {
         </div>
       </>
     );
+
   if (!user) return null;
 
+  const PROFILE_MENU = [
+    { label: "My Appointments", icon: "📅", href: "/appointments/my", color: "#3b82f6", subtitle: "Scheduled therapist sessions" },
+    { label: "Settings & Privacy", icon: "⚙️", href: "/settings", color: "#a855f7", subtitle: "Theme, export data, privacy" },
+    { label: "Notification Reminders", icon: "🔔", href: "/reminders", color: "#f59e0b", subtitle: "Custom check-in alerts" },
+  ];
+
   return (
-    <div
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-        background: "var(--bg-primary)",
-      }}
-    >
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
       <Sidebar />
-      <main
-        style={{
-          flex: 1,
-          marginLeft: 260,
-          padding: "32px 28px",
-          maxWidth: 800,
-          overflow: "auto",
-        }}
-      >
+      <main style={{ flex: 1, marginLeft: 260, padding: "32px 24px 100px", maxWidth: 800, overflow: "auto" }}>
         <style>{`
-          @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px !important; } }
+          @media (max-width: 767px) { main { margin-left: 0 !important; padding: 20px 16px 100px !important; } }
         `}</style>
 
-        {/* Header */}
-        <div style={{ marginBottom: 28 }}>
-          <h1
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "clamp(24px, 4vw, 32px)",
-              fontWeight: 700,
-              color: "var(--text-primary)",
-              marginBottom: 6,
-            }}
-          >
-            User Profile 👤
-          </h1>
-          <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
-            Personalize your account details and wellness goals
-          </p>
-        </div>
-
-        {/* Form */}
-        <div
+        {/* Profile Card Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
           style={{
-            padding: "28px 24px",
-            borderRadius: 20,
-            background: "var(--bg-glass)",
-            border: "0.5px solid var(--border-secondary)",
+            padding: 24,
+            borderRadius: 24,
+            background: "linear-gradient(135deg, rgba(34,197,94,0.12), rgba(59,130,246,0.08))",
+            border: "1px solid rgba(34,197,94,0.25)",
+            marginBottom: 24,
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
           }}
         >
-          <div style={{ marginBottom: 20 }}>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "var(--text-tertiary)",
-                display: "block",
-                marginBottom: 6,
-              }}
-            >
-              Email Address
-            </label>
-            <input
-              type="text"
-              disabled
-              value={user.email || ""}
-              style={{
-                width: "100%",
-                padding: "12px",
-                borderRadius: 10,
-                background: "var(--bg-tertiary)",
-                border: "0.5px solid var(--border-secondary)",
-                color: "var(--text-tertiary)",
-                fontSize: 13,
-              }}
-            />
-          </div>
-
-          <div style={{ marginBottom: 20 }}>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "var(--text-tertiary)",
-                display: "block",
-                marginBottom: 6,
-              }}
-            >
-              Display Name
-            </label>
-            <input
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="e.g., Himanshu"
-              style={{
-                width: "100%",
-                padding: "12px",
-                borderRadius: 10,
-                background: "var(--bg-secondary)",
-                border: "0.5px solid var(--border-secondary)",
-                color: "var(--text-primary)",
-                fontSize: 13,
-                outline: "none",
-              }}
-            />
-          </div>
-
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 16,
-              marginBottom: 20,
+              width: 60,
+              height: 60,
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #22c55e, #16a34a)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 28,
+              color: "#fff",
+              boxShadow: "0 0 20px rgba(34,197,94,0.3)",
+              fontWeight: 800,
             }}
           >
-            <div>
-              <label
+            {displayName ? displayName.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", margin: 0, fontFamily: "var(--font-display)" }}>
+              {displayName || "Sera Member"}
+            </h1>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "2px 0 0" }}>{user.email}</p>
+          </div>
+        </motion.div>
+
+        {/* Quick Menu Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 28 }}>
+          {PROFILE_MENU.map((item) => (
+            <Link key={item.href} href={item.href} style={{ textDecoration: "none" }}>
+              <motion.div
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
                 style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "var(--text-tertiary)",
-                  display: "block",
-                  marginBottom: 6,
+                  padding: 16,
+                  borderRadius: 18,
+                  background: "var(--bg-glass)",
+                  backdropFilter: "blur(16px)",
+                  border: "1px solid var(--border-secondary)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
                 }}
               >
-                Age
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    background: `${item.color}20`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 20,
+                  }}
+                >
+                  {item.icon}
+                </div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{item.label}</div>
+                  <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>{item.subtitle}</div>
+                </div>
+              </motion.div>
+            </Link>
+          ))}
+        </div>
+
+        {/* Profile Details Card */}
+        <div
+          style={{
+            padding: 24,
+            borderRadius: 20,
+            background: "var(--bg-glass)",
+            border: "1px solid var(--border-secondary)",
+            backdropFilter: "blur(16px)",
+            marginBottom: 24,
+          }}
+        >
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 20, fontFamily: "var(--font-display)" }}>
+            Personal Details
+          </h2>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 20 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-tertiary)", display: "block", marginBottom: 6 }}>
+                Display Name
               </label>
               <input
-                type="number"
-                value={age}
-                onChange={(e) =>
-                  setAge(e.target.value ? parseInt(e.target.value) : "")
-                }
-                placeholder="25"
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Your preferred name"
                 style={{
                   width: "100%",
-                  padding: "12px",
+                  padding: "10px 14px",
                   borderRadius: 10,
                   background: "var(--bg-secondary)",
-                  border: "0.5px solid var(--border-secondary)",
+                  border: "1px solid var(--border-secondary)",
                   color: "var(--text-primary)",
                   fontSize: 13,
                   outline: "none",
                 }}
               />
             </div>
+
             <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "var(--text-tertiary)",
-                  display: "block",
-                  marginBottom: 6,
-                }}
-              >
-                Gender
+              <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-tertiary)", display: "block", marginBottom: 6 }}>
+                Age
               </label>
-              <select
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
+              <input
+                type="number"
+                value={age}
+                onChange={(e) => setAge(e.target.value ? Number(e.target.value) : "")}
+                placeholder="Age in years"
                 style={{
                   width: "100%",
-                  padding: "12px",
+                  padding: "10px 14px",
                   borderRadius: 10,
                   background: "var(--bg-secondary)",
-                  border: "0.5px solid var(--border-secondary)",
+                  border: "1px solid var(--border-secondary)",
                   color: "var(--text-primary)",
                   fontSize: 13,
                   outline: "none",
                 }}
-              >
-                <option value="">Select (Optional)</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="non-binary">Non-binary</option>
-                <option value="prefer-not-to-say">Prefer not to say</option>
-              </select>
+              />
             </div>
           </div>
 
           <div style={{ marginBottom: 20 }}>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "var(--text-tertiary)",
-                display: "block",
-                marginBottom: 6,
-              }}
-            >
-              Timezone
-            </label>
-            <input
-              type="text"
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              placeholder="Asia/Kolkata"
-              style={{
-                width: "100%",
-                padding: "12px",
-                borderRadius: 10,
-                background: "var(--bg-secondary)",
-                border: "0.5px solid var(--border-secondary)",
-                color: "var(--text-primary)",
-                fontSize: 13,
-                outline: "none",
-              }}
-            />
-          </div>
-
-          <div style={{ marginBottom: 24 }}>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "var(--text-tertiary)",
-                display: "block",
-                marginBottom: 6,
-              }}
-            >
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-tertiary)", display: "block", marginBottom: 6 }}>
               Mental Wellness Goals
             </label>
             <textarea
@@ -317,16 +263,15 @@ export default function ProfilePage() {
               placeholder="e.g., Manage anxiety during work presentations, improve sleep consistency."
               style={{
                 width: "100%",
-                minHeight: 90,
+                minHeight: 80,
                 padding: "12px",
                 borderRadius: 10,
                 background: "var(--bg-secondary)",
-                border: "0.5px solid var(--border-secondary)",
+                border: "1px solid var(--border-secondary)",
                 color: "var(--text-primary)",
                 fontSize: 13,
                 outline: "none",
                 resize: "vertical",
-                fontFamily: "var(--font-body)",
               }}
             />
           </div>
@@ -336,11 +281,9 @@ export default function ProfilePage() {
             disabled={saving}
             style={{
               width: "100%",
-              padding: "14px",
+              padding: "12px",
               borderRadius: 12,
-              background: saving
-                ? "var(--bg-tertiary)"
-                : "linear-gradient(135deg, #22c55e, #16a34a)",
+              background: saving ? "var(--bg-tertiary)" : "linear-gradient(135deg, #22c55e, #16a34a)",
               border: "none",
               color: "white",
               fontSize: 14,
@@ -351,7 +294,26 @@ export default function ProfilePage() {
             {saving ? "Saving..." : "Save Profile Changes ✨"}
           </button>
         </div>
+
+        {/* Logout Button Card */}
+        <button
+          onClick={handleSignOut}
+          style={{
+            width: "100%",
+            padding: "14px",
+            borderRadius: 14,
+            background: "rgba(239,68,68,0.1)",
+            border: "1px solid rgba(239,68,68,0.3)",
+            color: "#fca5a5",
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          🚪 Sign Out of Account
+        </button>
       </main>
+
       <MobileBottomNav />
     </div>
   );

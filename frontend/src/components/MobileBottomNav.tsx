@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 
 const NAV_ITEMS = [
   { label: "Home", icon: "🏠", path: "/dashboard" },
-  { label: "Therapy", icon: "💬", path: "/chat" },
-  { label: "Mood", icon: "😊", path: "/mood" },
-  { label: "Journal", icon: "📝", path: "/journal" },
-  { label: "Timeline", icon: "📜", path: "/timeline" },
+  { label: "Therapy", icon: "🤖", path: "/chat" },
+  { label: "Progress", icon: "📊", path: "/progress" },
+  { label: "Wellness", icon: "🧘", path: "/wellness" },
+  { label: "Profile", icon: "👤", path: "/profile" },
 ];
 
 export default function MobileBottomNav() {
@@ -17,22 +18,27 @@ export default function MobileBottomNav() {
   return (
     <nav
       className="mobile-bottom-nav"
+      aria-label="Mobile Navigation"
       style={{
         position: "fixed",
-        bottom: 0,
-        left: 0,
-        right: 0,
+        bottom: 12,
+        left: 16,
+        right: 16,
         zIndex: 1002,
         height: 64,
-        background: "rgba(11, 15, 26, 0.95)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        borderTop: "1px solid var(--border-secondary)",
+        background: "rgba(17, 24, 39, 0.85)",
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)",
+        borderRadius: 24,
+        border: "1px solid rgba(255, 255, 255, 0.1)",
+        boxShadow: "0 12px 32px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.2)",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-around",
-        padding: "0 8px",
+        padding: "0 6px",
         pointerEvents: "auto",
+        maxWidth: 500,
+        margin: "0 auto",
       }}
     >
       <style>{`
@@ -42,30 +48,56 @@ export default function MobileBottomNav() {
       `}</style>
 
       {NAV_ITEMS.map((item) => {
-        const isActive = pathname === item.path;
+        const isActive =
+          pathname === item.path ||
+          (item.path !== "/dashboard" && pathname.startsWith(item.path));
+
         return (
           <Link
             key={item.path}
             href={item.path}
             style={{
+              position: "relative",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: 4,
+              justifyContent: "center",
+              gap: 3,
+              flex: 1,
+              height: 52,
               textDecoration: "none",
               color: isActive ? "#22c55e" : "var(--text-secondary)",
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: isActive ? 700 : 500,
-              padding: "6px 12px",
-              borderRadius: 12,
-              background: isActive ? "rgba(34,197,94,0.12)" : "transparent",
-              transition: "all 0.15s ease",
-              cursor: "pointer",
+              borderRadius: 18,
+              transition: "color 0.2s ease",
               touchAction: "manipulation",
+              WebkitTapHighlightColor: "transparent",
             }}
           >
-            <span style={{ fontSize: 18 }}>{item.icon}</span>
-            <span>{item.label}</span>
+            {isActive && (
+              <motion.div
+                layoutId="mobileNavActivePill"
+                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  borderRadius: 18,
+                  background: "linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(34, 197, 94, 0.08))",
+                  border: "1px solid rgba(34, 197, 94, 0.3)",
+                  boxShadow: "0 0 16px rgba(34, 197, 94, 0.2)",
+                  zIndex: 0,
+                }}
+              />
+            )}
+            <motion.span
+              animate={{ scale: isActive ? 1.15 : 1, y: isActive ? -1 : 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              style={{ fontSize: 20, zIndex: 1 }}
+            >
+              {item.icon}
+            </motion.span>
+            <span style={{ zIndex: 1, letterSpacing: "-0.01em" }}>{item.label}</span>
           </Link>
         );
       })}
