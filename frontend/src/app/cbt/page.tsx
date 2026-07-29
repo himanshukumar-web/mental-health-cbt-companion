@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import toast from "react-hot-toast";
 
@@ -124,7 +125,7 @@ export default function CBTPage() {
     return (
       <>
         <Sidebar />
-        <div style={{ marginLeft: 260 }}>
+        <div style={{ marginLeft: 250 }}>
           <PageSkeleton />
         </div>
       </>
@@ -143,14 +144,14 @@ export default function CBTPage() {
       <main
         style={{
           flex: 1,
-          marginLeft: 260,
-          padding: "32px 28px",
+          marginLeft: 250,
+          padding: "32px 28px 80px",
           maxWidth: 900,
           overflow: "auto",
         }}
       >
         <style>{`
-          @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px !important; } }
+          @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px 16px 80px !important; } }
           @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         `}</style>
 
@@ -549,6 +550,7 @@ export default function CBTPage() {
           </div>
         )}
       </main>
+      <MobileBottomNav />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import CalendarHeatmap from "@/components/CalendarHeatmap";
 import DayDetailsModal from "@/components/DayDetailsModal";
 import ExportModal from "@/components/ExportModal";
@@ -92,9 +93,9 @@ export default function AnalyticsPage() {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)" }}>
       <Sidebar />
-      <main style={{ flex: 1, marginLeft: 260, padding: "32px 28px", maxWidth: 1100, overflow: "auto" }}>
+      <main style={{ flex: 1, marginLeft: 250, padding: "32px 28px 80px", maxWidth: 1100, overflow: "auto" }}>
         <style>{`
-          @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px !important; } }
+          @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px 16px 80px !important; } }
         `}</style>
 
         {/* Header */}
@@ -195,6 +196,7 @@ export default function AnalyticsPage() {
           userId={user.id}
         />
       </main>
+      <MobileBottomNav />
     </div>
   );
 }

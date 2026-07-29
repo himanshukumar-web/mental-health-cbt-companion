@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import PHQ9Wizard from "@/components/PHQ9Wizard";
 import GAD7Wizard from "@/components/GAD7Wizard";
 import { useAssessments } from "@/hooks/useAssessments";
@@ -42,7 +43,10 @@ export default function AssessmentsPage() {
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
       <Sidebar />
 
-      <main style={{ flex: 1, padding: "28px 24px", maxWidth: 1100, margin: "0 auto", width: "100%" }}>
+      <main style={{ flex: 1, marginLeft: 250, padding: "28px 24px 80px", maxWidth: 1100, overflow: "auto" }}>
+        <style>{`
+          @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px 16px 80px !important; } }
+        `}</style>
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
           <span style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#8b5cf6", letterSpacing: "0.08em" }}>
@@ -268,6 +272,7 @@ export default function AssessmentsPage() {
           </div>
         )}
       </main>
+      <MobileBottomNav />
     </div>
   );
 }

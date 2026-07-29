@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import WellnessScoreCard from "@/components/WellnessScoreCard";
 import InsightChartCard from "@/components/InsightChartCard";
 import PersonaSelector from "@/components/PersonaSelector";
@@ -109,14 +110,14 @@ export default function DashboardPage() {
       <main
         style={{
           flex: 1,
-          marginLeft: 260,
-          padding: "32px 28px",
+          marginLeft: 250,
+          padding: "32px 28px 80px",
           maxWidth: 1080,
           overflow: "auto",
         }}
       >
         <style>{`
-          @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px !important; } }
+          @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px 16px 80px !important; } }
         `}</style>
 
         {/* Welcome & Level Header */}
@@ -323,6 +324,7 @@ export default function DashboardPage() {
           </Link>
         </div>
       </main>
+      <MobileBottomNav />
     </div>
   );
 }
