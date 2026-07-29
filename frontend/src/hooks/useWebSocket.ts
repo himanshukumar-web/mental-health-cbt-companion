@@ -418,7 +418,7 @@ export function useWebSocket(sessionId: string, userId?: string) {
   // an infinite loop. The effect already re-runs when sessionId/userId changes.
 
   const sendMessage = useCallback(
-    (content: string) => {
+    (content: string, personaId?: string) => {
       const ws = wsRef.current;
       if (!ws || ws.readyState !== WebSocket.OPEN || wsState.isStreaming || crisis) return;
 
@@ -430,6 +430,7 @@ export function useWebSocket(sessionId: string, userId?: string) {
         JSON.stringify({
           type: "message",
           content,
+          persona: personaId || "cbt",
           history: historyRef.current.slice(-20), // send last 20 turns
         })
       );

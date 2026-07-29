@@ -7,6 +7,8 @@ import type { AgentStatus, ChatMessage, WSState } from "@/hooks/useWebSocket";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeSelector from "@/components/ThemeSelector";
 import VoiceController from "@/components/VoiceController";
+import PersonaSelector from "@/components/PersonaSelector";
+import { usePersona } from "@/hooks/usePersona";
 
 // ── Lightweight Markdown renderer for Sera AI messages ─────────────────────────
 function renderMarkdown(text: string) {
@@ -163,7 +165,7 @@ interface ChatWindowProps {
   wsState: WSState;
   isStreaming: boolean;
   crisis: boolean;
-  onSend: (text: string) => void;
+  onSend: (text: string, personaId?: string) => void;
   onDismissCrisis: () => void;
   onReconnect?: () => void;
   user?: User | null;
@@ -186,6 +188,7 @@ export default function ChatWindow({
 }: ChatWindowProps) {
   const { signOut, userRole } = useAuth();
   const router = useRouter();
+  const { personas, activePersona, selectPersona, selectedPersonaId } = usePersona(user?.id);
   const [input, setInput] = useState("");
   const [sessionTime, setSessionTime] = useState(0);
   const [msgCount, setMsgCount] = useState(0);
@@ -253,9 +256,9 @@ export default function ChatWindow({
     const text = input.trim();
     if (!text || isStreaming || crisis) return;
     setInput("");
-    onSend(text);
+    onSend(text, selectedPersonaId);
     setTimeout(() => inputRef.current?.focus(), 50);
-  }, [input, isStreaming, crisis, onSend]);
+  }, [input, isStreaming, crisis, onSend, selectedPersonaId]);
 
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -503,30 +506,32 @@ export default function ChatWindow({
             </button>
           )}
           <div style={{
-            width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-            background: "linear-gradient(135deg,#a7f3d0,#6ee7b7)",
+            width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
+            background: `linear-gradient(135deg, ${activePersona.color}40, ${activePersona.color}90)`,
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 14, boxShadow: "0 0 14px rgba(34,197,94,0.2)",
-          }}>🌿</div>
+            fontSize: 16, boxShadow: `0 0 14px ${activePersona.color}40`,
+          }}>{activePersona.avatar}</div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>Sera</div>
-            <div style={{ fontSize: 11, color: isStreaming ? "#86efac" : "#22c55e" }}>
-              {isStreaming ? "typing…" : "Active · CBT Companion"}
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>
+              {activePersona.name} <span style={{ fontSize: 11, color: activePersona.color, fontWeight: 600 }}>({activePersona.title})</span>
+            </div>
+            <div style={{ fontSize: 11, color: isStreaming ? activePersona.color : "var(--text-tertiary)" }}>
+              {isStreaming ? "typing…" : "Active · Encrypted Session"}
             </div>
           </div>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-            {!isMobile && (
-              <div style={{
-                fontSize: 11, color: "var(--text-tertiary)",
-                padding: "4px 10px", borderRadius: 8,
-                border: "0.5px solid var(--border-secondary)",
-                background: "var(--bg-glass)",
-              }}>
-                Multi-agent · Encrypted
-              </div>
-            )}
             <ThemeSelector />
           </div>
+        </div>
+
+        {/* Persona Selector Bar */}
+        <div style={{ padding: "8px 14px", borderBottom: "0.5px solid var(--border-secondary)", background: "var(--bg-primary)" }}>
+          <PersonaSelector
+            personas={personas}
+            activePersonaId={selectedPersonaId}
+            onSelectPersona={selectPersona}
+            compact={true}
+          />
         </div>
 
         {/* Connection status banner */}

@@ -16,7 +16,9 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: "🏠", path: "/dashboard", category: "main" },
   { id: "chat", label: "AI Therapy", icon: "💬", path: "/chat", category: "main" },
+  { id: "timeline", label: "Timeline", icon: "📜", path: "/timeline", category: "main" },
   { id: "mood", label: "Mood Tracker", icon: "😊", path: "/mood", category: "wellness" },
+  { id: "assessments", label: "Clinical Tests", icon: "📋", path: "/assessments", category: "wellness" },
   { id: "journal", label: "Journal", icon: "📝", path: "/journal", category: "wellness" },
   { id: "habits", label: "Habits", icon: "✅", path: "/habits", category: "wellness" },
   { id: "analytics", label: "Analytics", icon: "📊", path: "/analytics", category: "wellness" },
