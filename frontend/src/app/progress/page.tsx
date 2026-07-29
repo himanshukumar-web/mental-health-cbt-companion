@@ -181,7 +181,7 @@ export default function ProgressHubPage() {
           <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 12, fontFamily: "var(--font-display)" }}>
             📅 90-Day Mindful Consistency
           </h3>
-          <CalendarHeatmap data={heatmapData} />
+          <CalendarHeatmap data={heatmapData} onDayClick={() => router.push("/timeline")} />
         </div>
 
         {/* Module Hub Cards */}

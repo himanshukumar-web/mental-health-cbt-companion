@@ -148,7 +148,7 @@ export default function WellnessHubPage() {
 
         {/* 1-Tap Quick Mood Check-In Widget */}
         <div style={{ marginBottom: 28 }}>
-          <QuickMoodLogger userId={user.id} />
+          <QuickMoodLogger userId={user.id} onMoodLogged={fetchData} />
         </div>
 
         {/* Wellness Tools Grid */}

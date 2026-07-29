@@ -7,7 +7,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface QuickMoodLoggerProps {
   userId: string;
-  onMoodLogged: () => void;
+  onMoodLogged?: () => void;
 }
 
 const MOOD_OPTIONS = [
@@ -43,7 +43,7 @@ export default function QuickMoodLogger({ userId, onMoodLogged }: QuickMoodLogge
 
       if (res.ok) {
         setToastMessage(`Logged "${option.emoji} ${option.label}"! +15 XP 🌟`);
-        onMoodLogged();
+        onMoodLogged?.();
         setTimeout(() => setToastMessage(null), 3500);
       }
     } catch {
