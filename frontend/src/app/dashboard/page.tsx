@@ -100,7 +100,7 @@ export default function DashboardPage() {
   const fetchData = useCallback(async () => {
     if (!user) return;
     try {
-      const [moodRes, journalRes, cbtRes, xpRes, insightsRes, apptRes] = await Promise.all([
+      const results = await Promise.allSettled([
         fetch(`${API_URL}/mood-entries/${user.id}`),
         fetch(`${API_URL}/journal/${user.id}`),
         fetch(`${API_URL}/cbt-worksheets/${user.id}`),
@@ -109,33 +109,35 @@ export default function DashboardPage() {
         fetch(`${API_URL}/appointments/patient/${user.id}`),
       ]);
 
-      if (moodRes.ok) {
-        const json = await moodRes.json();
+      const [moodRes, journalRes, cbtRes, xpRes, insightsRes, apptRes] = results;
+
+      if (moodRes.status === "fulfilled" && moodRes.value.ok) {
+        const json = await moodRes.value.json();
         const entries: MoodEntry[] = json.mood_entries || [];
         setMoodEntries(entries);
         if (entries.length > 0) setStreakDays(Math.min(entries.length, 7));
       }
-      if (journalRes.ok) {
-        const json = await journalRes.json();
+      if (journalRes.status === "fulfilled" && journalRes.value.ok) {
+        const json = await journalRes.value.json();
         const jList = json.journal_entries || [];
         setJournalCount(jList.length);
         if (jList.length > 0) setHabitsDone((prev) => ({ ...prev, journal: true }));
       }
-      if (cbtRes.ok) {
-        const json = await cbtRes.json();
+      if (cbtRes.status === "fulfilled" && cbtRes.value.ok) {
+        const json = await cbtRes.value.json();
         setCbtCount((json.worksheets || []).length);
       }
-      if (xpRes.ok) {
-        const json = await xpRes.json();
+      if (xpRes.status === "fulfilled" && xpRes.value.ok) {
+        const json = await xpRes.value.json();
         setUserXP(json.xp?.total_xp || 0);
         setUserLevel(json.xp?.level || 1);
       }
-      if (insightsRes.ok) {
-        const json = await insightsRes.json();
+      if (insightsRes.status === "fulfilled" && insightsRes.value.ok) {
+        const json = await insightsRes.value.json();
         setInsights(json.insights || []);
       }
-      if (apptRes.ok) {
-        const json = await apptRes.json();
+      if (apptRes.status === "fulfilled" && apptRes.value.ok) {
+        const json = await apptRes.value.json();
         setAppointments(json.appointments || []);
       }
     } catch {
