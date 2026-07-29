@@ -11,6 +11,7 @@ import WellnessPanel from "@/components/WellnessPanel";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import { usePersona } from "@/hooks/usePersona";
 import { motion, AnimatePresence } from "framer-motion";
+import toast from "react-hot-toast";
 
 // ── Lightweight Markdown Renderer ──────────────────────────────────────────────
 function renderMarkdown(text: string) {
@@ -125,6 +126,8 @@ export default function ChatWindow({
   const [input, setInput] = useState("");
   const [sessionTime, setSessionTime] = useState(0);
   const [showPersonaBar, setShowPersonaBar] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [bookmarkedIndexes, setBookmarkedIndexes] = useState<number[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -166,7 +169,26 @@ export default function ChatWindow({
     }
   };
 
+  const copyMessageContent = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Message copied to clipboard! 📋");
+  };
+
+  const toggleBookmark = (index: number) => {
+    if (bookmarkedIndexes.includes(index)) {
+      setBookmarkedIndexes(prev => prev.filter(i => i !== index));
+      toast("Bookmark removed", { icon: "🔖" });
+    } else {
+      setBookmarkedIndexes(prev => [...prev, index]);
+      toast.success("Saved to Bookmarked Therapy Insights! 📌");
+    }
+  };
+
   const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Friend";
+
+  const filteredMessages = searchQuery
+    ? messages.filter((m) => m.content.toLowerCase().includes(searchQuery.toLowerCase()))
+    : messages;
 
   return (
     <div
@@ -255,8 +277,25 @@ export default function ChatWindow({
             </div>
           </div>
 
-          {/* Connection Status & Session Timer */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {/* Search Chat Input & Timer */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <input
+              type="text"
+              placeholder="🔍 Search chat..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                padding: "5px 10px",
+                borderRadius: 10,
+                background: "var(--bg-glass)",
+                border: "1px solid var(--border-secondary)",
+                color: "var(--text-primary)",
+                fontSize: 12,
+                outline: "none",
+                width: 130,
+              }}
+            />
+
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--text-tertiary)" }}>
               <div
                 style={{
@@ -413,9 +452,9 @@ export default function ChatWindow({
           ) : (
             /* Render Conversation Messages */
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {messages.map((msg, index) => {
+              {filteredMessages.map((msg, index) => {
                 const isUser = msg.role === "user";
-                const isLatest = index === messages.length - 1;
+                const isBookmarked = bookmarkedIndexes.includes(index);
 
                 return (
                   <motion.div
@@ -467,18 +506,45 @@ export default function ChatWindow({
                         fontSize: 14,
                         lineHeight: 1.6,
                         boxShadow: isUser ? "0 4px 16px rgba(59,130,246,0.1)" : "0 4px 16px rgba(0,0,0,0.15)",
+                        position: "relative",
                       }}
                     >
-                      {/* Name Label */}
+                      {/* Name Label & Actions */}
                       <div
                         style={{
-                          fontSize: 11,
-                          fontWeight: 700,
-                          color: isUser ? "#3b82f6" : activePersona.color,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 12,
                           marginBottom: 4,
                         }}
                       >
-                        {isUser ? "You" : activePersona.name}
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: isUser ? "#3b82f6" : activePersona.color,
+                          }}
+                        >
+                          {isUser ? "You" : activePersona.name}
+                        </span>
+
+                        <div style={{ display: "flex", gap: 6, opacity: 0.8 }}>
+                          <button
+                            onClick={() => copyMessageContent(msg.content)}
+                            title="Copy text"
+                            style={{ background: "none", border: "none", color: "var(--text-tertiary)", fontSize: 11, cursor: "pointer" }}
+                          >
+                            📋
+                          </button>
+                          <button
+                            onClick={() => toggleBookmark(index)}
+                            title="Bookmark insight"
+                            style={{ background: "none", border: "none", color: isBookmarked ? "#f59e0b" : "var(--text-tertiary)", fontSize: 11, cursor: "pointer" }}
+                          >
+                            {isBookmarked ? "⭐" : "📌"}
+                          </button>
+                        </div>
                       </div>
 
                       {/* Content */}
@@ -521,7 +587,7 @@ export default function ChatWindow({
                     <span className="typing-dot" />
                     <span className="typing-dot" />
                     <span style={{ fontSize: 11, marginLeft: 6, color: "var(--text-tertiary)" }}>
-                      {activePersona.name} is thinking...
+                      {activePersona.name} is formulating response...
                     </span>
                   </div>
                 </div>
