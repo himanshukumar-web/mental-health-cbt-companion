@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
+const isVercel = Boolean(process.env.VERCEL);
+
 const nextConfig: NextConfig = {
-  output: "export",
+  ...(isVercel ? {} : { output: "export" }),
   images: {
     unoptimized: true,
   },
