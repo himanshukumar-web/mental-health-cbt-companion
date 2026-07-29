@@ -424,6 +424,7 @@ export default function SettingsPage() {
           </div>
         )}
       </main>
+      <MobileBottomNav />
     </div>
   );
 }
