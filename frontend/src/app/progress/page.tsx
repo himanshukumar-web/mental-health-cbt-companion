@@ -7,15 +7,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import CalendarHeatmap from "@/components/CalendarHeatmap";
+import type { HeatmapDay } from "@/types/heatmap";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import { motion } from "framer-motion";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-interface HeatmapDay {
-  date: string;
-  count: number;
-}
 
 export default function ProgressHubPage() {
   const { user, loading: authLoading } = useAuth();
@@ -54,7 +50,10 @@ export default function ProgressHubPage() {
           const d = (ev.timestamp || ev.date || "").split("T")[0];
           if (d) counts[d] = (counts[d] || 0) + 1;
         });
-        const list = Object.keys(counts).map((date) => ({ date, count: counts[date] }));
+        const list: HeatmapDay[] = Object.keys(counts).map((date) => ({
+          date,
+          score: Math.min(counts[date] * 25, 100),
+        }));
         setHeatmapData(list);
       }
 
