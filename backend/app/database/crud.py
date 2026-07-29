@@ -94,6 +94,71 @@ def init_sqlite():
     )
     """)
     
+    # Migration: add persona to sessions if missing
+    try:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN persona TEXT DEFAULT 'cbt'")
+        conn.commit()
+    except Exception:
+        pass
+
+    # Create user_persona_preferences table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_persona_preferences (
+        user_id TEXT PRIMARY KEY,
+        persona_id TEXT NOT NULL DEFAULT 'cbt',
+        updated_at TEXT
+    )
+    """)
+
+    # Create phq9_assessments table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS phq9_assessments (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        score INTEGER NOT NULL,
+        risk_category TEXT NOT NULL,
+        answers_json TEXT NOT NULL,
+        ai_explanation TEXT,
+        created_at TEXT
+    )
+    """)
+
+    # Create gad7_assessments table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS gad7_assessments (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        score INTEGER NOT NULL,
+        anxiety_level TEXT NOT NULL,
+        answers_json TEXT NOT NULL,
+        ai_explanation TEXT,
+        created_at TEXT
+    )
+    """)
+
+    # Create ai_memories table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS ai_memories (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        category TEXT NOT NULL,
+        memory_text TEXT NOT NULL,
+        weight INTEGER DEFAULT 1,
+        updated_at TEXT
+    )
+    """)
+
+    # Create wellness_scores table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS wellness_scores (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        total_score INTEGER NOT NULL,
+        breakdown_json TEXT NOT NULL,
+        created_at TEXT
+    )
+    """)
+
     # Initialize with default doctor if empty
     cursor.execute("SELECT COUNT(*) FROM doctors")
     if cursor.fetchone()[0] == 0:
@@ -2397,3 +2462,529 @@ async def delete_all_user_data(user_id: str) -> bool:
         return False
     finally:
         conn.close()
+
+
+# ── Persona Preferences ────────────────────────────────────────────────────────
+
+async def set_user_persona_preference(user_id: str, persona_id: str) -> dict:
+    now = datetime.now(timezone.utc).isoformat()
+    db = get_supabase()
+    if db:
+        try:
+            db.table("user_persona_preferences").upsert({"user_id": user_id, "persona_id": persona_id, "updated_at": now}).execute()
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        INSERT INTO user_persona_preferences (user_id, persona_id, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET persona_id=excluded.persona_id, updated_at=excluded.updated_at
+        """, (user_id, persona_id, now))
+        conn.commit()
+    except Exception as e:
+        print("SQLite persona pref error:", e)
+    finally:
+        conn.close()
+    return {"user_id": user_id, "persona_id": persona_id, "updated_at": now}
+
+
+async def get_user_persona_preference(user_id: str) -> str:
+    db = get_supabase()
+    if db:
+        try:
+            res = db.table("user_persona_preferences").select("persona_id").eq("user_id", user_id).execute()
+            if res.data and len(res.data) > 0:
+                return res.data[0]["persona_id"]
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT persona_id FROM user_persona_preferences WHERE user_id=?", (user_id,))
+        row = cursor.fetchone()
+        if row:
+            return row[0]
+    except Exception:
+        pass
+    finally:
+        conn.close()
+    return "cbt"
+
+
+# ── PHQ-9 Assessments ───────────────────────────────────────────────────────────
+
+async def save_phq9_assessment(user_id: str, score: int, risk_category: str, answers: list, ai_explanation: str) -> dict:
+    now = datetime.now(timezone.utc).isoformat()
+    record_id = str(uuid.uuid4())
+    answers_json = json.dumps(answers)
+
+    db = get_supabase()
+    if db:
+        try:
+            db.table("phq9_assessments").insert({
+                "id": record_id, "user_id": user_id, "score": score,
+                "risk_category": risk_category, "answers_json": answers_json,
+                "ai_explanation": ai_explanation, "created_at": now
+            }).execute()
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        INSERT INTO phq9_assessments (id, user_id, score, risk_category, answers_json, ai_explanation, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (record_id, user_id, score, risk_category, answers_json, ai_explanation, now))
+        conn.commit()
+    except Exception as e:
+        print("SQLite phq9 error:", e)
+    finally:
+        conn.close()
+
+    # Also add memory fact for assessment
+    await upsert_user_memory(user_id, "assessment", f"PHQ-9 Depression Score: {score}/27 ({risk_category}) logged on {now[:10]}")
+    await add_xp_event(user_id, "phq9_completed", 50)
+
+    return {
+        "id": record_id, "user_id": user_id, "score": score,
+        "risk_category": risk_category, "answers": answers,
+        "ai_explanation": ai_explanation, "created_at": now
+    }
+
+
+async def get_phq9_history(user_id: str) -> list[dict]:
+    db = get_supabase()
+    if db:
+        try:
+            res = db.table("phq9_assessments").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+            if res.data:
+                return [{**item, "answers": json.loads(item["answers_json"]) if isinstance(item.get("answers_json"), str) else item.get("answers_json", [])} for item in res.data]
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id, user_id, score, risk_category, answers_json, ai_explanation, created_at FROM phq9_assessments WHERE user_id=? ORDER BY created_at DESC", (user_id,))
+        rows = cursor.fetchall()
+        return [{
+            "id": r[0], "user_id": r[1], "score": r[2], "risk_category": r[3],
+            "answers": json.loads(r[4]) if r[4] else [], "ai_explanation": r[5], "created_at": r[6]
+        } for r in rows]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+# ── GAD-7 Assessments ───────────────────────────────────────────────────────────
+
+async def save_gad7_assessment(user_id: str, score: int, anxiety_level: str, answers: list, ai_explanation: str) -> dict:
+    now = datetime.now(timezone.utc).isoformat()
+    record_id = str(uuid.uuid4())
+    answers_json = json.dumps(answers)
+
+    db = get_supabase()
+    if db:
+        try:
+            db.table("gad7_assessments").insert({
+                "id": record_id, "user_id": user_id, "score": score,
+                "anxiety_level": anxiety_level, "answers_json": answers_json,
+                "ai_explanation": ai_explanation, "created_at": now
+            }).execute()
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        INSERT INTO gad7_assessments (id, user_id, score, anxiety_level, answers_json, ai_explanation, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (record_id, user_id, score, anxiety_level, answers_json, ai_explanation, now))
+        conn.commit()
+    except Exception as e:
+        print("SQLite gad7 error:", e)
+    finally:
+        conn.close()
+
+    # Also add memory fact
+    await upsert_user_memory(user_id, "assessment", f"GAD-7 Anxiety Score: {score}/21 ({anxiety_level}) logged on {now[:10]}")
+    await add_xp_event(user_id, "gad7_completed", 50)
+
+    return {
+        "id": record_id, "user_id": user_id, "score": score,
+        "anxiety_level": anxiety_level, "answers": answers,
+        "ai_explanation": ai_explanation, "created_at": now
+    }
+
+
+async def get_gad7_history(user_id: str) -> list[dict]:
+    db = get_supabase()
+    if db:
+        try:
+            res = db.table("gad7_assessments").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+            if res.data:
+                return [{**item, "answers": json.loads(item["answers_json"]) if isinstance(item.get("answers_json"), str) else item.get("answers_json", [])} for item in res.data]
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id, user_id, score, anxiety_level, answers_json, ai_explanation, created_at FROM gad7_assessments WHERE user_id=? ORDER BY created_at DESC", (user_id,))
+        rows = cursor.fetchall()
+        return [{
+            "id": r[0], "user_id": r[1], "score": r[2], "anxiety_level": r[3],
+            "answers": json.loads(r[4]) if r[4] else [], "ai_explanation": r[5], "created_at": r[6]
+        } for r in rows]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+# ── AI Memories ─────────────────────────────────────────────────────────────────
+
+async def upsert_user_memory(user_id: str, category: str, memory_text: str, weight: int = 1) -> dict:
+    now = datetime.now(timezone.utc).isoformat()
+    mem_id = str(uuid.uuid4())
+
+    db = get_supabase()
+    if db:
+        try:
+            db.table("ai_memories").insert({
+                "id": mem_id, "user_id": user_id, "category": category,
+                "memory_text": memory_text, "weight": weight, "updated_at": now
+            }).execute()
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        INSERT INTO ai_memories (id, user_id, category, memory_text, weight, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """, (mem_id, user_id, category, memory_text, weight, now))
+        conn.commit()
+    except Exception as e:
+        print("SQLite memory error:", e)
+    finally:
+        conn.close()
+
+    return {"id": mem_id, "user_id": user_id, "category": category, "memory_text": memory_text, "weight": weight, "updated_at": now}
+
+
+async def get_user_memories(user_id: str) -> list[dict]:
+    db = get_supabase()
+    if db:
+        try:
+            res = db.table("ai_memories").select("*").eq("user_id", user_id).order("updated_at", desc=True).limit(20).execute()
+            if res.data:
+                return res.data
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id, user_id, category, memory_text, weight, updated_at FROM ai_memories WHERE user_id=? ORDER BY updated_at DESC LIMIT 20", (user_id,))
+        rows = cursor.fetchall()
+        return [{
+            "id": r[0], "user_id": r[1], "category": r[2],
+            "memory_text": r[3], "weight": r[4], "updated_at": r[5]
+        } for r in rows]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+# ── Wellness Score ─────────────────────────────────────────────────────────────
+
+async def calculate_and_save_wellness_score(user_id: str) -> dict:
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Gather user activity
+    moods = await get_mood_entries(user_id)
+    journals = await get_journal_entries(user_id)
+    phq9 = await get_phq9_history(user_id)
+    gad7 = await get_gad7_history(user_id)
+    habit_completions = await get_habit_completions(user_id)
+
+    # 1. Mood Component (0-25)
+    recent_moods = moods[:7] if moods else []
+    avg_mood = sum(m.get("mood_score", 5) for m in recent_moods) / len(recent_moods) if recent_moods else 6.0
+    mood_subscore = min(25, round((avg_mood / 10.0) * 25))
+
+    # 2. Sleep Component (0-20)
+    sleep_entries = [m.get("sleep_hours", 7) for m in recent_moods if m.get("sleep_hours") is not None]
+    avg_sleep = sum(sleep_entries) / len(sleep_entries) if sleep_entries else 7.0
+    sleep_subscore = 20 if 7.0 <= avg_sleep <= 9.0 else (15 if 6.0 <= avg_sleep < 7.0 or 9.0 < avg_sleep <= 10.0 else 10)
+
+    # 3. Stress & Anxiety Component (0-20)
+    latest_gad7 = gad7[0]["score"] if gad7 else 5
+    gad7_inverted = max(0, 21 - latest_gad7)
+    stress_subscore = round((gad7_inverted / 21.0) * 20)
+
+    # 4. Journal Activity (0-12)
+    journal_subscore = min(12, len(journals) * 3)
+
+    # 5. Habit Completion (0-13)
+    habit_subscore = min(13, len(habit_completions) * 2)
+
+    # 6. CBT / Meditation (0-10)
+    meditation_subscore = 10 if len(journals) > 0 or len(moods) > 3 else 6
+
+    total = mood_subscore + sleep_subscore + stress_subscore + journal_subscore + habit_subscore + meditation_subscore
+    total_score = min(100, max(0, total))
+
+    breakdown = {
+        "mood": mood_subscore,
+        "sleep": sleep_subscore,
+        "stress": stress_subscore,
+        "journal": journal_subscore,
+        "habits": habit_subscore,
+        "meditation": meditation_subscore,
+    }
+
+    record_id = str(uuid.uuid4())
+    breakdown_json = json.dumps(breakdown)
+
+    db = get_supabase()
+    if db:
+        try:
+            db.table("wellness_scores").insert({
+                "id": record_id, "user_id": user_id,
+                "total_score": total_score, "breakdown_json": breakdown_json, "created_at": now
+            }).execute()
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        INSERT INTO wellness_scores (id, user_id, total_score, breakdown_json, created_at)
+        VALUES (?, ?, ?, ?, ?)
+        """, (record_id, user_id, total_score, breakdown_json, now))
+        conn.commit()
+    except Exception as e:
+        print("SQLite wellness error:", e)
+    finally:
+        conn.close()
+
+    return {
+        "id": record_id, "user_id": user_id, "total_score": total_score,
+        "breakdown": breakdown, "created_at": now
+    }
+
+
+async def get_wellness_score_history(user_id: str) -> list[dict]:
+    db = get_supabase()
+    if db:
+        try:
+            res = db.table("wellness_scores").select("*").eq("user_id", user_id).order("created_at", desc=True).limit(30).execute()
+            if res.data:
+                return [{**item, "breakdown": json.loads(item["breakdown_json"]) if isinstance(item.get("breakdown_json"), str) else item.get("breakdown_json", {})} for item in res.data]
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id, user_id, total_score, breakdown_json, created_at FROM wellness_scores WHERE user_id=? ORDER BY created_at DESC LIMIT 30", (user_id,))
+        rows = cursor.fetchall()
+        return [{
+            "id": r[0], "user_id": r[1], "total_score": r[2],
+            "breakdown": json.loads(r[3]) if r[3] else {}, "created_at": r[4]
+        } for r in rows]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+# ── Unified Timeline ────────────────────────────────────────────────────────────
+
+async def get_unified_timeline(user_id: str, category_filter: str = "all", search_query: str = "") -> list[dict]:
+    timeline_items = []
+
+    # 1. Sessions / Chat History
+    sessions = await get_user_sessions(user_id)
+    for s in sessions[:10]:
+        messages = await get_session_history(s["id"])
+        persona = s.get("persona", "cbt")
+        for m in messages:
+            if search_query and search_query.lower() not in m["content"].lower():
+                continue
+            timeline_items.append({
+                "id": m["id"],
+                "type": "chat",
+                "title": f"Chat ({persona.upper()}) - {m['role'].capitalize()}",
+                "content": m["content"],
+                "category": "chat",
+                "timestamp": m.get("timestamp") or s.get("started_at"),
+                "meta": {"persona": persona, "role": m["role"]}
+            })
+
+    # 2. Mood History
+    moods = await get_mood_entries(user_id)
+    for md in moods:
+        txt = f"Mood score: {md.get('mood_score')}/10. {md.get('note', '')}"
+        if search_query and search_query.lower() not in txt.lower():
+            continue
+        timeline_items.append({
+            "id": md["id"],
+            "type": "mood",
+            "title": f"Mood Check-in: {md.get('mood_score')}/10",
+            "content": md.get("note") or f"Logged mood score of {md.get('mood_score')}/10",
+            "category": "mood",
+            "timestamp": md.get("created_at"),
+            "meta": {"score": md.get("mood_score"), "emotions": md.get("emotions", [])}
+        })
+
+    # 3. Journal History
+    journals = await get_journal_entries(user_id)
+    for j in journals:
+        body = f"{j.get('title', '')} {j.get('content', '')}"
+        if search_query and search_query.lower() not in body.lower():
+            continue
+        timeline_items.append({
+            "id": j["id"],
+            "type": "journal",
+            "title": j.get("title") or "Journal Entry",
+            "content": j.get("content", ""),
+            "category": "journal",
+            "timestamp": j.get("created_at"),
+            "meta": {"sentiment": j.get("sentiment_score")}
+        })
+
+    # 4. PHQ-9 & GAD-7 Assessment History
+    phq9 = await get_phq9_history(user_id)
+    for p in phq9:
+        title = f"PHQ-9 Assessment (Score: {p['score']}/27 - {p['risk_category']})"
+        if search_query and search_query.lower() not in (title + " " + (p.get("ai_explanation") or "")).lower():
+            continue
+        timeline_items.append({
+            "id": p["id"],
+            "type": "assessment",
+            "title": title,
+            "content": p.get("ai_explanation") or f"PHQ-9 assessment submitted with score {p['score']}.",
+            "category": "assessment",
+            "timestamp": p.get("created_at"),
+            "meta": {"score": p["score"], "category": p["risk_category"], "scale": "PHQ-9"}
+        })
+
+    gad7 = await get_gad7_history(user_id)
+    for g in gad7:
+        title = f"GAD-7 Assessment (Score: {g['score']}/21 - {g['anxiety_level']})"
+        if search_query and search_query.lower() not in (title + " " + (g.get("ai_explanation") or "")).lower():
+            continue
+        timeline_items.append({
+            "id": g["id"],
+            "type": "assessment",
+            "title": title,
+            "content": g.get("ai_explanation") or f"GAD-7 assessment submitted with score {g['score']}.",
+            "category": "assessment",
+            "timestamp": g.get("created_at"),
+            "meta": {"score": g["score"], "category": g["anxiety_level"], "scale": "GAD-7"}
+        })
+
+    # 5. CBT Worksheets
+    worksheets = await get_cbt_worksheets(user_id)
+    for w in worksheets:
+        body = f"{w.get('trigger_event', '')} {w.get('automatic_thought', '')}"
+        if search_query and search_query.lower() not in body.lower():
+            continue
+        timeline_items.append({
+            "id": w["id"],
+            "type": "cbt",
+            "title": "CBT Thought Record",
+            "content": f"Trigger: {w.get('trigger_event', '')} | Reframed: {w.get('rational_thought', '')}",
+            "category": "cbt",
+            "timestamp": w.get("created_at"),
+            "meta": {"cognitive_distortion": w.get("cognitive_distortion")}
+        })
+
+    # Apply Category Filter
+    if category_filter and category_filter != "all":
+        timeline_items = [item for item in timeline_items if item["category"] == category_filter]
+
+    # Sort Chronologically (newest first)
+    timeline_items.sort(key=lambda x: str(x.get("timestamp") or ""), reverse=True)
+    return timeline_items
+
+
+# ── XP Events & Gamification Helper ──────────────────────────────────────────────
+
+async def add_xp_event(user_id: str, event_type: str, points: int) -> dict:
+    now = datetime.now(timezone.utc).isoformat()
+    db = get_supabase()
+    if db:
+        try:
+            db.table("user_xp_events").insert({
+                "user_id": user_id, "event_type": event_type, "points": points, "created_at": now
+            }).execute()
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_xp_events (
+            id TEXT PRIMARY KEY, user_id TEXT, event_type TEXT, points INTEGER, created_at TEXT
+        )""")
+        cursor.execute("""
+        INSERT INTO user_xp_events (id, user_id, event_type, points, created_at)
+        VALUES (?, ?, ?, ?, ?)
+        """, (str(uuid.uuid4()), user_id, event_type, points, now))
+        conn.commit()
+    except Exception as e:
+        print("SQLite XP event error:", e)
+    finally:
+        conn.close()
+
+    return {"user_id": user_id, "event_type": event_type, "points": points, "created_at": now}
+
+
+async def build_user_memory_context(user_id: str | None) -> str:
+    if not user_id:
+        return ""
+
+    context_parts = []
+    
+    # 1. Custom Memories
+    memories = await get_user_memories(user_id)
+    if memories:
+        mem_lines = [f"- {m['category'].upper()}: {m['memory_text']}" for m in memories[:5]]
+        context_parts.append("Key User Profile & Preferences:\n" + "\n".join(mem_lines))
+
+    # 2. Recent Mood
+    moods = await get_mood_entries(user_id)
+    if moods:
+        latest_mood = moods[0]
+        context_parts.append(f"Recent Mood Check-in: Score {latest_mood.get('mood_score')}/10, Note: '{latest_mood.get('note', 'None')}'")
+
+    # 3. Clinical Assessments
+    phq9 = await get_phq9_history(user_id)
+    if phq9:
+        context_parts.append(f"Latest PHQ-9 Depression Assessment: {phq9[0]['score']}/27 ({phq9[0]['risk_category']})")
+
+    gad7 = await get_gad7_history(user_id)
+    if gad7:
+        context_parts.append(f"Latest GAD-7 Anxiety Assessment: {gad7[0]['score']}/21 ({gad7[0]['anxiety_level']})")
+
+    if not context_parts:
+        return ""
+
+    return "\n" + "\n".join(context_parts) + "\n"
+
+

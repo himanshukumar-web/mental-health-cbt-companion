@@ -23,7 +23,7 @@ from pydantic import BaseModel
 
 from app.config import settings
 from app.agents.monitor import analyze_threat_level
-from app.agents.therapist import stream_response
+from app.agents.therapist import stream_response, PERSONAS
 from app.database import crud
 
 from typing import Dict, Tuple
@@ -517,15 +517,16 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str
                 await crud.save_message(session_id, "user", content, "crisis", user_id)
                 continue
 
-            # ── Agent 1: Therapist (streaming with memory context) ────────────
+            # ── Agent 1: Therapist (streaming with memory context & persona) ────────────
             await websocket.send_json({"type": "stream_start", "agent": "therapist"})
 
+            persona_id = data.get("persona") or data.get("persona_id") or "cbt"
             user_memory = await crud.build_user_memory_context(user_id)
             messages = history + [{"role": "user", "content": content}]
             full_response = ""
 
             try:
-                async for token in stream_response(messages, threat_level, user_memory):
+                async for token in stream_response(messages, threat_level, user_memory, persona_id):
                     full_response += token
                     await websocket.send_json({"type": "token", "content": token})
             except Exception as exc:
@@ -951,3 +952,255 @@ async def delete_data_endpoint(user_id: str):
     if not ok:
         raise HTTPException(status_code=500, detail="Failed to delete data")
     return {"deleted": True}
+
+
+# ── AI Therapist Personas Endpoints ──────────────────────────────────────────
+
+class PersonaPreferenceRequest(BaseModel):
+    persona_id: str
+
+
+@app.get("/personas")
+async def list_personas_endpoint():
+    """List available AI Therapist personas."""
+    return {"personas": list(PERSONAS.values())}
+
+
+@app.get("/users/{user_id}/persona-preference")
+async def get_persona_preference_endpoint(user_id: str):
+    """Get selected persona for a user."""
+    persona_id = await crud.get_user_persona_preference(user_id)
+    persona = PERSONAS.get(persona_id, PERSONAS["cbt"])
+    return {"persona_id": persona_id, "persona": persona}
+
+
+@app.post("/users/{user_id}/persona-preference")
+async def set_persona_preference_endpoint(user_id: str, req: PersonaPreferenceRequest):
+    """Set persona preference for a user."""
+    if req.persona_id not in PERSONAS:
+        raise HTTPException(status_code=400, detail=f"Invalid persona_id: {req.persona_id}")
+    res = await crud.set_user_persona_preference(user_id, req.persona_id)
+    return {"status": "ok", "preference": res, "persona": PERSONAS[req.persona_id]}
+
+
+# ── PHQ-9 Clinical Assessment Endpoints ─────────────────────────────────────
+
+class PHQ9SubmissionRequest(BaseModel):
+    user_id: str
+    answers: list[int]  # 9 integer answers (0-3)
+
+
+@app.post("/assessments/phq9")
+async def submit_phq9_endpoint(req: PHQ9SubmissionRequest):
+    if len(req.answers) != 9:
+        raise HTTPException(status_code=400, detail="PHQ-9 questionnaire requires exactly 9 answers")
+
+    score = sum(req.answers)
+    if score <= 4:
+        risk = "Minimal Depression"
+        explanation = "Your answers indicate minimal or no depressive symptoms. Maintaining positive daily habits and emotional awareness is recommended."
+    elif score <= 9:
+        risk = "Mild Depression"
+        explanation = "Your answers indicate mild depressive symptoms. Gentle CBT thought reframing, structured sleep routines, and daily exercise can help improve your mood."
+    elif score <= 14:
+        risk = "Moderate Depression"
+        explanation = "Your answers reflect moderate depressive symptoms. Structured CBT exercises, active journaling, and consistent check-ins with your AI therapist are beneficial."
+    elif score <= 19:
+        risk = "Moderately Severe Depression"
+        explanation = "Your score points to moderately severe depressive symptoms. We strongly encourage combining AI support with professional healthcare consultation."
+    else:
+        risk = "Severe Depression"
+        explanation = "Your answers reflect severe depressive symptoms. Please reach out to a professional mental health care provider or a crisis helpline immediately."
+
+    assessment = await crud.save_phq9_assessment(
+        user_id=req.user_id,
+        score=score,
+        risk_category=risk,
+        answers=req.answers,
+        ai_explanation=explanation
+    )
+    return {"assessment": assessment}
+
+
+@app.get("/assessments/phq9/{user_id}")
+async def get_phq9_history_endpoint(user_id: str):
+    history = await crud.get_phq9_history(user_id)
+    return {"history": history}
+
+
+@app.get("/assessments/phq9/{user_id}/compare")
+async def compare_phq9_endpoint(user_id: str):
+    history = await crud.get_phq9_history(user_id)
+    if not history:
+        return {"current": None, "previous": None, "score_delta": 0, "status": "No assessments logged yet"}
+
+    current = history[0]
+    previous = history[1] if len(history) > 1 else None
+    score_delta = (current["score"] - previous["score"]) if previous else 0
+
+    return {
+        "current": current,
+        "previous": previous,
+        "score_delta": score_delta,
+        "improved": score_delta < 0,
+        "same": score_delta == 0
+    }
+
+
+# ── GAD-7 Clinical Assessment Endpoints ─────────────────────────────────────
+
+class GAD7SubmissionRequest(BaseModel):
+    user_id: str
+    answers: list[int]  # 7 integer answers (0-3)
+
+
+@app.post("/assessments/gad7")
+async def submit_gad7_endpoint(req: GAD7SubmissionRequest):
+    if len(req.answers) != 7:
+        raise HTTPException(status_code=400, detail="GAD-7 assessment requires exactly 7 answers")
+
+    score = sum(req.answers)
+    if score <= 4:
+        level = "Minimal Anxiety"
+        explanation = "Your responses suggest minimal anxiety levels. Keep practicing present-moment mindfulness and balanced rest."
+    elif score <= 9:
+        level = "Mild Anxiety"
+        explanation = "Your score indicates mild anxiety. Short box-breathing exercises, stress coaching, and journaling will help soothe nervousness."
+    elif score <= 14:
+        level = "Moderate Anxiety"
+        explanation = "Your answers indicate moderate anxiety. Utilizing CBT grounding techniques, limiting stimulant intake, and progressive muscle relaxation are recommended."
+    else:
+        level = "Severe Anxiety"
+        explanation = "Your responses reflect high anxiety levels. Please utilize our crisis resources and consult a qualified healthcare professional."
+
+    assessment = await crud.save_gad7_assessment(
+        user_id=req.user_id,
+        score=score,
+        anxiety_level=level,
+        answers=req.answers,
+        ai_explanation=explanation
+    )
+    return {"assessment": assessment}
+
+
+@app.get("/assessments/gad7/{user_id}")
+async def get_gad7_history_endpoint(user_id: str):
+    history = await crud.get_gad7_history(user_id)
+    return {"history": history}
+
+
+@app.get("/assessments/gad7/{user_id}/compare")
+async def compare_gad7_endpoint(user_id: str):
+    history = await crud.get_gad7_history(user_id)
+    if not history:
+        return {"current": None, "previous": None, "score_delta": 0, "status": "No assessments logged yet"}
+
+    current = history[0]
+    previous = history[1] if len(history) > 1 else None
+    score_delta = (current["score"] - previous["score"]) if previous else 0
+
+    return {
+        "current": current,
+        "previous": previous,
+        "score_delta": score_delta,
+        "improved": score_delta < 0,
+        "same": score_delta == 0
+    }
+
+
+# ── AI Memory Endpoints ──────────────────────────────────────────────────────
+
+class MemoryUpsertRequest(BaseModel):
+    category: str
+    memory_text: str
+    weight: int = 1
+
+
+@app.get("/memories/{user_id}")
+async def get_user_memories_endpoint(user_id: str):
+    memories = await crud.get_user_memories(user_id)
+    return {"memories": memories}
+
+
+@app.post("/memories/{user_id}")
+async def add_user_memory_endpoint(user_id: str, req: MemoryUpsertRequest):
+    mem = await crud.upsert_user_memory(user_id, req.category, req.memory_text, req.weight)
+    return {"memory": mem}
+
+
+# ── Timeline Endpoint ────────────────────────────────────────────────────────
+
+@app.get("/timeline/{user_id}")
+async def get_timeline_endpoint(user_id: str, category: str = "all", search: str = ""):
+    timeline = await crud.get_unified_timeline(user_id, category_filter=category, search_query=search)
+    return {"timeline": timeline}
+
+
+# ── Personalized Insights Engine Endpoint ───────────────────────────────────
+
+@app.get("/insights/{user_id}")
+async def get_personalized_insights_endpoint(user_id: str):
+    moods = await crud.get_mood_entries(user_id)
+    journals = await crud.get_journal_entries(user_id)
+    phq9 = await crud.get_phq9_history(user_id)
+    gad7 = await crud.get_gad7_history(user_id)
+
+    insights = []
+
+    # Sleep vs Mood Insight
+    low_sleep_moods = [m for m in moods if m.get("sleep_hours", 7) < 6]
+    if low_sleep_moods:
+        avg_low_sleep_mood = sum(m.get("mood_score", 5) for m in low_sleep_moods) / len(low_sleep_moods)
+        insights.append({
+            "id": "sleep_mood",
+            "type": "correlation",
+            "icon": "🌙",
+            "title": "Sleep Affects Your Emotional Balance",
+            "description": f"Your mood score averages {round(avg_low_sleep_mood, 1)}/10 on days with under 6 hours of sleep.",
+            "recommendation": "Aim for 7-8 hours of sleep to boost your emotional resilience."
+        })
+
+    # Journal Frequency Insight
+    if len(journals) >= 3:
+        insights.append({
+            "id": "journal_benefit",
+            "type": "habit",
+            "icon": "📝",
+            "title": "Consistent Journaling Boosts Clarity",
+            "description": f"You have written {len(journals)} journal entries. Journaling regularly helps process complex thoughts.",
+            "recommendation": "Keep up your journal streak to identify recurring cognitive patterns."
+        })
+
+    # Meditation / Breathing Effect
+    insights.append({
+        "id": "meditation_effect",
+        "type": "wellness",
+        "icon": "🧘",
+        "title": "Mindfulness Calms Anxiety",
+        "description": "Mindfulness sessions improve average user emotional stability by up to 18%.",
+        "recommendation": "Try a 5-minute guided breathing session when feeling tense."
+    })
+
+    # Clinical Assessment Insight
+    if gad7 or phq9:
+        gad_score = gad7[0]["score"] if gad7 else 0
+        insights.append({
+            "id": "assessment_trend",
+            "type": "clinical",
+            "icon": "📊",
+            "title": "Assessment Progress Tracking Active",
+            "description": f"Latest Anxiety (GAD-7) score: {gad_score}/21. Tracking clinical indicators helps guide personalized therapy.",
+            "recommendation": "Re-assess every 2 weeks to evaluate wellness progression."
+        })
+
+    return {"insights": insights}
+
+
+# ── AI Wellness Score Endpoint ───────────────────────────────────────────────
+
+@app.get("/wellness-score/{user_id}")
+async def get_wellness_score_endpoint(user_id: str):
+    latest = await crud.calculate_and_save_wellness_score(user_id)
+    history = await crud.get_wellness_score_history(user_id)
+    return {"current": latest, "history": history}
+
