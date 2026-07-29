@@ -603,7 +603,6 @@ function AdminDashboardInner() {
         {[
           { id: "dashboard" as const, icon: "📊", label: "Dashboard" },
           { id: "appointments" as const, icon: "📅", label: "Appointments" },
-          { id: "chat" as const, icon: "💬", label: "Chat with Patient" },
           { id: "profile" as const, icon: "👤", label: "Edit Profile" },
         ].map((item) => (
           <button

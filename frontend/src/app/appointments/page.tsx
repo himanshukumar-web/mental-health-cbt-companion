@@ -342,20 +342,6 @@ export default function BookAppointmentPage() {
                           >
                             📅 Book
                           </button>
-                          
-                          <Link
-                            href={`/appointments/my?tab=chat&doctorUserId=${doc.user_id}`}
-                            style={{
-                              flex: 1, padding: "12px 10px", borderRadius: 10,
-                              border: "0.5px solid var(--border-secondary)",
-                              background: "rgba(255,255,255,0.04)",
-                              color: "var(--text-secondary)", fontSize: 13, fontWeight: 500,
-                              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                              gap: 6, minHeight: 44,
-                            }}
-                          >
-                            💬 Chat
-                          </Link>
                         </div>
                       </div>
                     </div>

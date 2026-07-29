@@ -486,7 +486,6 @@ function MyAppointmentsPageInner() {
 
   const filters = [
     { id: "all", label: "📅 Booked Sessions", count: appointments.length },
-    { id: "chat", label: "💬 Chat with Doctor", count: chatPartners.length },
   ];
 
   return (
@@ -873,24 +872,6 @@ function MyAppointmentsPageInner() {
 
                         <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", alignItems: isMobile ? "center" : "flex-end", gap: 10, flexWrap: "wrap" }}>
                           <StatusBadge status={appt.status} />
-                          {appt.doctors?.user_id && (
-                            <button
-                              onClick={() => {
-                                setFilter("chat");
-                                setSelectedPartner({
-                                  user_id: appt.doctors!.user_id,
-                                  name: appt.doctors!.full_name,
-                                  role: "doctor"
-                                });
-                              }}
-                              style={{
-                                padding: "8px 16px", borderRadius: 10, border: "none",
-                                background: "rgba(34,197,94,0.15)", color: "#86efac",
-                                fontSize: isMobile ? 12 : 13, fontWeight: 500, cursor: "pointer",
-                                transition: "all 0.2s"
-                              }}
-                            >💬 Chat</button>
-                          )}
                         </div>
                       </div>
                     </div>
