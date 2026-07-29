@@ -194,7 +194,8 @@ export default function GAD7Wizard({ onSubmit, latestAssessment }: GAD7WizardPro
         </div>
       </div>
 
-      <div style={{ minHeight: 180, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+      {/* Question prompt */}
+      <div style={{ minHeight: "auto", margin: "16px 0", display: "flex", flexDirection: "column", justifyContent: "center" }}>
         <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 6 }}>
           Over the last 2 weeks, how often have you been bothered by:
         </div>
@@ -205,13 +206,13 @@ export default function GAD7Wizard({ onSubmit, latestAssessment }: GAD7WizardPro
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
-            style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.4, margin: "0 0 20px" }}
+            style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.4, margin: "0 0 16px" }}
           >
             {GAD7_QUESTIONS[step]}
           </motion.h3>
         </AnimatePresence>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {OPTIONS.map((opt) => {
             const isSelected = answers[step] === opt.value;
             return (
@@ -221,12 +222,12 @@ export default function GAD7Wizard({ onSubmit, latestAssessment }: GAD7WizardPro
                 whileTap={{ scale: 0.99 }}
                 onClick={() => handleSelect(opt.value)}
                 style={{
-                  padding: "14px 18px",
+                  padding: "10px 14px",
                   borderRadius: 12,
                   border: isSelected ? "2px solid #8b5cf6" : "1px solid var(--border-secondary)",
                   background: isSelected ? "rgba(139,92,246,0.12)" : "var(--bg-secondary)",
                   color: isSelected ? "#8b5cf6" : "var(--text-primary)",
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: isSelected ? 700 : 500,
                   cursor: "pointer",
                   textAlign: "left",
@@ -237,7 +238,7 @@ export default function GAD7Wizard({ onSubmit, latestAssessment }: GAD7WizardPro
                 }}
               >
                 <span>{opt.label}</span>
-                <span style={{ fontSize: 12, opacity: 0.6 }}>+{opt.value} pts</span>
+                <span style={{ fontSize: 11, opacity: 0.6 }}>+{opt.value} pts</span>
               </motion.button>
             );
           })}

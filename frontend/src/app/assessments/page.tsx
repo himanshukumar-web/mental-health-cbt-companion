@@ -61,7 +61,7 @@ export default function AssessmentsPage() {
         </div>
 
         {/* Navigation Tabs */}
-        <div style={{ display: "flex", gap: 10, marginBottom: 24, borderBottom: "1px solid var(--border-secondary)", paddingBottom: 12 }}>
+        <div className="custom-scrollbar" style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24, borderBottom: "1px solid var(--border-secondary)", paddingBottom: 12, overflowX: "auto" }}>
           <button
             onClick={() => setActiveTab("phq9")}
             style={{

@@ -238,7 +238,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Tools & Shortcuts Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14 }}>
           <Link
             href="/chat"
             style={{

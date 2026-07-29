@@ -15,15 +15,16 @@ export default function MobileBottomNav() {
   const pathname = usePathname();
 
   return (
-    <div
+    <nav
+      className="mobile-bottom-nav"
       style={{
         position: "fixed",
         bottom: 0,
         left: 0,
         right: 0,
-        zIndex: 990,
+        zIndex: 1002,
         height: 64,
-        background: "rgba(11, 15, 26, 0.85)",
+        background: "rgba(11, 15, 26, 0.95)",
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
         borderTop: "1px solid var(--border-secondary)",
@@ -31,6 +32,7 @@ export default function MobileBottomNav() {
         alignItems: "center",
         justifyContent: "space-around",
         padding: "0 8px",
+        pointerEvents: "auto",
       }}
     >
       <style>{`
@@ -56,8 +58,10 @@ export default function MobileBottomNav() {
               fontWeight: isActive ? 700 : 500,
               padding: "6px 12px",
               borderRadius: 12,
-              background: isActive ? "rgba(34,197,94,0.1)" : "transparent",
+              background: isActive ? "rgba(34,197,94,0.12)" : "transparent",
               transition: "all 0.15s ease",
+              cursor: "pointer",
+              touchAction: "manipulation",
             }}
           >
             <span style={{ fontSize: 18 }}>{item.icon}</span>
@@ -65,6 +69,6 @@ export default function MobileBottomNav() {
           </Link>
         );
       })}
-    </div>
+    </nav>
   );
 }
