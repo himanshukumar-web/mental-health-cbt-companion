@@ -419,7 +419,7 @@ export default function ChatWindow({
 
                 return (
                   <motion.div
-                    key={msg.id || index}
+                    key={index}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
@@ -556,10 +556,10 @@ export default function ChatWindow({
           >
             {/* Voice Controller Button */}
             <VoiceController
-              onSpeechToText={(spokenText) => {
+              onTranscript={(spokenText: string) => {
                 setInput((prev) => (prev ? `${prev} ${spokenText}` : spokenText));
               }}
-              isAISpeaking={false}
+              isStreaming={isStreaming}
             />
 
             {/* Auto Growing Textarea Input */}
