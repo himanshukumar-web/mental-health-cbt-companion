@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import MobileHeader from "@/components/MobileHeader";
 import WellnessScoreCard from "@/components/WellnessScoreCard";
 import InsightChartCard from "@/components/InsightChartCard";
 import PersonaSelector from "@/components/PersonaSelector";
@@ -185,23 +186,21 @@ export default function DashboardPage() {
       <Sidebar />
 
       <div
+        className="app-main-layout"
         style={{
-          flex: 1,
-          marginLeft: 250,
           display: "flex",
           gap: 24,
-          padding: "28px 24px 80px",
           maxWidth: 1380,
           overflow: "auto",
         }}
       >
         <style>{`
           @media (max-width: 1100px) { .desktop-right-sidebar-container { display: none !important; } }
-          @media (max-width: 767px) { .dashboard-main-content { margin-left: 0 !important; padding: 16px 14px 80px !important; } }
         `}</style>
 
         {/* Main Left Content */}
-        <main style={{ flex: 1, minWidth: 0 }} className="dashboard-main-content">
+        <main style={{ flex: 1, minWidth: 0 }}>
+          <MobileHeader title="Dashboard" />
           {/* Header & Patient Quick Nav Bar */}
           <div
             style={{

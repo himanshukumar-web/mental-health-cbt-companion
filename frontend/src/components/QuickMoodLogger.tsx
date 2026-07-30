@@ -125,8 +125,8 @@ export default function QuickMoodLogger({ userId, onMoodLogged }: QuickMoodLogge
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))",
-          gap: 12,
+          gridTemplateColumns: "repeat(auto-fit, minmax(56px, 1fr))",
+          gap: 10,
         }}
       >
         {MOOD_OPTIONS.map((opt) => {
