@@ -195,14 +195,26 @@ export default function ChatWindow({
       style={{
         display: "flex",
         height: "100%",
-        width: "100%",
-        background: "var(--bg-primary)",
-        color: "var(--text-primary)",
+        flexDirection: "row",
         position: "relative",
+        background: "var(--bg-primary)",
         overflow: "hidden",
       }}
     >
-      {/* Main Chat Center Container */}
+      <style>{`
+        @media (max-width: 767px) {
+          .chat-messages-container {
+            padding: 12px 12px 165px !important;
+          }
+          .chat-floating-input-container {
+            bottom: calc(82px + env(safe-area-inset-bottom, 0px)) !important;
+            left: 10px !important;
+            right: 10px !important;
+          }
+        }
+      `}</style>
+
+      {/* Main Chat Conversation Center Column */}
       <div
         style={{
           flex: 1,
@@ -210,7 +222,7 @@ export default function ChatWindow({
           flexDirection: "column",
           height: "100%",
           position: "relative",
-          overflow: "hidden",
+          minWidth: 0,
         }}
       >
         {/* Sleek Top Header Bar (56px) */}
@@ -354,7 +366,7 @@ export default function ChatWindow({
 
         {/* Messages Container Area */}
         <div
-          className="custom-scrollbar"
+          className="custom-scrollbar chat-messages-container"
           style={{
             flex: 1,
             overflowY: "auto",
@@ -600,6 +612,7 @@ export default function ChatWindow({
 
         {/* Floating Glass Input Bar */}
         <div
+          className="chat-floating-input-container"
           style={{
             position: "absolute",
             bottom: 16,

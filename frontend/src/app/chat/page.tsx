@@ -126,13 +126,19 @@ function ChatPageInner() {
         }
       `}</style>
 
+      <style>{`
+        @media (max-width: 767px) {
+          .chat-main-wrapper { margin-left: 0 !important; }
+        }
+      `}</style>
+
       {/* Sidebar */}
       <Sidebar />
 
       {/* Crisis overlay */}
       {crisis && <CrisisPanel onDismiss={dismissCrisis} userId={user?.id} sessionId={sessionId} />}
 
-      <div style={{ flex: 1, marginLeft: user ? 260 : 0, height: "100%", overflow: "hidden" }}>
+      <div className="chat-main-wrapper" style={{ flex: 1, marginLeft: user ? 260 : 0, height: "100%", overflow: "hidden" }}>
         <ChatWindow
           messages={messages}
           wsState={wsState}
