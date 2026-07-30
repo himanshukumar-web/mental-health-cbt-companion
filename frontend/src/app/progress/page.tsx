@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import MobileHeader from "@/components/MobileHeader";
 import CalendarHeatmap from "@/components/CalendarHeatmap";
 import type { HeatmapDay } from "@/types/heatmap";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -27,57 +29,56 @@ export default function ProgressHubPage() {
     if (!authLoading && !user) router.replace("/login");
   }, [user, authLoading, router]);
 
-  const fetchData = useCallback(async () => {
-    if (!user) return;
-    try {
-      const [xpRes, timelineRes, phqRes] = await Promise.allSettled([
-        fetch(`${API_URL}/gamification/xp/${user.id}`),
-        fetch(`${API_URL}/timeline/${user.id}`),
-        fetch(`${API_URL}/phq9/${user.id}`),
-      ]);
-
-      if (xpRes.status === "fulfilled" && xpRes.value.ok) {
-        const json = await xpRes.value.json();
-        setTotalXP(json.xp?.total_xp || 0);
-        setLevel(json.xp?.level || 1);
-      }
-
-      if (timelineRes.status === "fulfilled" && timelineRes.value.ok) {
-        const json = await timelineRes.value.json();
-        const events = json.events || [];
-        const counts: { [date: string]: number } = {};
-        events.forEach((ev: { timestamp?: string; date?: string }) => {
-          const d = (ev.timestamp || ev.date || "").split("T")[0];
-          if (d) counts[d] = (counts[d] || 0) + 1;
-        });
-        const list: HeatmapDay[] = Object.keys(counts).map((date) => ({
-          date,
-          score: Math.min(counts[date] * 25, 100),
-        }));
-        setHeatmapData(list);
-      }
-
-      if (phqRes.status === "fulfilled" && phqRes.value.ok) {
-        const json = await phqRes.value.json();
-        if (json.assessments && json.assessments.length > 0) {
-          setPhq9Score(json.assessments[0].score);
-        }
-      }
-    } catch {
-      /* ignore */
-    }
-    setLoading(false);
-  }, [user]);
-
   useEffect(() => {
+    if (!user) return;
+    const fetchData = async () => {
+      try {
+        const [xpRes, timelineRes, phqRes] = await Promise.allSettled([
+          fetch(`${API_URL}/gamification/xp/${user.id}`),
+          fetch(`${API_URL}/timeline/${user.id}`),
+          fetch(`${API_URL}/phq9/${user.id}`),
+        ]);
+
+        if (xpRes.status === "fulfilled" && xpRes.value.ok) {
+          const json = await xpRes.value.json();
+          setTotalXP(json.xp?.total_xp || 0);
+          setLevel(json.xp?.level || 1);
+        }
+
+        if (timelineRes.status === "fulfilled" && timelineRes.value.ok) {
+          const json = await timelineRes.value.json();
+          const events = json.events || [];
+          const counts: { [date: string]: number } = {};
+          events.forEach((ev: { timestamp?: string; date?: string }) => {
+            const d = (ev.timestamp || ev.date || "").split("T")[0];
+            if (d) counts[d] = (counts[d] || 0) + 1;
+          });
+          const list: HeatmapDay[] = Object.keys(counts).map((date) => ({
+            date,
+            score: Math.min(counts[date] * 25, 100),
+          }));
+          setHeatmapData(list);
+        }
+
+        if (phqRes.status === "fulfilled" && phqRes.value.ok) {
+          const json = await phqRes.value.json();
+          if (json.assessments && json.assessments.length > 0) {
+            setPhq9Score(json.assessments[0].score);
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+      setLoading(false);
+    };
     fetchData();
-  }, [fetchData]);
+  }, [user]);
 
   if (authLoading || loading)
     return (
       <>
         <Sidebar />
-        <div style={{ marginLeft: 250 }}>
+        <div className="app-main-layout">
           <PageSkeleton />
         </div>
       </>
@@ -127,10 +128,8 @@ export default function ProgressHubPage() {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
       <Sidebar />
-      <main style={{ flex: 1, marginLeft: 250, padding: "28px 24px 100px", maxWidth: 960, overflow: "auto" }}>
-        <style>{`
-          @media (max-width: 767px) { main { margin-left: 0 !important; padding: 20px 16px 100px !important; } }
-        `}</style>
+      <main className="app-main-layout" style={{ padding: "24px 20px", maxWidth: 960, overflow: "auto" }}>
+        <MobileHeader title="Progress Hub" />
 
         {/* Header */}
         <div style={{ marginBottom: 24 }}>

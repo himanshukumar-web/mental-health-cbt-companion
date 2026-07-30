@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import MobileHeader from "@/components/MobileHeader";
 import CalendarHeatmap from "@/components/CalendarHeatmap";
 import DayDetailsModal from "@/components/DayDetailsModal";
 import ExportModal from "@/components/ExportModal";
@@ -103,10 +104,8 @@ export default function AnalyticsPage() {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)" }}>
       <Sidebar />
-      <main style={{ flex: 1, marginLeft: 250, padding: "32px 28px 80px", maxWidth: 1120, overflow: "auto" }}>
-        <style>{`
-          @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px 16px 80px !important; } }
-        `}</style>
+      <main className="app-main-layout" style={{ padding: "24px 20px", maxWidth: 1120, overflow: "auto" }}>
+        <MobileHeader title="Analytics & Insights" />
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 16 }}>

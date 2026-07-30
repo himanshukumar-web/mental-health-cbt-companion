@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import MobileHeader from "@/components/MobileHeader";
 import DailyChallengesCard from "@/components/DailyChallengesCard";
 import { useChallenges } from "@/hooks/useChallenges";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -153,7 +154,7 @@ export default function AchievementsPage() {
     return (
       <>
         <Sidebar />
-        <div style={{ marginLeft: 250 }}>
+        <div className="app-main-layout">
           <PageSkeleton />
         </div>
       </>
@@ -166,10 +167,8 @@ export default function AchievementsPage() {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
       <Sidebar />
-      <main style={{ flex: 1, marginLeft: 250, padding: "32px 28px 80px", maxWidth: 1080, overflow: "auto" }}>
-        <style>{`
-          @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px 16px 80px !important; } }
-        `}</style>
+      <main className="app-main-layout" style={{ padding: "24px 20px", maxWidth: 1080, overflow: "auto" }}>
+        <MobileHeader title="Achievements & XP" />
 
         {/* Header */}
         <div style={{ marginBottom: 28 }}>

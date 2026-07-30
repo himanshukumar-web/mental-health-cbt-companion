@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import MobileHeader from "@/components/MobileHeader";
 import TimelineFeed from "@/components/TimelineFeed";
 import CalendarHeatmap from "@/components/CalendarHeatmap";
 import DayDetailsModal from "@/components/DayDetailsModal";
@@ -30,17 +31,15 @@ export default function TimelinePage() {
   }, [user, authLoading, router]);
 
   if (authLoading || !user) {
-    return <PageSkeleton />;
+    return <><Sidebar /><div className="app-main-layout"><PageSkeleton /></div></>;
   }
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
       <Sidebar />
 
-      <main style={{ flex: 1, marginLeft: 250, padding: "28px 24px 80px", maxWidth: 1120, overflow: "auto" }}>
-        <style>{`
-          @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px 16px 80px !important; } }
-        `}</style>
+      <main className="app-main-layout" style={{ padding: "24px 20px", maxWidth: 1120, overflow: "auto" }}>
+        <MobileHeader title="Timeline & Heatmap" />
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 16 }}>
