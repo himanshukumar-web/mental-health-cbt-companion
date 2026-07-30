@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import MobileHeader from "@/components/MobileHeader";
+import ThemeSelector from "@/components/ThemeSelector";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import toast from "react-hot-toast";
 
@@ -131,7 +133,7 @@ export default function SettingsPage() {
     return (
       <>
         <Sidebar />
-        <div style={{ marginLeft: 260 }}>
+        <div className="app-main-layout">
           <PageSkeleton />
         </div>
       </>
@@ -147,18 +149,8 @@ export default function SettingsPage() {
       }}
     >
       <Sidebar />
-      <main
-        style={{
-          flex: 1,
-          marginLeft: 260,
-          padding: "32px 28px",
-          maxWidth: 800,
-          overflow: "auto",
-        }}
-      >
-        <style>{`
-          @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px !important; } }
-        `}</style>
+      <main className="app-main-layout" style={{ padding: "24px 20px", maxWidth: 800, overflow: "auto" }}>
+        <MobileHeader title="Settings & Preferences" />
 
         {/* Header */}
         <div style={{ marginBottom: 28 }}>

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import MobileHeader from "@/components/MobileHeader";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
@@ -89,7 +90,7 @@ export default function ProfilePage() {
     return (
       <>
         <Sidebar />
-        <div style={{ marginLeft: 260 }}>
+        <div className="app-main-layout">
           <PageSkeleton />
         </div>
       </>
@@ -106,10 +107,8 @@ export default function ProfilePage() {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
       <Sidebar />
-      <main style={{ flex: 1, marginLeft: 260, padding: "32px 24px 100px", maxWidth: 800, overflow: "auto" }}>
-        <style>{`
-          @media (max-width: 767px) { main { margin-left: 0 !important; padding: 20px 16px 100px !important; } }
-        `}</style>
+      <main className="app-main-layout" style={{ padding: "24px 20px", maxWidth: 800, overflow: "auto" }}>
+        <MobileHeader title="User Profile" />
 
         {/* Profile Card Header */}
         <motion.div
