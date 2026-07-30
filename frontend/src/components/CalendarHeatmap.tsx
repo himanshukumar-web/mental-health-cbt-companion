@@ -71,6 +71,7 @@ export default function CalendarHeatmap({
 
       {/* Contribution Grid */}
       <div
+        className="mobile-scroll-x"
         style={{
           display: "grid",
           gridTemplateColumns: `repeat(auto-fill, minmax(20px, 1fr))`,

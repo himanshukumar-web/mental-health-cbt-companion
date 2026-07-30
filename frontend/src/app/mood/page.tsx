@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import MobileHeader from "@/components/MobileHeader";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import toast from "react-hot-toast";
 
@@ -145,7 +146,7 @@ export default function MoodTrackerPage() {
     }
   };
 
-  if (authLoading || loading) return <><Sidebar /><div style={{ marginLeft: 260 }}><PageSkeleton /></div></>;
+  if (authLoading || loading) return <><Sidebar /><div className="app-main-layout"><PageSkeleton /></div></>;
   if (!user) return null;
 
   const selectedMood = MOOD_OPTIONS.find(m => m.score === moodScore);
@@ -153,14 +154,12 @@ export default function MoodTrackerPage() {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)" }}>
       <Sidebar />
-      <main style={{
-        flex: 1, marginLeft: 260, padding: "32px 28px",
+      <main className="app-main-layout" style={{
+        padding: "24px 20px",
         maxWidth: 900, overflow: "auto",
       }}>
+        <MobileHeader title="Mood Tracker" />
         <style>{`
-          @media (max-width: 767px) {
-            main { margin-left: 0 !important; padding: 16px !important; }
-          }
           @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
           @keyframes popIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
         `}</style>
