@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import MobileHeader from "@/components/MobileHeader";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import toast from "react-hot-toast";
 
@@ -134,7 +135,7 @@ export default function BreathingPage() {
     return (
       <>
         <Sidebar />
-        <div style={{ marginLeft: 260 }}>
+        <div className="app-main-layout">
           <PageSkeleton />
         </div>
       </>
@@ -154,15 +155,8 @@ export default function BreathingPage() {
       }}
     >
       <Sidebar />
-      <main
-        style={{
-          flex: 1,
-          marginLeft: 260,
-          padding: "32px 28px",
-          maxWidth: 900,
-          overflow: "auto",
-        }}
-      >
+      <main className="app-main-layout" style={{ padding: "24px 20px", maxWidth: 900, overflow: "auto" }}>
+        <MobileHeader title="Breathing Exercises" />
         <style>{`
           @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px !important; } }
           @keyframes expandCircle { from { transform: scale(1); } to { transform: scale(1.4); } }

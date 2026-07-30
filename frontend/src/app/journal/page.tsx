@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import MobileHeader from "@/components/MobileHeader";
+import VoiceController from "@/components/VoiceController";
 import EmptyState from "@/components/ui/EmptyState";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import { motion } from "framer-motion";
@@ -214,7 +216,7 @@ export default function JournalPage() {
     return (
       <>
         <Sidebar />
-        <div style={{ marginLeft: 250 }}>
+        <div className="app-main-layout">
           <PageSkeleton />
         </div>
       </>
@@ -224,10 +226,8 @@ export default function JournalPage() {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)" }}>
       <Sidebar />
-      <main style={{ flex: 1, marginLeft: 250, padding: "32px 28px 80px", maxWidth: 960, overflow: "auto" }}>
-        <style>{`
-          @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px 16px 80px !important; } }
-        `}</style>
+      <main className="app-main-layout" style={{ padding: "24px 20px", maxWidth: 960, overflow: "auto" }}>
+        <MobileHeader title="Voice & Text Journal" />
 
         <div style={{ marginBottom: 24 }}>
           <span style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#a855f7", letterSpacing: "0.08em" }}>

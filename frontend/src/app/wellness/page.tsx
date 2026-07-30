@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import MobileHeader from "@/components/MobileHeader";
+import WellnessPanel from "@/components/WellnessPanel";
 import QuickMoodLogger from "@/components/QuickMoodLogger";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import { motion } from "framer-motion";
@@ -128,10 +130,8 @@ export default function WellnessHubPage() {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
       <Sidebar />
-      <main style={{ flex: 1, marginLeft: 250, padding: "28px 24px 100px", maxWidth: 960, overflow: "auto" }}>
-        <style>{`
-          @media (max-width: 767px) { main { margin-left: 0 !important; padding: 20px 16px 100px !important; } }
-        `}</style>
+      <main className="app-main-layout" style={{ padding: "24px 20px", maxWidth: 960, overflow: "auto" }}>
+        <MobileHeader title="Wellness & Self-Care" />
 
         {/* Header */}
         <div style={{ marginBottom: 24 }}>

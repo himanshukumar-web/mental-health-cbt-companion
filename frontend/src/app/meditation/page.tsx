@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import MobileHeader from "@/components/MobileHeader";
+import AudioStreamer from "@/components/AudioStreamer";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import toast from "react-hot-toast";
 
@@ -188,7 +190,7 @@ export default function MeditationPage() {
     return (
       <>
         <Sidebar />
-        <div style={{ marginLeft: 260 }}>
+        <div className="app-main-layout">
           <PageSkeleton />
         </div>
       </>
@@ -218,15 +220,8 @@ export default function MeditationPage() {
       }}
     >
       <Sidebar />
-      <main
-        style={{
-          flex: 1,
-          marginLeft: 260,
-          padding: "32px 28px",
-          maxWidth: 950,
-          overflow: "auto",
-        }}
-      >
+      <main className="app-main-layout" style={{ padding: "24px 20px", maxWidth: 950, overflow: "auto" }}>
+        <MobileHeader title="Mindful Meditation" />
         <style>{`
           @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px !important; } }
           @keyframes pulseGlow { 0%,100%{box-shadow:0 0 20px rgba(59,130,246,0.3)} 50%{box-shadow:0 0 40px rgba(34,197,94,0.5)} }
