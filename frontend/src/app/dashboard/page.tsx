@@ -107,7 +107,7 @@ export default function DashboardPage() {
         fetch(`${API_URL}/cbt-worksheets/${user.id}`),
         fetch(`${API_URL}/gamification/xp/${user.id}`),
         fetch(`${API_URL}/insights/${user.id}`),
-        fetch(`${API_URL}/appointments/patient/${user.id}`),
+        fetch(`${API_URL}/appointments/user/${user.id}`),
       ]);
 
       const [moodRes, journalRes, cbtRes, xpRes, insightsRes, apptRes] = results;
