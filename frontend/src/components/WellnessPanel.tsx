@@ -45,7 +45,7 @@ export default function WellnessPanel({ userId }: WellnessPanelProps) {
 
   return (
     <aside
-      className="custom-scrollbar"
+      className="custom-scrollbar wellness-panel-root"
       style={{
         width: 280,
         height: "100%",

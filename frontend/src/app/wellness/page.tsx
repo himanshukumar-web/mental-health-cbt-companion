@@ -219,6 +219,8 @@ export default function WellnessHubPage() {
         </div>
       </main>
 
+      <WellnessPanel userId={user.id} />
+
       <MobileBottomNav />
     </div>
   );

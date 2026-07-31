@@ -28,10 +28,11 @@ export default function QuickMoodLogger({ userId, onMoodLogged }: QuickMoodLogge
 
     try {
       const todayStr = new Date().toISOString().split("T")[0];
-      const res = await fetch(`${API_URL}/mood-entries/${userId}`, {
+      const res = await fetch(`${API_URL}/mood-entries`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          user_id: userId,
           date: todayStr,
           mood_score: option.score,
           mood_emoji: option.emoji,

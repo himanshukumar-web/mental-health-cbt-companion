@@ -35,7 +35,7 @@ export default function ProgressHubPage() {
         const [xpRes, timelineRes, phqRes] = await Promise.allSettled([
           fetch(`${API_URL}/gamification/xp/${user.id}`),
           fetch(`${API_URL}/timeline/${user.id}`),
-          fetch(`${API_URL}/phq9/${user.id}`),
+          fetch(`${API_URL}/assessments/phq9/${user.id}`),
         ]);
 
         if (xpRes.status === "fulfilled" && xpRes.value.ok) {
@@ -46,7 +46,7 @@ export default function ProgressHubPage() {
 
         if (timelineRes.status === "fulfilled" && timelineRes.value.ok) {
           const json = await timelineRes.value.json();
-          const events = json.events || [];
+          const events = json.timeline || json.events || [];
           const counts: { [date: string]: number } = {};
           events.forEach((ev: { timestamp?: string; date?: string }) => {
             const d = (ev.timestamp || ev.date || "").split("T")[0];
