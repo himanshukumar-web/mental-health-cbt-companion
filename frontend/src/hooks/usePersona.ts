@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Persona } from "@/types/persona";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://mental-health-cbt-companion.onrender.com";
 
 const DEFAULT_PERSONAS: Persona[] = [
   {

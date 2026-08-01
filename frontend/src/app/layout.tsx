@@ -35,6 +35,8 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+import BackendPrewarmer from "@/components/BackendPrewarmer";
+
 export default function RootLayout({
   children,
 }: {
@@ -55,6 +57,7 @@ export default function RootLayout({
       <body>
         <ErrorBoundary>
           <AuthProvider>
+            <BackendPrewarmer />
             <ToastProvider />
             {children}
             <InstallPrompt />

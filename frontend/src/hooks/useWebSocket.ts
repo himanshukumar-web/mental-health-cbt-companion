@@ -44,8 +44,10 @@ function getBackendUrls(): { wsUrl: string; httpUrl: string } {
     }
   }
 
-  // Default: use env URL or localhost
-  const baseUrl = envUrl || "http://localhost:8000";
+  // Default: use env URL or production Render backend URL
+  const baseUrl = envUrl || (typeof window !== "undefined" && window.location.hostname !== "localhost"
+    ? "https://mental-health-cbt-companion.onrender.com"
+    : "http://localhost:8000");
   const wsBase = baseUrl.replace(/^http/, "ws");
   return { wsUrl: wsBase, httpUrl: baseUrl };
 }
