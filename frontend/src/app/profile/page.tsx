@@ -14,7 +14,7 @@ import toast from "react-hot-toast";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export default function ProfilePage() {
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, userRole, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
 
   const [displayName, setDisplayName] = useState("");
@@ -98,11 +98,17 @@ export default function ProfilePage() {
 
   if (!user) return null;
 
-  const PROFILE_MENU = [
-    { label: "My Appointments", icon: "📅", href: "/appointments/my", color: "#3b82f6", subtitle: "Scheduled therapist sessions" },
-    { label: "Settings & Privacy", icon: "⚙️", href: "/settings", color: "#a855f7", subtitle: "Theme, export data, privacy" },
-    { label: "Notification Reminders", icon: "🔔", href: "/reminders", color: "#f59e0b", subtitle: "Custom check-in alerts" },
-  ];
+  const PROFILE_MENU = userRole === "admin"
+    ? [
+        { label: "Patient Appointments", icon: "📅", href: "/admin?tab=appointments", color: "#f59e0b", subtitle: "View and manage patient sessions" },
+        { label: "Doctor Portal", icon: "🩺", href: "/admin", color: "#22c55e", subtitle: "Clinical dashboard and patient manager" },
+        { label: "Settings & Privacy", icon: "⚙️", href: "/settings", color: "#a855f7", subtitle: "Theme, export data, privacy" },
+      ]
+    : [
+        { label: "My Appointments", icon: "📅", href: "/appointments/my", color: "#3b82f6", subtitle: "Scheduled therapist sessions" },
+        { label: "Settings & Privacy", icon: "⚙️", href: "/settings", color: "#a855f7", subtitle: "Theme, export data, privacy" },
+        { label: "Notification Reminders", icon: "🔔", href: "/reminders", color: "#f59e0b", subtitle: "Custom check-in alerts" },
+      ];
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
