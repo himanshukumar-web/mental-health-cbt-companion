@@ -57,7 +57,7 @@ const MINDFUL_QUOTES = [
 ];
 
 export default function DashboardPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, userRole, loading: authLoading } = useAuth();
   const router = useRouter();
 
   const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([]);
@@ -317,6 +317,107 @@ export default function DashboardPage() {
               ↻ Next
             </button>
           </div>
+
+          {/* Role-Specific Appointment Banner */}
+          {userRole === "admin" ? (
+            <div
+              style={{
+                padding: "18px 22px",
+                borderRadius: 18,
+                background: "linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.04))",
+                border: "1px solid rgba(245,158,11,0.3)",
+                marginBottom: 24,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 16,
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 14,
+                    background: "rgba(245,158,11,0.2)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 22,
+                  }}
+                >
+                  🩺
+                </div>
+                <div>
+                  <h4 style={{ fontSize: 16, fontWeight: 800, color: "var(--text-primary)", margin: 0, fontFamily: "var(--font-display)" }}>
+                    Doctor Portal — Patient Appointments
+                  </h4>
+                  <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "2px 0 0" }}>
+                    Patients book appointments with you. View and manage patient appointments directly in your doctor dashboard.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/admin?tab=appointments"
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: 14,
+                  background: "#f59e0b",
+                  color: "#000",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  boxShadow: "0 4px 16px rgba(245,158,11,0.3)",
+                }}
+              >
+                <span>View Patient Appointments</span>
+                <span>→</span>
+              </Link>
+            </div>
+          ) : (
+            upcomingAppt && (
+              <div
+                style={{
+                  padding: "16px 20px",
+                  borderRadius: 18,
+                  background: "linear-gradient(135deg, rgba(59,130,246,0.12), rgba(59,130,246,0.04))",
+                  border: "1px solid rgba(59,130,246,0.3)",
+                  marginBottom: 24,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 16,
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#3b82f6", letterSpacing: "0.06em" }}>
+                    Upcoming Appointment
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginTop: 2 }}>
+                    📅 {upcomingAppt.date} at {upcomingAppt.time_slot}
+                  </div>
+                </div>
+                <Link
+                  href="/appointments/my"
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: 12,
+                    background: "rgba(59,130,246,0.2)",
+                    color: "#60a5fa",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    textDecoration: "none",
+                  }}
+                >
+                  View Details →
+                </Link>
+              </div>
+            )
+          )}
 
           {/* Quick Actions Grid */}
           <div style={{ marginBottom: 24 }}>

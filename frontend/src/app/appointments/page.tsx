@@ -25,7 +25,7 @@ const TIME_SLOTS = [
 ];
 
 export default function BookAppointmentPage() {
-  const { user, loading } = useAuth();
+  const { user, userRole, loading } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -50,8 +50,11 @@ export default function BookAppointmentPage() {
   }, []);
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [user, loading, router]);
+    if (!loading) {
+      if (!user) router.replace("/login");
+      else if (userRole === "admin") router.replace("/admin?tab=appointments");
+    }
+  }, [user, userRole, loading, router]);
 
   // Fetch doctors
   useEffect(() => {

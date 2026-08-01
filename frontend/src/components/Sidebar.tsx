@@ -159,11 +159,18 @@ export default function Sidebar() {
             </div>
 
             {group.items.map((item) => {
-              const isActive = pathname === item.path;
+              const targetPath = (userRole === "admin" && item.path === "/appointments")
+                ? "/admin?tab=appointments"
+                : item.path;
+              const targetLabel = (userRole === "admin" && item.path === "/appointments")
+                ? "Patient Appointments"
+                : item.label;
+              const isActive = pathname === targetPath || (item.path === "/appointments" && pathname.startsWith("/admin"));
+
               return (
                 <Link
                   key={item.path}
-                  href={item.path}
+                  href={targetPath}
                   style={{
                     position: "relative",
                     display: "flex",
@@ -182,7 +189,7 @@ export default function Sidebar() {
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <span style={{ fontSize: 16 }}>{item.icon}</span>
-                    <span>{item.label}</span>
+                    <span>{targetLabel}</span>
                   </div>
 
                   {item.badge && (

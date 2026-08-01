@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
 
 const NAV_ITEMS = [
   { label: "Home", icon: "🏠", path: "/dashboard" },
@@ -14,6 +15,17 @@ const NAV_ITEMS = [
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
+  const { userRole } = useAuth();
+
+  const navItems = userRole === "admin"
+    ? [
+        { label: "Home", icon: "🏠", path: "/dashboard" },
+        { label: "Therapy", icon: "🤖", path: "/chat" },
+        { label: "Doctor", icon: "🩺", path: "/admin" },
+        { label: "Progress", icon: "📊", path: "/progress" },
+        { label: "Profile", icon: "👤", path: "/profile" },
+      ]
+    : NAV_ITEMS;
 
   return (
     <nav
@@ -47,7 +59,7 @@ export default function MobileBottomNav() {
         }
       `}</style>
 
-      {NAV_ITEMS.map((item) => {
+      {navItems.map((item) => {
         const isActive =
           pathname === item.path ||
           (item.path !== "/dashboard" && pathname.startsWith(item.path));
