@@ -58,7 +58,7 @@ const RECONNECT_BASE_MS = 2_000;
 const RECONNECT_MAX_MS = 30_000;
 const MAX_RECONNECT_ATTEMPTS = 10;
 
-export function useWebSocket(sessionId: string, userId?: string) {
+export function useWebSocket(sessionId: string, userId?: string, activeGreeting?: string) {
   const wsRef = useRef<WebSocket | null>(null);
   const [wsState, setWsState] = useState<WSState>({
     isConnected: false,
@@ -68,11 +68,13 @@ export function useWebSocket(sessionId: string, userId?: string) {
     threatLevel: "normal",
     connectionError: null,
   });
+
+  const defaultGreeting = activeGreeting || "Hi, I'm Sera — your CBT companion. 🌿 This is a safe space to talk through whatever's on your mind. I use evidence-based CBT techniques to help you explore your thoughts and feelings. How are you doing today?";
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
-      content:
-        "Hi, I'm Sera — your CBT companion. 🌿 This is a safe space to talk through whatever's on your mind. I use evidence-based CBT techniques to help you explore your thoughts and feelings. How are you doing today?",
+      content: defaultGreeting,
       agent: "therapist",
     },
   ]);
@@ -103,8 +105,7 @@ export function useWebSocket(sessionId: string, userId?: string) {
     const defaultMessages: ChatMessage[] = [
       {
         role: "assistant",
-        content:
-          "Hi, I'm Sera — your CBT companion. 🌿 This is a safe space to talk through whatever's on your mind. I use evidence-based CBT techniques to help you explore your thoughts and feelings. How are you doing today?",
+        content: defaultGreeting,
         agent: "therapist",
       },
     ];

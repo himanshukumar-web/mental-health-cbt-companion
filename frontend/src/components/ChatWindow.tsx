@@ -560,7 +560,15 @@ export default function ChatWindow({
                       </div>
 
                       {/* Content */}
-                      <div>{isUser ? msg.content : renderMarkdown(msg.content)}</div>
+                      <div>
+                        {isUser
+                          ? msg.content
+                          : renderMarkdown(
+                              index === 0 && msg.content.includes("Hi, I'm Sera") && activePersona.greeting
+                                ? activePersona.greeting
+                                : msg.content
+                            )}
+                      </div>
                     </div>
                   </motion.div>
                 );

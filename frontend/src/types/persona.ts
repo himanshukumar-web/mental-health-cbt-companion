@@ -6,6 +6,7 @@ export interface Persona {
   color: string;
   description: string;
   prompt: string;
+  greeting?: string;
 }
 
 export interface PHQ9Assessment {

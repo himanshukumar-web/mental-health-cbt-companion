@@ -14,6 +14,7 @@ const DEFAULT_PERSONAS: Persona[] = [
     color: "#22c55e",
     description: "Structured cognitive behavioral therapy, thought reframing, and cognitive distortion identification.",
     prompt: "",
+    greeting: "Hi, I'm Sera — your CBT companion. 🌿 This is a safe space to talk through whatever's on your mind. I use evidence-based CBT techniques to help you reframe unhelpful thoughts. How are you feeling today?",
   },
   {
     id: "compassionate",
@@ -23,6 +24,7 @@ const DEFAULT_PERSONAS: Persona[] = [
     color: "#a855f7",
     description: "Deep emotional validation, warm empathy, safe non-judgmental space, and heart-felt active listening.",
     prompt: "",
+    greeting: "Hi, I'm Luna — your compassionate listener. 💜 I'm here to listen to you with open arms and deep empathy, without any judgment. Whatever is in your heart today, I'm right here to hear you.",
   },
   {
     id: "motivational",
@@ -32,6 +34,7 @@ const DEFAULT_PERSONAS: Persona[] = [
     color: "#f59e0b",
     description: "High-energy inspiration, action planning, goal breakdown, momentum building, and positive accountability.",
     prompt: "",
+    greeting: "Hey there! I'm Axel — your motivational coach! ⚡ Ready to turn challenges into momentum? Tell me what goal or hurdle you're facing today, and let's tackle it together!",
   },
   {
     id: "mindfulness",
@@ -41,6 +44,7 @@ const DEFAULT_PERSONAS: Persona[] = [
     color: "#06b6d4",
     description: "Grounding exercises, present moment awareness, meditation techniques, and calm breathing guidance.",
     prompt: "",
+    greeting: "Welcome. I'm Zen — your peaceful mindfulness guide. 🧘 Take a deep breath in... and release. I am here to help you find calm, ground yourself in the present moment, and restore your inner peace.",
   },
   {
     id: "stress",
@@ -50,6 +54,7 @@ const DEFAULT_PERSONAS: Persona[] = [
     color: "#6366f1",
     description: "Burnout prevention, boundary setting, workload pacing, somatic relaxation, and stress mitigation.",
     prompt: "",
+    greeting: "Hello, I'm Kai — your stress & burnout coach. 🛡️ If you're feeling overwhelmed, exhausted, or stretched thin, let's protect your energy and create manageable steps for peace of mind.",
   },
   {
     id: "study",
@@ -59,6 +64,7 @@ const DEFAULT_PERSONAS: Persona[] = [
     color: "#10b981",
     description: "Exam anxiety relief, study focus techniques (Pomodoro), time management, and student mental balance.",
     prompt: "",
+    greeting: "Hi! I'm Maya — your study & academic wellness coach. 🎓 Facing exam stress, homework overload, or focus troubles? Let's break down your tasks and make study sessions stress-free!",
   },
 ];
 
