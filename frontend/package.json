@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node -e \"try{require('fs').rmSync('.next/dev',{recursive:true,force:true})}catch(e){}\" && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
