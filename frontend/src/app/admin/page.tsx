@@ -601,7 +601,7 @@ function AdminDashboardInner() {
 
         {/* Nav items */}
         {[
-          { id: "dashboard" as const, icon: "📊", label: "Dashboard" },
+          { id: "dashboard" as const, icon: "📊", label: "Admin Overview" },
           { id: "appointments" as const, icon: "📅", label: "Appointments" },
           { id: "profile" as const, icon: "👤", label: "Edit Profile" },
         ].map((item) => (

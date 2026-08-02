@@ -87,7 +87,7 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
     setLoading(true);
     const err = await signIn(email, password);
     if (err) { setError(err); setLoading(false); }
-    else { setDone(true); setTimeout(() => router.push("/role-select"), 800); }
+    else { setDone(true); setTimeout(() => router.push("/dashboard"), 800); }
   };
 
   const handleGoogleSignIn = async () => {
