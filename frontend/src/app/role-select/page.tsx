@@ -22,8 +22,7 @@ export default function RoleSelectPage() {
   // Auto-redirect if role already set
   useEffect(() => {
     if (!loading && user && userRole) {
-      if (userRole === "admin") router.replace("/admin");
-      else router.replace("/dashboard");
+      router.replace("/dashboard");
     }
   }, [user, userRole, loading, router]);
 
@@ -57,8 +56,7 @@ export default function RoleSelectPage() {
       }
     }
 
-    if (role === "admin") router.push("/admin");
-    else router.push("/dashboard");
+    router.push("/dashboard");
   };
 
   if (loading || userRole) {

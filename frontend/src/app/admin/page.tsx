@@ -589,14 +589,14 @@ function AdminDashboardInner() {
         </div>
 
         {/* Home link at the very top of sidebar navigation options, above Dashboard */}
-        <Link href="/" style={{
+        <Link href="/dashboard" style={{
           display: "flex", alignItems: "center", gap: 12,
           padding: "12px 14px", borderRadius: 10,
           color: "var(--text-secondary)", fontSize: 14,
           marginBottom: 4, transition: "all 0.2s",
         }}>
           <span style={{ fontSize: 18 }}>🏠</span>
-          Home
+          Home Dashboard
         </Link>
 
         {/* Nav items */}
@@ -688,6 +688,18 @@ function AdminDashboardInner() {
                 ☰ Menu
               </button>
             )}
+            <Link
+              href="/dashboard"
+              style={{
+                background: "rgba(34,197,94,0.12)", border: "0.5px solid rgba(34,197,94,0.3)",
+                color: "#86efac", fontSize: 13, fontWeight: 600,
+                padding: "8px 16px", borderRadius: 10, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                textDecoration: "none"
+              }}
+            >
+              🏠 Home Dashboard
+            </Link>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <AdminNotificationBell userId={user.id} isMobile={isMobile} />

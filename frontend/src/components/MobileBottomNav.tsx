@@ -74,14 +74,16 @@ export default function MobileBottomNav() {
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              gap: 3,
+              gap: 2,
               flex: 1,
+              minWidth: 0,
               height: 52,
+              padding: "4px 2px",
               textDecoration: "none",
               color: isActive ? "#22c55e" : "var(--text-secondary)",
               fontSize: 11,
               fontWeight: isActive ? 700 : 500,
-              borderRadius: 18,
+              borderRadius: 16,
               transition: "color 0.2s ease",
               touchAction: "manipulation",
               WebkitTapHighlightColor: "transparent",
@@ -94,7 +96,7 @@ export default function MobileBottomNav() {
                 style={{
                   position: "absolute",
                   inset: 0,
-                  borderRadius: 18,
+                  borderRadius: 16,
                   background: "linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(34, 197, 94, 0.08))",
                   border: "1px solid rgba(34, 197, 94, 0.3)",
                   boxShadow: "0 0 16px rgba(34, 197, 94, 0.2)",
@@ -103,13 +105,25 @@ export default function MobileBottomNav() {
               />
             )}
             <motion.span
-              animate={{ scale: isActive ? 1.15 : 1, y: isActive ? -1 : 0 }}
+              animate={{ scale: isActive ? 1.12 : 1, y: isActive ? -1 : 0 }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              style={{ fontSize: 20, zIndex: 1 }}
+              style={{ fontSize: 19, zIndex: 1, lineHeight: 1 }}
             >
               {item.icon}
             </motion.span>
-            <span style={{ zIndex: 1, letterSpacing: "-0.01em" }}>{item.label}</span>
+            <span
+              style={{
+                zIndex: 1,
+                letterSpacing: "-0.01em",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                maxWidth: "100%",
+                fontSize: 10,
+              }}
+            >
+              {item.label}
+            </span>
           </Link>
         );
       })}

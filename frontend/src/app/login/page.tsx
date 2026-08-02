@@ -366,8 +366,7 @@ function AuthPageInner() {
   useEffect(() => {
     if (!loading && user) {
       if (userRole) {
-        if (userRole === "admin") router.replace("/admin");
-        else router.replace("/dashboard");
+        router.replace("/dashboard");
       } else {
         router.replace("/role-select");
       }
