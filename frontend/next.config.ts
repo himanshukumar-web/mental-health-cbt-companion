@@ -1,14 +1,11 @@
 import type { NextConfig } from "next";
 
-const isCapacitorBuild = process.env.CAPACITOR_BUILD === "true";
+const isVercel = Boolean(process.env.VERCEL);
 
 const nextConfig: NextConfig = {
-  ...(isCapacitorBuild ? { output: "export" } : {}),
+  ...(isVercel ? {} : { output: "export" }),
   images: {
     unoptimized: true,
-  },
-  typescript: {
-    ignoreBuildErrors: false,
   },
 };
 

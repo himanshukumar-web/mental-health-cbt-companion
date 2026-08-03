@@ -53,15 +53,14 @@ export default function LandingPage() {
   const router = useRouter();
   const { user, userRole, signOut, loading } = useAuth();
 
-  // Prefetch main routes
+  // Redirect logged-in users to their main dashboard
   useEffect(() => {
-    if (user) {
-      router.prefetch("/dashboard");
-      if (userRole === "admin") router.prefetch("/admin");
+    if (!loading && user) {
+      router.replace("/dashboard");
     } else {
       router.prefetch("/chat");
     }
-  }, [user, userRole, router]);
+  }, [user, loading, router]);
 
   const startSession = () => {
     if (user) {
@@ -121,15 +120,10 @@ export default function LandingPage() {
                     {user.user_metadata?.full_name ?? user.email}
                   </span>
 
-                  {/* Dashboard link */}
-                  <Link href="/dashboard" id="nav-user-dashboard" className="nav-btn nav-btn-secondary">
-                    📊 Dashboard
-                  </Link>
-
                   {/* Admin dashboard link for doctors */}
                   {userRole === "admin" && (
                     <Link href="/admin" id="nav-admin-dashboard" className="nav-btn nav-btn-admin">
-                      🩺 Doctor Portal
+                      🩺 Admin
                     </Link>
                   )}
 
