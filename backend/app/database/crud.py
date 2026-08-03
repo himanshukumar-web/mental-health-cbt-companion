@@ -34,13 +34,24 @@ def init_sqlite():
     CREATE TABLE IF NOT EXISTS messages (
         id TEXT PRIMARY KEY,
         session_id TEXT NOT NULL,
+        user_id TEXT,
         role TEXT NOT NULL,
-        content_encrypted TEXT NOT NULL,
+        content TEXT NOT NULL,
         threat_level TEXT DEFAULT 'normal',
         timestamp TEXT,
         FOREIGN KEY(session_id) REFERENCES sessions(id)
     )
     """)
+    # Migration: add user_id & content to messages if missing
+    try:
+        cursor.execute("ALTER TABLE messages ADD COLUMN user_id TEXT")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE messages ADD COLUMN content TEXT")
+    except Exception:
+        pass
+    conn.commit()
     # Create doctors table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS doctors (
@@ -3217,6 +3228,179 @@ async def generate_and_save_memory_summary(user_id: str) -> dict:
         conn.close()
 
     return {"user_id": user_id, "compact_summary": compact_summary, "last_summarized_at": now}
+
+
+# ── Chat Messages & Sessions Persistence ───────────────────────────────────────
+
+async def save_message(session_id: str, role: str, content: str, threat_level: str = "normal", user_id: str | None = None) -> dict | None:
+    """Save a chat message to Supabase / SQLite datastore."""
+    if not session_id or not content:
+        return None
+
+    now = datetime.now(timezone.utc).isoformat()
+    msg_id = str(uuid.uuid4())
+
+    # Try Supabase first
+    supabase = get_supabase()
+    if supabase:
+        try:
+            # Ensure session exists in Supabase
+            sess_res = supabase.table("sessions").select("id").eq("id", session_id).execute()
+            if not sess_res.data:
+                sess_payload = {"id": session_id, "started_at": now}
+                if user_id:
+                    sess_payload["user_id"] = user_id
+                supabase.table("sessions").insert(sess_payload).execute()
+            
+            # Save message
+            msg_payload = {
+                "id": msg_id,
+                "session_id": session_id,
+                "role": role,
+                "content": content,
+                "threat_level": threat_level,
+                "timestamp": now,
+            }
+            if user_id:
+                msg_payload["user_id"] = user_id
+
+            res = supabase.table("messages").insert(msg_payload).execute()
+            if res.data:
+                return res.data[0]
+        except Exception as e:
+            print("Supabase save_message error:", e)
+
+    # SQLite Fallback
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        # Ensure session exists
+        cursor.execute("SELECT id FROM sessions WHERE id = ?", (session_id,))
+        if not cursor.fetchone():
+            cursor.execute(
+                "INSERT INTO sessions (id, user_id, started_at) VALUES (?, ?, ?)",
+                (session_id, user_id, now)
+            )
+        
+        # Save message
+        cursor.execute("""
+        INSERT INTO messages (id, session_id, user_id, role, content, threat_level, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (msg_id, session_id, user_id, role, content, threat_level, now))
+        conn.commit()
+
+        return {
+            "id": msg_id,
+            "session_id": session_id,
+            "user_id": user_id,
+            "role": role,
+            "content": content,
+            "threat_level": threat_level,
+            "timestamp": now
+        }
+    except Exception as e:
+        print("SQLite save_message error:", e)
+        return None
+    finally:
+        conn.close()
+
+
+async def get_session_history(session_id: str, limit: int = 100) -> list[dict]:
+    """Get chat message history for a given session."""
+    if not session_id:
+        return []
+
+    # Try Supabase first
+    supabase = get_supabase()
+    if supabase:
+        try:
+            res = (
+                supabase.table("messages")
+                .select("*")
+                .eq("session_id", session_id)
+                .order("timestamp", desc=False)
+                .limit(limit)
+                .execute()
+            )
+            if res.data is not None and len(res.data) > 0:
+                return res.data
+        except Exception as e:
+            print("Supabase get_session_history error:", e)
+
+    # SQLite Fallback
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        SELECT id, session_id, user_id, role, content, threat_level, timestamp
+        FROM messages
+        WHERE session_id = ?
+        ORDER BY timestamp ASC
+        LIMIT ?
+        """, (session_id, limit))
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        print("SQLite get_session_history error:", e)
+        return []
+    finally:
+        conn.close()
+
+
+async def get_user_chat_sessions(user_id: str, limit: int = 20) -> list[dict]:
+    """Get list of past chat sessions for a given user with preview of last message."""
+    if not user_id:
+        return []
+
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        SELECT s.id, s.user_id, s.persona, s.started_at,
+               (SELECT content FROM messages m WHERE m.session_id = s.id ORDER BY timestamp DESC LIMIT 1) as last_message,
+               (SELECT timestamp FROM messages m WHERE m.session_id = s.id ORDER BY timestamp DESC LIMIT 1) as last_activity
+        FROM sessions s
+        WHERE s.user_id = ? OR s.id = ?
+        ORDER BY COALESCE(last_activity, s.started_at) DESC
+        LIMIT ?
+        """, (user_id, user_id, limit))
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        print("SQLite get_user_chat_sessions error:", e)
+        return []
+    finally:
+        conn.close()
+
+
+async def delete_session_history(session_id: str) -> bool:
+    """Delete all messages for a session."""
+    if not session_id:
+        return False
+
+    supabase = get_supabase()
+    if supabase:
+        try:
+            supabase.table("messages").delete().eq("session_id", session_id).execute()
+            supabase.table("sessions").delete().eq("id", session_id).execute()
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+        cursor.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        print("SQLite delete_session_history error:", e)
+        return False
+    finally:
+        conn.close()
+
 
 
 
