@@ -588,20 +588,32 @@ function AdminDashboardInner() {
           </div>
         </div>
 
-        {/* Home link at the very top of sidebar navigation options, above Dashboard */}
+        {/* Home page & Patient dashboard links */}
+        <Link href="/" style={{
+          display: "flex", alignItems: "center", gap: 12,
+          padding: "12px 14px", borderRadius: 10,
+          color: "var(--text-secondary)", fontSize: 14,
+          marginBottom: 4, transition: "all 0.2s",
+          textDecoration: "none",
+        }}>
+          <span style={{ fontSize: 18 }}>🏠</span>
+          Home Page
+        </Link>
+
         <Link href="/dashboard" style={{
           display: "flex", alignItems: "center", gap: 12,
           padding: "12px 14px", borderRadius: 10,
           color: "var(--text-secondary)", fontSize: 14,
           marginBottom: 4, transition: "all 0.2s",
+          textDecoration: "none",
         }}>
-          <span style={{ fontSize: 18 }}>🏠</span>
-          Home Dashboard
+          <span style={{ fontSize: 18 }}>📊</span>
+          Patient Dashboard
         </Link>
 
         {/* Nav items */}
         {[
-          { id: "dashboard" as const, icon: "📊", label: "Admin Overview" },
+          { id: "dashboard" as const, icon: "🩺", label: "Doctor Overview" },
           { id: "appointments" as const, icon: "📅", label: "Appointments" },
           { id: "profile" as const, icon: "👤", label: "Edit Profile" },
         ].map((item) => (
@@ -630,6 +642,7 @@ function AdminDashboardInner() {
           padding: "12px 14px", borderRadius: 10,
           color: "var(--text-secondary)", fontSize: 14,
           marginBottom: 4, transition: "all 0.2s",
+          textDecoration: "none",
         }}>
           <span style={{ fontSize: 18 }}>🌿</span>
           Sera AI Chat
@@ -689,7 +702,7 @@ function AdminDashboardInner() {
               </button>
             )}
             <Link
-              href="/dashboard"
+              href="/"
               style={{
                 background: "rgba(34,197,94,0.12)", border: "0.5px solid rgba(34,197,94,0.3)",
                 color: "#86efac", fontSize: 13, fontWeight: 600,
@@ -698,7 +711,19 @@ function AdminDashboardInner() {
                 textDecoration: "none"
               }}
             >
-              🏠 Home Dashboard
+              🏠 Home Page
+            </Link>
+            <Link
+              href="/dashboard"
+              style={{
+                background: "rgba(59,130,246,0.12)", border: "0.5px solid rgba(59,130,246,0.3)",
+                color: "#93c5fd", fontSize: 13, fontWeight: 600,
+                padding: "8px 16px", borderRadius: 10, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                textDecoration: "none"
+              }}
+            >
+              📊 Patient Dashboard
             </Link>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>

@@ -97,7 +97,8 @@ export default function Sidebar() {
       `}</style>
 
       {/* Brand Logo Header */}
-      <div
+      <Link
+        href="/"
         style={{
           display: "flex",
           alignItems: "center",
@@ -105,6 +106,7 @@ export default function Sidebar() {
           padding: "0 8px 20px",
           borderBottom: "1px solid var(--border-secondary)",
           marginBottom: 16,
+          textDecoration: "none",
         }}
       >
         <div
@@ -130,7 +132,7 @@ export default function Sidebar() {
             AI Companion
           </div>
         </div>
-      </div>
+      </Link>
 
       {/* Navigation Links Grouped */}
       <div
