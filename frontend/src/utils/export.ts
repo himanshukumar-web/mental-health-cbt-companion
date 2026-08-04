@@ -1,6 +1,4 @@
-import { ExportCategory, ExportFormat } from "@/types/heatmap";
-
-export function exportDataAsJSON(data: any, filename: string) {
+export function exportDataAsJSON(data: unknown, filename: string) {
   const jsonStr = JSON.stringify(data, null, 2);
   const blob = new Blob([jsonStr], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -11,7 +9,7 @@ export function exportDataAsJSON(data: any, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function exportDataAsCSV(data: any[], filename: string) {
+export function exportDataAsCSV(data: Record<string, unknown>[], filename: string) {
   if (!data || data.length === 0) return;
 
   const headers = Object.keys(data[0]);
@@ -35,7 +33,7 @@ export function exportDataAsCSV(data: any[], filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function exportReportAsPDF(title: string, contentHtml: string, filename: string) {
+export function exportReportAsPDF(title: string, contentHtml: string, _filename?: string) {
   const printWindow = window.open("", "_blank");
   if (!printWindow) return;
 

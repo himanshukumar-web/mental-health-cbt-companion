@@ -7,8 +7,17 @@ const config: CapacitorConfig = {
   server: {
     // Allow mixed content (HTTP WebSocket from HTTPS-like WebView)
     androidScheme: 'http',
-    // Allow navigation to the backend for WebSocket connections
-    allowNavigation: ['192.168.*', '10.0.2.2', 'localhost'],
+    // Allow navigation to production backend, Supabase, Vercel, and local endpoints
+    allowNavigation: [
+      "https://mental-health-cbt-companion.onrender.com",
+      "wss://mental-health-cbt-companion.onrender.com",
+      "*.onrender.com",
+      "*.supabase.co",
+      "*.vercel.app",
+      "192.168.*",
+      "10.0.2.2",
+      "localhost"
+    ],
   },
 };
 

@@ -45,7 +45,7 @@ export interface TimelineItem {
   content: string;
   category: string;
   timestamp: string;
-  meta?: Record<string, any>;
+  meta?: Record<string, unknown>;
 }
 
 export interface PersonalizedInsight {

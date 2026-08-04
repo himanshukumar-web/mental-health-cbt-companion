@@ -32,7 +32,7 @@ function getBackendUrls(): { wsUrl: string; httpUrl: string } {
   if (typeof window !== "undefined") {
     // Check if running inside Capacitor native app
     const isCapacitor =
-      (window as any).Capacitor !== undefined ||
+      (window as unknown as { Capacitor?: unknown }).Capacitor !== undefined ||
       window.location.protocol === "capacitor:";
 
     if (isCapacitor) {
@@ -91,13 +91,17 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
 
   // History ref so sendMessage always reads latest
   const historyRef = useRef<{ role: string; content: string }[]>([]);
+  const connectRef = useRef<(() => void) | null>(null);
 
-  // Resolve URLs once
   const urlsRef = useRef<{ wsUrl: string; httpUrl: string } | null>(null);
-  if (typeof window !== "undefined" && !urlsRef.current) {
-    urlsRef.current = getBackendUrls();
-    console.log("[Sera WS] Backend URLs:", urlsRef.current);
-  }
+
+  // Resolve URLs once lazily
+  const getUrls = useCallback(() => {
+    if (!urlsRef.current && typeof window !== "undefined") {
+      urlsRef.current = getBackendUrls();
+    }
+    return urlsRef.current;
+  }, []);
 
   // Load session history on mount or when sessionId changes
   useEffect(() => {
@@ -118,7 +122,7 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
     let active = true;
 
     const loadHistory = async () => {
-      const urls = urlsRef.current;
+      const urls = getUrls();
       if (!urls) return;
       try {
         const res = await fetch(`${urls.httpUrl}/sessions/${sessionId}/history`);
@@ -126,7 +130,7 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
           const data = await res.json();
           if (active && data.messages && data.messages.length > 0) {
             setMessages(data.messages);
-            historyRef.current = data.messages.map((m: any) => ({ role: m.role, content: m.content }));
+            historyRef.current = data.messages.map((m: { role: string; content: string }) => ({ role: m.role, content: m.content }));
           }
         }
       } catch (err) {
@@ -191,7 +195,7 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
       return;
     }
 
-    const urls = urlsRef.current;
+    const urls = getUrls();
     if (!urls) return;
 
     // Close any existing connection cleanly before creating a new one
@@ -301,7 +305,9 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
       }
 
       console.log(`[Sera WS] Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current}/${MAX_RECONNECT_ATTEMPTS})`);
-      reconnectTimer.current = setTimeout(connect, delay);
+      reconnectTimer.current = setTimeout(() => {
+        connectRef.current?.();
+      }, delay);
     };
 
     ws.onerror = (event) => {
@@ -400,6 +406,10 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
       }
     };
   }, [sessionId, userId, startPing, clearPing, closeExistingWs]);
+
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
   // Connect when sessionId changes (and is non-empty)
   useEffect(() => {
