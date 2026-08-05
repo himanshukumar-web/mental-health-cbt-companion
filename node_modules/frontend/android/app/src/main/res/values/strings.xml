@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sera</string>
+    <string name="title_activity_main">Sera</string>
+    <string name="package_name">com.sera.app</string>
+    <string name="custom_url_scheme">com.sera.app</string>
+</resources>

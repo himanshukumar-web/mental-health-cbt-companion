@@ -687,8 +687,36 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str
             conv_id = data.get("conversation_id")
             await crud.save_message(session_id, "user", content, threat_level, user_id)
             await crud.save_message(session_id, "assistant", full_response, "normal", user_id)
+
             if conv_id:
                 await crud.update_conversation_metadata(conv_id, full_response)
+                # Auto-generate title from first user message if default
+                try:
+                    words = [w for w in content.strip().split() if len(w) > 2]
+                    auto_title = " ".join(words[:5]).capitalize()
+                    if auto_title and user_id:
+                        # Only update if current title is default
+                        convs = await crud.get_user_conversations(user_id)
+                        curr_conv = next((c for c in convs if c["id"] == conv_id), None)
+                        if curr_conv and (curr_conv.get("title") in ("New Chat", "New Therapy Chat") or curr_conv.get("message_count", 0) <= 2):
+                            await crud.rename_conversation(conv_id, user_id, auto_title[:40])
+                except Exception as title_err:
+                    logger.debug("[WS] Auto-title generation skipped: %s", title_err)
+
+            # Auto-extract long term memory if user mentions goals, events, or preferences
+            if user_id and len(content) > 15:
+                try:
+                    lower_msg = content.lower()
+                    if any(k in lower_msg for k in ["goal", "want to", "aiming to", "hope to", "planning to"]):
+                        await crud.save_therapist_memory(user_id, persona_id, "goal", content[:120])
+                    elif any(k in lower_msg for k in ["feel", "feeling", "anxious", "sad", "stressed", "happy", "overwhelmed"]):
+                        await crud.save_therapist_memory(user_id, persona_id, "mood", content[:120])
+                    elif any(k in lower_msg for k in ["prefer", "like when", "don't like", "hate", "love"]):
+                        await crud.save_therapist_memory(user_id, persona_id, "preference", content[:120])
+                    elif any(k in lower_msg for k in ["exam", "interview", "job", "breakup", "moved", "started"]):
+                        await crud.save_therapist_memory(user_id, persona_id, "event", content[:120])
+                except Exception as mem_err:
+                    logger.debug("[WS] Auto-memory extraction skipped: %s", mem_err)
 
     except WebSocketDisconnect:
         logger.info("[WS] Disconnected: session=%s", session_id)
