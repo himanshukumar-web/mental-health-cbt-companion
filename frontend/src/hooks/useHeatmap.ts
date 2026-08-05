@@ -2,8 +2,9 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { HeatmapDay, DayDetails } from "@/types/heatmap";
+import { getApiUrl } from "@/lib/config";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL = getApiUrl();
 
 export function useHeatmap(userId?: string) {
   const [heatmapData, setHeatmapData] = useState<HeatmapDay[]>([]);

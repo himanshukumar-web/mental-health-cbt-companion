@@ -2,9 +2,10 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { DailyChallenge, UserStreak } from "@/types/heatmap";
+import { getApiUrl } from "@/lib/config";
 import toast from "react-hot-toast";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL = getApiUrl();
 
 export function useChallenges(userId?: string) {
   const [challenges, setChallenges] = useState<DailyChallenge[]>([]);

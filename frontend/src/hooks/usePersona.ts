@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Persona } from "@/types/persona";
+import { getApiUrl } from "@/lib/config";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://mental-health-cbt-companion.onrender.com";
+const API_URL = getApiUrl();
 
 const DEFAULT_PERSONAS: Persona[] = [
   {

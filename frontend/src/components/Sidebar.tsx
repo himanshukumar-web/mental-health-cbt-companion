@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeSelector from "@/components/ThemeSelector";
+import GlobalSearch from "@/components/GlobalSearch";
 import { motion } from "framer-motion";
 
 interface NavGroup {
@@ -70,6 +71,18 @@ const NAV_GROUPS: NavGroup[] = [
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, userRole, signOut } = useAuth();
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   return (
     <aside
@@ -131,6 +144,37 @@ export default function Sidebar() {
           </div>
         </div>
       </div>
+
+      {/* Global Search Trigger Button */}
+      <button
+        onClick={() => setSearchOpen(true)}
+        style={{
+          width: "100%",
+          padding: "8px 12px",
+          borderRadius: 12,
+          background: "var(--bg-glass)",
+          border: "1px solid var(--border-secondary)",
+          color: "var(--text-secondary)",
+          fontSize: 12,
+          fontWeight: 600,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          cursor: "pointer",
+          marginBottom: 16,
+          transition: "all 0.15s ease",
+        }}
+      >
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span>🔍</span>
+          <span>Global Search...</span>
+        </span>
+        <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 6, background: "var(--bg-secondary)", color: "var(--text-tertiary)" }}>
+          ⌘K
+        </span>
+      </button>
+
+      <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} userId={user?.id} />
 
       {/* Navigation Links Grouped */}
       <div

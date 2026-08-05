@@ -2,8 +2,9 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { WellnessScore } from "@/types/persona";
+import { getApiUrl } from "@/lib/config";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL = getApiUrl();
 
 export function useWellnessScore(userId?: string) {
   const [currentScore, setCurrentScore] = useState<WellnessScore | null>(null);

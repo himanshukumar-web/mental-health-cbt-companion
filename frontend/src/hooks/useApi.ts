@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { API_URL, getApiUrl } from "@/lib/config";
 
 interface UseApiOptions {
   immediate?: boolean;

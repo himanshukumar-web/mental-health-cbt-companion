@@ -2,8 +2,9 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { PHQ9Assessment, GAD7Assessment } from "@/types/persona";
+import { getApiUrl } from "@/lib/config";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL = getApiUrl();
 
 export function useAssessments(userId?: string) {
   const [phq9History, setPhq9History] = useState<PHQ9Assessment[]>([]);

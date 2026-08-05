@@ -203,6 +203,44 @@ def init_sqlite():
     )
     """)
 
+    # Create chat_conversations table (ChatGPT-style per-therapist chats)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS chat_conversations (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        persona_id TEXT NOT NULL DEFAULT 'cbt',
+        title TEXT NOT NULL DEFAULT 'New Chat',
+        is_pinned INTEGER DEFAULT 0,
+        is_archived INTEGER DEFAULT 0,
+        message_count INTEGER DEFAULT 0,
+        last_message_preview TEXT,
+        created_at TEXT,
+        updated_at TEXT
+    )
+    """)
+
+    # Create therapist_memories table (per-therapist independent memory)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS therapist_memories (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        persona_id TEXT NOT NULL,
+        category TEXT NOT NULL,
+        memory_text TEXT NOT NULL,
+        weight INTEGER DEFAULT 1,
+        created_at TEXT,
+        updated_at TEXT
+    )
+    """)
+
+    # Migration: add conversation_id to messages if missing
+    try:
+        cursor.execute("ALTER TABLE messages ADD COLUMN conversation_id TEXT")
+    except Exception:
+        pass
+
+    conn.commit()
+
     # Initialize with default doctor if empty
     cursor.execute("SELECT COUNT(*) FROM doctors")
     if cursor.fetchone()[0] == 0:
@@ -3402,5 +3440,390 @@ async def delete_session_history(session_id: str) -> bool:
         conn.close()
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# V3: Chat Conversations, Therapist Memories, Global Search
+# ══════════════════════════════════════════════════════════════════════════════
 
 
+# ── Chat Conversations CRUD ───────────────────────────────────────────────────
+
+async def create_conversation(user_id: str, persona_id: str = "cbt", title: str = "New Chat") -> dict | None:
+    conv_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    db = get_supabase()
+    if db:
+        try:
+            res = db.table("chat_conversations").insert({
+                "id": conv_id, "user_id": user_id, "persona_id": persona_id,
+                "title": title, "created_at": now, "updated_at": now,
+            }).execute()
+            if res.data:
+                return res.data[0]
+        except Exception as e:
+            print(f"Supabase create_conversation error: {e}")
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO chat_conversations (id, user_id, persona_id, title, is_pinned, is_archived, message_count, created_at, updated_at) VALUES (?,?,?,?,0,0,0,?,?)",
+            (conv_id, user_id, persona_id, title, now, now))
+        conn.commit()
+        return {"id": conv_id, "user_id": user_id, "persona_id": persona_id, "title": title, "is_pinned": False, "is_archived": False, "message_count": 0, "last_message_preview": None, "created_at": now, "updated_at": now}
+    except Exception as e:
+        print(f"SQLite create_conversation error: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+async def get_user_conversations(user_id: str, persona_id: str | None = None, archived: bool = False, search: str = "") -> list[dict]:
+    db = get_supabase()
+    if db:
+        try:
+            query = db.table("chat_conversations").select("*").eq("user_id", user_id).eq("is_archived", archived)
+            if persona_id:
+                query = query.eq("persona_id", persona_id)
+            if search:
+                query = query.ilike("title", f"%{search}%")
+            res = query.order("is_pinned", desc=True).order("updated_at", desc=True).limit(100).execute()
+            return res.data or []
+        except Exception as e:
+            print(f"Supabase get_user_conversations error: {e}")
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        sql = "SELECT id, user_id, persona_id, title, is_pinned, is_archived, message_count, last_message_preview, created_at, updated_at FROM chat_conversations WHERE user_id=? AND is_archived=?"
+        params: list = [user_id, 1 if archived else 0]
+        if persona_id:
+            sql += " AND persona_id=?"
+            params.append(persona_id)
+        if search:
+            sql += " AND title LIKE ?"
+            params.append(f"%{search}%")
+        sql += " ORDER BY is_pinned DESC, updated_at DESC LIMIT 100"
+        cursor.execute(sql, params)
+        return [{"id": r[0], "user_id": r[1], "persona_id": r[2], "title": r[3], "is_pinned": bool(r[4]), "is_archived": bool(r[5]), "message_count": r[6], "last_message_preview": r[7], "created_at": r[8], "updated_at": r[9]} for r in cursor.fetchall()]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+async def rename_conversation(conv_id: str, user_id: str, title: str) -> bool:
+    now = datetime.now(timezone.utc).isoformat()
+    db = get_supabase()
+    if db:
+        try:
+            db.table("chat_conversations").update({"title": title, "updated_at": now}).eq("id", conv_id).eq("user_id", user_id).execute()
+            return True
+        except Exception:
+            pass
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE chat_conversations SET title=?, updated_at=? WHERE id=? AND user_id=?", (title, now, conv_id, user_id))
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
+
+async def pin_conversation(conv_id: str, user_id: str, pinned: bool) -> bool:
+    now = datetime.now(timezone.utc).isoformat()
+    db = get_supabase()
+    if db:
+        try:
+            db.table("chat_conversations").update({"is_pinned": pinned, "updated_at": now}).eq("id", conv_id).eq("user_id", user_id).execute()
+            return True
+        except Exception:
+            pass
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE chat_conversations SET is_pinned=?, updated_at=? WHERE id=? AND user_id=?", (1 if pinned else 0, now, conv_id, user_id))
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
+
+async def archive_conversation(conv_id: str, user_id: str, archived: bool) -> bool:
+    now = datetime.now(timezone.utc).isoformat()
+    db = get_supabase()
+    if db:
+        try:
+            db.table("chat_conversations").update({"is_archived": archived, "updated_at": now}).eq("id", conv_id).eq("user_id", user_id).execute()
+            return True
+        except Exception:
+            pass
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE chat_conversations SET is_archived=?, updated_at=? WHERE id=? AND user_id=?", (1 if archived else 0, now, conv_id, user_id))
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
+
+async def delete_conversation(conv_id: str, user_id: str) -> bool:
+    db = get_supabase()
+    if db:
+        try:
+            db.table("messages").delete().eq("conversation_id", conv_id).execute()
+            db.table("chat_conversations").delete().eq("id", conv_id).eq("user_id", user_id).execute()
+            return True
+        except Exception:
+            pass
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM messages WHERE conversation_id=?", (conv_id,))
+        cursor.execute("DELETE FROM chat_conversations WHERE id=? AND user_id=?", (conv_id, user_id))
+        conn.commit()
+        return True
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
+
+async def get_conversation_messages(conv_id: str) -> list[dict]:
+    db = get_supabase()
+    if db:
+        try:
+            res = db.table("messages").select("*").eq("conversation_id", conv_id).order("timestamp").execute()
+            messages = []
+            for m in (res.data or []):
+                content = m.get("content") or ""
+                if not content and m.get("content_encrypted"):
+                    try:
+                        content = decrypt_message(m["content_encrypted"])
+                    except Exception:
+                        content = "[encrypted]"
+                messages.append({"role": m["role"], "content": content, "timestamp": m.get("timestamp"), "threat_level": m.get("threat_level", "normal")})
+            return messages
+        except Exception as e:
+            print(f"Supabase get_conversation_messages error: {e}")
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT role, content, timestamp, threat_level FROM messages WHERE conversation_id=? ORDER BY timestamp", (conv_id,))
+        return [{"role": r[0], "content": r[1] or "", "timestamp": r[2], "threat_level": r[3] or "normal"} for r in cursor.fetchall()]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+async def update_conversation_metadata(conv_id: str, message_preview: str, increment_count: bool = True):
+    now = datetime.now(timezone.utc).isoformat()
+    preview = message_preview[:100] if message_preview else ""
+    db = get_supabase()
+    if db:
+        try:
+            update_data = {"last_message_preview": preview, "updated_at": now}
+            if increment_count:
+                conv = db.table("chat_conversations").select("message_count").eq("id", conv_id).execute()
+                if conv.data:
+                    update_data["message_count"] = (conv.data[0].get("message_count", 0) or 0) + 1
+            db.table("chat_conversations").update(update_data).eq("id", conv_id).execute()
+        except Exception:
+            pass
+        return
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        if increment_count:
+            cursor.execute("UPDATE chat_conversations SET last_message_preview=?, message_count=message_count+1, updated_at=? WHERE id=?", (preview, now, conv_id))
+        else:
+            cursor.execute("UPDATE chat_conversations SET last_message_preview=?, updated_at=? WHERE id=?", (preview, now, conv_id))
+        conn.commit()
+    except Exception:
+        pass
+    finally:
+        conn.close()
+
+
+# ── Therapist Memory CRUD ─────────────────────────────────────────────────────
+
+async def save_therapist_memory(user_id: str, persona_id: str, category: str, memory_text: str, weight: int = 1) -> dict | None:
+    mem_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    db = get_supabase()
+    if db:
+        try:
+            res = db.table("therapist_memories").upsert({
+                "id": mem_id, "user_id": user_id, "persona_id": persona_id,
+                "category": category, "memory_text": memory_text, "weight": weight,
+                "created_at": now, "updated_at": now,
+            }).execute()
+            if res.data:
+                return res.data[0]
+        except Exception as e:
+            print(f"Supabase save_therapist_memory error: {e}")
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id FROM therapist_memories WHERE user_id=? AND persona_id=? AND category=? AND memory_text=?", (user_id, persona_id, category, memory_text))
+        existing = cursor.fetchone()
+        if existing:
+            cursor.execute("UPDATE therapist_memories SET weight=?, updated_at=? WHERE id=?", (weight, now, existing[0]))
+        else:
+            cursor.execute("INSERT INTO therapist_memories (id, user_id, persona_id, category, memory_text, weight, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)", (mem_id, user_id, persona_id, category, memory_text, weight, now, now))
+        conn.commit()
+        return {"id": mem_id, "user_id": user_id, "persona_id": persona_id, "category": category, "memory_text": memory_text, "weight": weight, "created_at": now, "updated_at": now}
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
+async def get_therapist_memories(user_id: str, persona_id: str) -> list[dict]:
+    db = get_supabase()
+    if db:
+        try:
+            res = db.table("therapist_memories").select("*").eq("user_id", user_id).eq("persona_id", persona_id).order("weight", desc=True).order("updated_at", desc=True).limit(50).execute()
+            return res.data or []
+        except Exception:
+            pass
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id, user_id, persona_id, category, memory_text, weight, created_at, updated_at FROM therapist_memories WHERE user_id=? AND persona_id=? ORDER BY weight DESC, updated_at DESC LIMIT 50", (user_id, persona_id))
+        return [{"id": r[0], "user_id": r[1], "persona_id": r[2], "category": r[3], "memory_text": r[4], "weight": r[5], "created_at": r[6], "updated_at": r[7]} for r in cursor.fetchall()]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+async def build_therapist_memory_context(user_id: str | None, persona_id: str = "cbt") -> str:
+    if not user_id or user_id == "anonymous":
+        return ""
+    memories = await get_therapist_memories(user_id, persona_id)
+    if not memories:
+        return ""
+    parts = []
+    categories: dict[str, list[str]] = {}
+    for mem in memories[:20]:
+        cat = mem.get("category", "general")
+        if cat not in categories:
+            categories[cat] = []
+        categories[cat].append(mem["memory_text"])
+    for cat, texts in categories.items():
+        cat_label = cat.replace("_", " ").title()
+        for text in texts[:5]:
+            parts.append(f"- [{cat_label}] {text}")
+    if not parts:
+        return ""
+    from app.agents.therapist import PERSONAS
+    persona_name = PERSONAS.get(persona_id, {}).get("name", "Therapist")
+    return (
+        f"\n\n=========================================\n"
+        f"{persona_name.upper()}'S PERSONAL MEMORY OF THIS USER:\n"
+        + "\n".join(parts) + "\n"
+        f"Use these memories naturally to show continuity and care across sessions.\n"
+        f"=========================================\n"
+    )
+
+
+# ── Global Search ─────────────────────────────────────────────────────────────
+
+async def global_search(user_id: str, query: str, categories: list[str] | None = None) -> list[dict]:
+    if not query or not user_id:
+        return []
+    results = []
+    search_all = not categories or "all" in categories
+    q_like = f"%{query}%"
+    db = get_supabase()
+
+    if search_all or "journal" in (categories or []):
+        try:
+            if db:
+                res = db.table("journal_entries").select("id, title, content, created_at").eq("user_id", user_id).or_(f"title.ilike.{q_like},content.ilike.{q_like}").order("created_at", desc=True).limit(10).execute()
+                for item in (res.data or []):
+                    results.append({"id": item["id"], "type": "journal", "title": item.get("title") or "Journal Entry", "snippet": _search_snippet(item.get("content", ""), query), "timestamp": item.get("created_at"), "link": "/journal"})
+            else:
+                conn = sqlite3.connect(DB_FILE)
+                cur = conn.cursor()
+                cur.execute("SELECT id, title, content, created_at FROM journal_entries WHERE user_id=? AND (title LIKE ? OR content LIKE ?) ORDER BY created_at DESC LIMIT 10", (user_id, q_like, q_like))
+                for r in cur.fetchall():
+                    results.append({"id": r[0], "type": "journal", "title": r[1] or "Journal", "snippet": _search_snippet(r[2] or "", query), "timestamp": r[3], "link": "/journal"})
+                conn.close()
+        except Exception:
+            pass
+
+    if search_all or "mood" in (categories or []):
+        try:
+            if db:
+                res = db.table("mood_entries").select("id, date, mood_emoji, notes, mood_score").eq("user_id", user_id).ilike("notes", q_like).order("date", desc=True).limit(10).execute()
+                for item in (res.data or []):
+                    results.append({"id": item["id"], "type": "mood", "title": f"{item.get('mood_emoji','😐')} Mood — {item.get('date','')}", "snippet": _search_snippet(item.get("notes", ""), query), "timestamp": item.get("date"), "link": "/mood"})
+            else:
+                conn = sqlite3.connect(DB_FILE)
+                cur = conn.cursor()
+                cur.execute("SELECT id, date, mood_emoji, notes FROM mood_entries WHERE user_id=? AND notes LIKE ? ORDER BY date DESC LIMIT 10", (user_id, q_like))
+                for r in cur.fetchall():
+                    results.append({"id": r[0], "type": "mood", "title": f"{r[2] or '😐'} Mood — {r[1]}", "snippet": _search_snippet(r[3] or "", query), "timestamp": r[1], "link": "/mood"})
+                conn.close()
+        except Exception:
+            pass
+
+    if search_all or "cbt" in (categories or []):
+        try:
+            if db:
+                res = db.table("cbt_worksheets").select("id, situation, automatic_thought, emotion, created_at").eq("user_id", user_id).or_(f"situation.ilike.{q_like},automatic_thought.ilike.{q_like}").order("created_at", desc=True).limit(10).execute()
+                for item in (res.data or []):
+                    results.append({"id": item["id"], "type": "cbt", "title": f"CBT: {item.get('emotion','')} — {(item.get('situation',''))[:40]}", "snippet": _search_snippet(item.get("automatic_thought", ""), query), "timestamp": item.get("created_at"), "link": "/cbt"})
+            else:
+                conn = sqlite3.connect(DB_FILE)
+                cur = conn.cursor()
+                cur.execute("SELECT id, situation, automatic_thought, emotion, created_at FROM cbt_worksheets WHERE user_id=? AND (situation LIKE ? OR automatic_thought LIKE ?) ORDER BY created_at DESC LIMIT 10", (user_id, q_like, q_like))
+                for r in cur.fetchall():
+                    results.append({"id": r[0], "type": "cbt", "title": f"CBT: {r[3]} — {(r[1] or '')[:40]}", "snippet": _search_snippet(r[2] or "", query), "timestamp": r[4], "link": "/cbt"})
+                conn.close()
+        except Exception:
+            pass
+
+    if search_all or "chats" in (categories or []):
+        try:
+            if db:
+                res = db.table("chat_conversations").select("id, title, persona_id, last_message_preview, updated_at").eq("user_id", user_id).or_(f"title.ilike.{q_like},last_message_preview.ilike.{q_like}").order("updated_at", desc=True).limit(10).execute()
+                for item in (res.data or []):
+                    results.append({"id": item["id"], "type": "chat", "title": item.get("title") or "Chat", "snippet": _search_snippet(item.get("last_message_preview", ""), query), "timestamp": item.get("updated_at"), "link": f"/chat?conversation={item['id']}"})
+            else:
+                conn = sqlite3.connect(DB_FILE)
+                cur = conn.cursor()
+                cur.execute("SELECT id, title, persona_id, last_message_preview, updated_at FROM chat_conversations WHERE user_id=? AND (title LIKE ? OR last_message_preview LIKE ?) ORDER BY updated_at DESC LIMIT 10", (user_id, q_like, q_like))
+                for r in cur.fetchall():
+                    results.append({"id": r[0], "type": "chat", "title": r[1] or "Chat", "snippet": _search_snippet(r[3] or "", query), "timestamp": r[4], "link": f"/chat?conversation={r[0]}"})
+                conn.close()
+        except Exception:
+            pass
+
+    results.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+    return results[:30]
+
+
+def _search_snippet(text: str, query: str, max_len: int = 120) -> str:
+    if not text:
+        return ""
+    lower = text.lower()
+    idx = lower.find(query.lower())
+    if idx == -1:
+        return text[:max_len] + ("..." if len(text) > max_len else "")
+    start = max(0, idx - 40)
+    end = min(len(text), idx + len(query) + 80)
+    snippet = text[start:end]
+    if start > 0:
+        snippet = "..." + snippet
+    if end < len(text):
+        snippet += "..."
+    return snippet

@@ -10,6 +10,15 @@ export interface ChatMessage {
   threatLevel?: string;
 }
 
+export interface RouterSuggestion {
+  suggestedPersona: string;
+  personaName: string;
+  personaAvatar: string;
+  personaColor: string;
+  reason: string;
+  confidence: number;
+}
+
 export type ThreatLevel = "normal" | "distress" | "crisis";
 export type AgentStatus = "active" | "alert" | "idle";
 
@@ -81,6 +90,7 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
     },
   ]);
   const [crisis, setCrisis] = useState(false);
+  const [routerSuggestion, setRouterSuggestion] = useState<RouterSuggestion | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const reconnectAttempts = useRef(0);
@@ -325,6 +335,12 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
         content?: string;
         threat_level?: string;
         agent?: string;
+        suggested_persona?: string;
+        persona_name?: string;
+        persona_avatar?: string;
+        persona_color?: string;
+        reason?: string;
+        confidence?: number;
       };
 
       // Ignore pong messages (keep-alive responses)
@@ -388,6 +404,17 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
             return copy;
           });
           setWsState((s) => ({ ...s, isStreaming: false, therapistStatus: "active" }));
+          break;
+
+        case "router_suggestion":
+          setRouterSuggestion({
+            suggestedPersona: data.suggested_persona ?? "",
+            personaName: data.persona_name ?? "",
+            personaAvatar: data.persona_avatar ?? "",
+            personaColor: data.persona_color ?? "",
+            reason: data.reason ?? "",
+            confidence: data.confidence ?? 0,
+          });
           break;
 
         case "error":
@@ -456,6 +483,10 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
     setWsState((s) => ({ ...s, monitorStatus: "active", threatLevel: "normal" }));
   }, []);
 
+  const dismissRouterSuggestion = useCallback(() => {
+    setRouterSuggestion(null);
+  }, []);
+
   // Manual reconnect — allows user to retry from the UI
   const manualReconnect = useCallback(() => {
     console.log("[Sera WS] Manual reconnect triggered");
@@ -472,5 +503,5 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
     }, 100);
   }, [connect, closeExistingWs]);
 
-  return { messages, wsState, crisis, sendMessage, dismissCrisis, manualReconnect };
+  return { messages, wsState, crisis, routerSuggestion, sendMessage, dismissCrisis, dismissRouterSuggestion, manualReconnect };
 }

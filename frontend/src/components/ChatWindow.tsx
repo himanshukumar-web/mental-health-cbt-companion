@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
-import type { AgentStatus, ChatMessage, WSState } from "@/hooks/useWebSocket";
+import type { AgentStatus, ChatMessage, WSState, RouterSuggestion } from "@/hooks/useWebSocket";
 import { useAuth } from "@/contexts/AuthContext";
 import VoiceController from "@/components/VoiceController";
 import PersonaSelector from "@/components/PersonaSelector";
@@ -13,7 +13,7 @@ import { usePersona } from "@/hooks/usePersona";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 
-// ── Lightweight Markdown Renderer ──────────────────────────────────────────────
+// ── Enhanced Markdown Renderer ──────────────────────────────────────────────
 function renderMarkdown(text: string) {
   if (!text) return null;
   const lines = text.split("\n");
@@ -23,8 +23,104 @@ function renderMarkdown(text: string) {
   while (i < lines.length) {
     const line = lines[i];
     const trimmed = line.trim();
+
     if (!trimmed) { i++; continue; }
 
+    // Fenced Code Block: ```lang ... ```
+    if (trimmed.startsWith("```")) {
+      const lang = trimmed.slice(3).trim();
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith("```")) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length) i++; // skip closing ```
+      const codeStr = codeLines.join("\n");
+      elements.push(
+        <div key={`code-${i}`} style={{ margin: "10px 0", borderRadius: 12, overflow: "hidden", border: "1px solid var(--border-secondary)", background: "#0f172a" }}>
+          <div style={{ padding: "6px 12px", background: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.1)", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: "var(--text-tertiary)" }}>
+            <span>{lang || "code"}</span>
+            <button
+              onClick={() => { navigator.clipboard.writeText(codeStr); toast.success("Code copied!"); }}
+              style={{ background: "none", border: "none", color: "var(--text-secondary)", fontSize: 11, cursor: "pointer" }}
+            >
+              📋 Copy
+            </button>
+          </div>
+          <pre style={{ margin: 0, padding: 12, overflowX: "auto", fontSize: 12, color: "#e2e8f0", fontFamily: "monospace", lineHeight: 1.5 }}>
+            <code>{codeStr}</code>
+          </pre>
+        </div>
+      );
+      continue;
+    }
+
+    // Markdown Table: | Col 1 | Col 2 |
+    if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+      const tableRows: string[][] = [];
+      while (i < lines.length && lines[i].trim().startsWith("|")) {
+        const rowLine = lines[i].trim();
+        // Skip separator row |---|---|
+        if (!rowLine.match(/^\|[\s:-]+(?:\|[\s:-]+)*\|$/)) {
+          const cells = rowLine.split("|").slice(1, -1).map((c) => c.trim());
+          tableRows.push(cells);
+        }
+        i++;
+      }
+      if (tableRows.length > 0) {
+        const header = tableRows[0];
+        const body = tableRows.slice(1);
+        elements.push(
+          <div key={`table-${i}`} style={{ overflowX: "auto", margin: "10px 0" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: "rgba(255,255,255,0.08)", borderBottom: "2px solid var(--border-secondary)" }}>
+                  {header.map((cell, idx) => (
+                    <th key={idx} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700 }}>{formatInline(cell)}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {body.map((row, rIdx) => (
+                  <tr key={rIdx} style={{ borderBottom: "1px solid var(--border-secondary)", background: rIdx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
+                    {row.map((cell, cIdx) => (
+                      <td key={cIdx} style={{ padding: "8px 12px" }}>{formatInline(cell)}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      }
+      continue;
+    }
+
+    // Blockquote: > text
+    if (trimmed.startsWith(">")) {
+      elements.push(
+        <blockquote key={`quote-${i}`} style={{ margin: "8px 0", paddingLeft: 14, borderLeft: "3px solid #22c55e", fontStyle: "italic", color: "var(--text-secondary)" }}>
+          {formatInline(trimmed.slice(1).trim())}
+        </blockquote>
+      );
+      i++;
+      continue;
+    }
+
+    // Headings: ### Header
+    if (trimmed.startsWith("### ")) {
+      elements.push(<h4 key={i} style={{ margin: "12px 0 6px", fontSize: 15, fontWeight: 800 }}>{formatInline(trimmed.slice(4))}</h4>);
+      i++;
+      continue;
+    }
+    if (trimmed.startsWith("## ")) {
+      elements.push(<h3 key={i} style={{ margin: "14px 0 6px", fontSize: 17, fontWeight: 800 }}>{formatInline(trimmed.slice(3))}</h3>);
+      i++;
+      continue;
+    }
+
+    // Numbered lists: 1. Item
     const numMatch = trimmed.match(/^(\d+)[.)\-]\s+(.+)/);
     if (numMatch) {
       const listItems: React.ReactNode[] = [];
@@ -47,6 +143,7 @@ function renderMarkdown(text: string) {
       continue;
     }
 
+    // Bullet lists: - Item
     const bulletMatch = trimmed.match(/^[-*•]\s+(.+)/);
     if (bulletMatch) {
       const listItems: React.ReactNode[] = [];
@@ -81,10 +178,17 @@ function renderMarkdown(text: string) {
 }
 
 function formatInline(text: string): React.ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*)/);
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/);
   return parts.map((part, i) => {
     if (part.startsWith("**") && part.endsWith("**")) {
       return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("`") && part.endsWith("`")) {
+      return (
+        <code key={i} style={{ background: "rgba(255,255,255,0.1)", padding: "2px 6px", borderRadius: 4, fontSize: "0.9em", fontFamily: "monospace" }}>
+          {part.slice(1, -1)}
+        </code>
+      );
     }
     return part;
   });
@@ -108,6 +212,8 @@ interface ChatWindowProps {
   onReconnect?: () => void;
   user?: User | null;
   sessionId: string;
+  routerSuggestion?: RouterSuggestion | null;
+  onDismissRouterSuggestion?: () => void;
 }
 
 export default function ChatWindow({
@@ -120,6 +226,8 @@ export default function ChatWindow({
   onReconnect,
   user,
   sessionId,
+  routerSuggestion,
+  onDismissRouterSuggestion,
 }: ChatWindowProps) {
   const router = useRouter();
   const { personas, activePersona, selectPersona, selectedPersonaId } = usePersona(user?.id);
@@ -321,6 +429,63 @@ export default function ChatWindow({
               <span>{wsState.isConnected ? "Online" : "Connecting..."}</span>
             </div>
 
+            {/* Export & Share Action Buttons */}
+            <div style={{ display: "flex", gap: 6 }}>
+              <button
+                onClick={() => {
+                  const transcript = messages.map((m) => `**${m.role === "user" ? "You" : activePersona.name}**: ${m.content}`).join("\n\n");
+                  navigator.clipboard.writeText(transcript);
+                  toast.success("Chat copied to clipboard!");
+                }}
+                title="Share / Copy Chat"
+                style={{
+                  padding: "5px 10px",
+                  borderRadius: 10,
+                  background: "var(--bg-glass)",
+                  border: "1px solid var(--border-secondary)",
+                  color: "var(--text-secondary)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <span>📤 Share</span>
+              </button>
+              <button
+                onClick={() => {
+                  const transcript = `# Therapy Session with ${activePersona.name} (${activePersona.title})\nDate: ${new Date().toLocaleString()}\n\n` +
+                    messages.map((m) => `### ${m.role === "user" ? "User" : activePersona.name}\n${m.content}`).join("\n\n");
+                  const blob = new Blob([transcript], { type: "text/markdown" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `therapy_chat_${activePersona.id}_${Date.now()}.md`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  toast.success("Exported session to Markdown!");
+                }}
+                title="Export Chat as Markdown"
+                style={{
+                  padding: "5px 10px",
+                  borderRadius: 10,
+                  background: "var(--bg-glass)",
+                  border: "1px solid var(--border-secondary)",
+                  color: "var(--text-secondary)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <span>📥 Export</span>
+              </button>
+            </div>
+
             <div
               style={{
                 fontSize: 11,
@@ -360,6 +525,78 @@ export default function ChatWindow({
                 }}
                 compact={false}
               />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* AI Router Suggestion Banner */}
+        <AnimatePresence>
+          {routerSuggestion && (
+            <motion.div
+              initial={{ opacity: 0, y: -20, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: "auto" }}
+              exit={{ opacity: 0, y: -20, height: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              style={{
+                margin: "0 20px",
+                padding: "12px 16px",
+                borderRadius: 16,
+                background: `linear-gradient(135deg, ${routerSuggestion.personaColor}15, ${routerSuggestion.personaColor}08)`,
+                border: `1px solid ${routerSuggestion.personaColor}40`,
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                marginTop: 8,
+                boxShadow: `0 4px 20px ${routerSuggestion.personaColor}15`,
+              }}
+            >
+              <div style={{
+                width: 36, height: 36, borderRadius: "50%",
+                background: `linear-gradient(135deg, ${routerSuggestion.personaColor}40, ${routerSuggestion.personaColor}90)`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 18, flexShrink: 0,
+                border: `2px solid ${routerSuggestion.personaColor}`,
+              }}>
+                {routerSuggestion.personaAvatar}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: routerSuggestion.personaColor, marginBottom: 2 }}>
+                  🧭 Smart Suggestion
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.4 }}>
+                  {routerSuggestion.reason}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    selectPersona(routerSuggestion.suggestedPersona);
+                    onDismissRouterSuggestion?.();
+                    toast.success(`Switched to ${routerSuggestion.personaName}!`);
+                  }}
+                  style={{
+                    padding: "6px 12px", borderRadius: 10, fontSize: 11, fontWeight: 700,
+                    background: routerSuggestion.personaColor, color: "#fff", border: "none",
+                    cursor: "pointer", whiteSpace: "nowrap",
+                  }}
+                >
+                  Switch to {routerSuggestion.personaName}
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => onDismissRouterSuggestion?.()}
+                  style={{
+                    padding: "6px 12px", borderRadius: 10, fontSize: 11, fontWeight: 600,
+                    background: "var(--bg-glass)", color: "var(--text-secondary)",
+                    border: "1px solid var(--border-secondary)", cursor: "pointer", whiteSpace: "nowrap",
+                  }}
+                >
+                  Stay
+                </motion.button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -569,6 +806,58 @@ export default function ChatWindow({
                                 : msg.content
                             )}
                       </div>
+
+                      {/* Assistant Actions: Regenerate & Continue (for last assistant message) */}
+                      {!isUser && index === messages.length - 1 && !isStreaming && (
+                        <div style={{ display: "flex", gap: 8, marginTop: 8, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                          <button
+                            onClick={() => {
+                              // Find last user message
+                              const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+                              if (lastUserMsg) {
+                                onSend(lastUserMsg.content, selectedPersonaId);
+                              }
+                            }}
+                            title="Regenerate last response"
+                            style={{
+                              background: "none",
+                              border: "1px solid var(--border-secondary)",
+                              borderRadius: 6,
+                              padding: "2px 8px",
+                              color: "var(--text-tertiary)",
+                              fontSize: 10,
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            🔄 Regenerate
+                          </button>
+                          <button
+                            onClick={() => {
+                              onSend("Please continue from where you left off.", selectedPersonaId);
+                            }}
+                            title="Continue response"
+                            style={{
+                              background: "none",
+                              border: "1px solid var(--border-secondary)",
+                              borderRadius: 6,
+                              padding: "2px 8px",
+                              color: "var(--text-tertiary)",
+                              fontSize: 10,
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            ⏩ Continue
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 );

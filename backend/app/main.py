@@ -24,6 +24,7 @@ from pydantic import BaseModel
 from app.config import settings
 from app.agents.monitor import analyze_threat_level
 from app.agents.therapist import stream_response, PERSONAS
+from app.agents.router import classify_intent
 from app.database import crud
 
 from typing import Dict, Tuple
@@ -461,7 +462,119 @@ async def mark_all_read(user_id: str):
     return {"status": "ok"}
 
 
+# ── Conversations API (ChatGPT-style) ──────────────────────────────────────────
+
+class CreateConversationRequest(BaseModel):
+    user_id: str
+    persona_id: str = "cbt"
+    title: str = "New Chat"
+
+class UpdateTitleRequest(BaseModel):
+    user_id: str
+    title: str
+
+class UpdatePinRequest(BaseModel):
+    user_id: str
+    is_pinned: bool
+
+class UpdateArchiveRequest(BaseModel):
+    user_id: str
+    is_archived: bool
+
+class CreateMemoryRequest(BaseModel):
+    user_id: str
+    persona_id: str
+    category: str
+    memory_text: str
+    weight: int = 1
+
+@app.get("/conversations/{user_id}")
+async def list_conversations(
+    user_id: str,
+    persona_id: str | None = None,
+    archived: bool = False,
+    search: str = "",
+):
+    """List conversations for a user with optional persona, archive, or title filtering."""
+    convs = await crud.get_user_conversations(user_id, persona_id, archived, search)
+    return {"conversations": convs}
+
+@app.post("/conversations")
+async def create_new_conversation(req: CreateConversationRequest):
+    """Create a new conversation session."""
+    conv = await crud.create_conversation(req.user_id, req.persona_id, req.title)
+    if not conv:
+        raise HTTPException(status_code=500, detail="Failed to create conversation")
+    return {"conversation": conv}
+
+@app.patch("/conversations/{conv_id}/rename")
+async def rename_chat(conv_id: str, req: UpdateTitleRequest):
+    """Rename a conversation."""
+    ok = await crud.rename_conversation(conv_id, req.user_id, req.title)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Failed to rename conversation")
+    return {"status": "ok"}
+
+@app.patch("/conversations/{conv_id}/pin")
+async def pin_chat(conv_id: str, req: UpdatePinRequest):
+    """Pin or unpin a conversation."""
+    ok = await crud.pin_conversation(conv_id, req.user_id, req.is_pinned)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Failed to update pin state")
+    return {"status": "ok"}
+
+@app.patch("/conversations/{conv_id}/archive")
+async def archive_chat(conv_id: str, req: UpdateArchiveRequest):
+    """Archive or unarchive a conversation."""
+    ok = await crud.archive_conversation(conv_id, req.user_id, req.is_archived)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Failed to update archive state")
+    return {"status": "ok"}
+
+@app.delete("/conversations/{conv_id}")
+async def remove_chat(conv_id: str, user_id: str):
+    """Delete a conversation and all its messages."""
+    ok = await crud.delete_conversation(conv_id, user_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Failed to delete conversation")
+    return {"status": "ok"}
+
+@app.get("/conversations/{conv_id}/messages")
+async def list_conversation_messages(conv_id: str):
+    """Get all messages for a specific conversation."""
+    msgs = await crud.get_conversation_messages(conv_id)
+    return {"messages": msgs}
+
+# ── Per-Therapist Memory API ──────────────────────────────────────────────────
+
+@app.get("/memories/{user_id}/{persona_id}")
+async def list_therapist_memories(user_id: str, persona_id: str):
+    """Get stored long-term memories for a specific therapist persona."""
+    memories = await crud.get_therapist_memories(user_id, persona_id)
+    return {"memories": memories}
+
+@app.post("/memories")
+async def add_therapist_memory(req: CreateMemoryRequest):
+    """Save a memory item scoped to a specific therapist persona."""
+    mem = await crud.save_therapist_memory(
+        req.user_id, req.persona_id, req.category, req.memory_text, req.weight
+    )
+    if not mem:
+        raise HTTPException(status_code=500, detail="Failed to save memory")
+    return {"memory": mem}
+
+# ── Global Search API ─────────────────────────────────────────────────────────
+
+@app.get("/search/{user_id}")
+async def perform_global_search(user_id: str, q: str, category: str = "all"):
+    """Global search across chats, journal, mood, CBT, and assessments."""
+    categories = [category] if category != "all" else None
+    results = await crud.global_search(user_id, q, categories)
+    return {"results": results, "query": q}
+
+
 # ── WebSocket endpoint ─────────────────────────────────────────────────────────
+
 
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str | None = None):
@@ -521,12 +634,30 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str
             await websocket.send_json({"type": "stream_start", "agent": "therapist"})
 
             persona_id = data.get("persona") or data.get("persona_id") or "cbt"
+
+            # ── AI Intent Router (non-blocking suggestion) ────────────────────
+            try:
+                router_result = await classify_intent(content, persona_id)
+                if router_result:
+                    await websocket.send_json({
+                        "type": "router_suggestion",
+                        "suggested_persona": router_result["persona_id"],
+                        "persona_name": router_result["persona_name"],
+                        "persona_avatar": router_result["persona_avatar"],
+                        "persona_color": router_result["persona_color"],
+                        "reason": router_result["reason"],
+                        "confidence": router_result["confidence"],
+                    })
+            except Exception as router_err:
+                logger.debug("[WS] Router classification skipped: %s", router_err)
+
             user_memory = await crud.build_user_memory_context(user_id)
+            therapist_memory = await crud.build_therapist_memory_context(user_id, persona_id)
             messages = history + [{"role": "user", "content": content}]
             full_response = ""
 
             try:
-                async for token in stream_response(messages, threat_level, user_memory, persona_id):
+                async for token in stream_response(messages, threat_level, user_memory, persona_id, therapist_memory):
                     full_response += token
                     await websocket.send_json({"type": "token", "content": token})
             except Exception as exc:
@@ -552,9 +683,12 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str
                 {"type": "stream_end", "threat_level": threat_level}
             )
 
-            # Persist to Supabase (non-blocking, fire-and-forget)
+            # Persist to DB (non-blocking, fire-and-forget)
+            conv_id = data.get("conversation_id")
             await crud.save_message(session_id, "user", content, threat_level, user_id)
             await crud.save_message(session_id, "assistant", full_response, "normal", user_id)
+            if conv_id:
+                await crud.update_conversation_metadata(conv_id, full_response)
 
     except WebSocketDisconnect:
         logger.info("[WS] Disconnected: session=%s", session_id)

@@ -7,6 +7,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import ChatWindow from "@/components/ChatWindow";
 import CrisisPanel from "@/components/CrisisPanel";
 import Sidebar from "@/components/Sidebar";
+import ChatHistorySidebar from "@/components/ChatHistorySidebar";
+import { useChatHistory } from "@/hooks/useChatHistory";
+import { usePersona } from "@/hooks/usePersona";
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -65,12 +68,29 @@ function ChatPageInner() {
   const { user, loading } = useAuth();
   const [sessionId, setSessionId] = useState("");
 
+  const { personas, activePersona, selectPersona, selectedPersonaId } = usePersona(user?.id);
+
+  const {
+    conversations,
+    activeConversationId,
+    setActiveConversationId,
+    searchQuery,
+    setSearchQuery,
+    createConversation,
+    renameConversation,
+    pinConversation,
+    archiveConversation,
+    deleteConversation,
+  } = useChatHistory(user?.id, selectedPersonaId);
+
   useEffect(() => {
     if (loading) return;
 
-    const querySession = params.get("session");
+    const querySession = params.get("session") || params.get("conversation");
     if (querySession) {
       setSessionId(querySession);
+    } else if (activeConversationId) {
+      setSessionId(activeConversationId);
     } else if (user) {
       setSessionId(user.id);
     } else {
@@ -81,10 +101,22 @@ function ChatPageInner() {
       }
       setSessionId(localSession);
     }
-  }, [user, loading, params]);
+  }, [user, loading, params, activeConversationId]);
 
-  const { messages, wsState, crisis, sendMessage, dismissCrisis, manualReconnect } =
+  const { messages, wsState, crisis, routerSuggestion, sendMessage, dismissCrisis, dismissRouterSuggestion, manualReconnect } =
     useWebSocket(sessionId, user?.id);
+
+  const handleNewChat = async () => {
+    const newConv = await createConversation(selectedPersonaId);
+    if (newConv) {
+      setSessionId(newConv.id);
+    }
+  };
+
+  const handleSelectConversation = (convId: string) => {
+    setActiveConversationId(convId);
+    setSessionId(convId);
+  };
 
   if (!sessionId) {
     return (
@@ -129,27 +161,54 @@ function ChatPageInner() {
       <style>{`
         @media (max-width: 767px) {
           .chat-main-wrapper { margin-left: 0 !important; }
+          .chat-history-sidebar-wrapper { display: none !important; }
         }
       `}</style>
 
-      {/* Sidebar */}
+      {/* Main Global Sidebar */}
       <Sidebar />
 
       {/* Crisis overlay */}
       {crisis && <CrisisPanel onDismiss={dismissCrisis} userId={user?.id} sessionId={sessionId} />}
 
-      <div className="chat-main-wrapper" style={{ flex: 1, marginLeft: user ? 260 : 0, height: "100%", overflow: "hidden" }}>
-        <ChatWindow
-          messages={messages}
-          wsState={wsState}
-          isStreaming={wsState.isStreaming}
-          crisis={crisis}
-          onSend={sendMessage}
-          onDismissCrisis={dismissCrisis}
-          onReconnect={manualReconnect}
-          user={user}
-          sessionId={sessionId}
-        />
+      <div className="chat-main-wrapper" style={{ flex: 1, marginLeft: user ? 250 : 0, height: "100%", overflow: "hidden", display: "flex" }}>
+        {/* ChatGPT-style History Panel */}
+        {user && (
+          <div className="chat-history-sidebar-wrapper">
+            <ChatHistorySidebar
+              conversations={conversations}
+              activeConversationId={activeConversationId}
+              onSelectConversation={handleSelectConversation}
+              onNewChat={handleNewChat}
+              onRename={renameConversation}
+              onPin={pinConversation}
+              onArchive={archiveConversation}
+              onDelete={deleteConversation}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              personas={personas}
+              activePersonaId={selectedPersonaId}
+              onSelectPersona={selectPersona}
+            />
+          </div>
+        )}
+
+        {/* Main Conversation Window */}
+        <div style={{ flex: 1, height: "100%", overflow: "hidden", position: "relative" }}>
+          <ChatWindow
+            messages={messages}
+            wsState={wsState}
+            isStreaming={wsState.isStreaming}
+            crisis={crisis}
+            onSend={(text, pId) => sendMessage(text, pId || selectedPersonaId)}
+            onDismissCrisis={dismissCrisis}
+            onReconnect={manualReconnect}
+            user={user}
+            sessionId={sessionId}
+            routerSuggestion={routerSuggestion}
+            onDismissRouterSuggestion={dismissRouterSuggestion}
+          />
+        </div>
       </div>
     </div>
   );
