@@ -8,8 +8,8 @@ import { useAuth } from "@/contexts/AuthContext";
 const NAV_ITEMS = [
   { label: "Home", icon: "🏠", path: "/dashboard" },
   { label: "Therapy", icon: "🤖", path: "/chat" },
-  { label: "Progress", icon: "📊", path: "/progress" },
   { label: "Wellness", icon: "🧘", path: "/wellness" },
+  { label: "Progress", icon: "📊", path: "/progress" },
   { label: "Profile", icon: "👤", path: "/profile" },
 ];
 
