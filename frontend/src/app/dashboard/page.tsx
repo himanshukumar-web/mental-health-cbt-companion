@@ -18,7 +18,7 @@ import Link from "next/link";
 import { PersonalizedInsight } from "@/types/persona";
 import { motion } from "framer-motion";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { API_URL } from "@/lib/config";
 
 interface MoodEntry {
   date: string;
@@ -40,12 +40,12 @@ interface Appointment {
 }
 
 const QUICK_ACTIONS = [
-  { icon: "😰", title: "Talk About Anxiety", prompt: "I'm feeling very anxious today, can you help me process this?", color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
-  { icon: "📚", title: "Exam / Work Stress", prompt: "I have exam and work stress buildup, let's do a quick CBT reframe.", color: "#8b5cf6", bg: "rgba(139,92,246,0.12)" },
-  { icon: "😴", title: "Sleep Better", prompt: "I can't sleep well due to racing thoughts at night.", color: "#3b82f6", bg: "rgba(59,130,246,0.12)" },
-  { icon: "📝", title: "Start Journal", href: "/journal", color: "#ec4899", bg: "rgba(236,72,153,0.12)" },
+  { icon: "🤖", title: "Talk with AI", prompt: "I need CBT guidance for my thoughts today.", color: "#22c55e", bg: "rgba(34,197,94,0.12)", href: "/chat" },
+  { icon: "📝", title: "Journal", href: "/journal", color: "#ec4899", bg: "rgba(236,72,153,0.12)" },
   { icon: "🧘", title: "Meditate", href: "/meditation", color: "#10b981", bg: "rgba(16,185,129,0.12)" },
+  { icon: "🎭", title: "Mood Check", href: "/mood", color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
   { icon: "🫁", title: "Breathing", href: "/breathing", color: "#06b6d4", bg: "rgba(6,182,212,0.12)" },
+  { icon: "📅", title: "Appointments", href: "/appointments", color: "#3b82f6", bg: "rgba(59,130,246,0.12)" },
 ];
 
 const MINDFUL_QUOTES = [
