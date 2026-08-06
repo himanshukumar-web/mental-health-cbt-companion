@@ -9,7 +9,7 @@ import MobileHeader from "@/components/MobileHeader";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import toast from "react-hot-toast";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { API_URL } from "@/lib/config";
 
 interface MeditationSession {
   id: string;
