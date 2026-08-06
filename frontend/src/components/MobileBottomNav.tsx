@@ -17,6 +17,17 @@ export default function MobileBottomNav() {
   const pathname = usePathname();
   const { userRole } = useAuth();
 
+  // Hide bottom nav on landing, login, signup, role-select screens
+  if (
+    !pathname ||
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/role-select"
+  ) {
+    return null;
+  }
+
   const navItems = userRole === "admin"
     ? [
         { label: "Home", icon: "🏠", path: "/dashboard" },
