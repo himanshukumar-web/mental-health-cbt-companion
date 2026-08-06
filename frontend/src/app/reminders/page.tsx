@@ -8,7 +8,7 @@ import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import { requestNotificationPermission, scheduleSmartReminders } from "@/utils/notifications";
 import toast from "react-hot-toast";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { API_URL } from "@/lib/config";
 
 export default function RemindersPage() {
   const { user, loading: authLoading } = useAuth();
