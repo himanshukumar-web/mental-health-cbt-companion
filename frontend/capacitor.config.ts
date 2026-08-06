@@ -1,9 +1,17 @@
 import type { CapacitorConfig } from '@capacitor/cli';
+import { KeyboardResize, KeyboardStyle } from '@capacitor/keyboard';
 
 const config: CapacitorConfig = {
   appId: 'com.sera.app',
   appName: 'Sera',
   webDir: 'out',
+  plugins: {
+    Keyboard: {
+      resize: KeyboardResize.Body,
+      style: KeyboardStyle.Dark,
+      resizeOnFullScreen: true,
+    },
+  },
   server: {
     // Allow mixed content (HTTP WebSocket from HTTPS-like WebView)
     androidScheme: 'http',
