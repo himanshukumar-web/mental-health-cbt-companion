@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileHeader from "@/components/MobileHeader";
 // import ThemeSelector from "@/components/ThemeSelector";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -420,7 +419,6 @@ export default function SettingsPage() {
           </div>
         )}
       </main>
-      <MobileBottomNav />
     </div>
   );
 }

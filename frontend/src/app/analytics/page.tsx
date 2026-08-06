@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileHeader from "@/components/MobileHeader";
 import CalendarHeatmap from "@/components/CalendarHeatmap";
 import DayDetailsModal from "@/components/DayDetailsModal";
@@ -290,8 +289,6 @@ export default function AnalyticsPage() {
           userId={user.id}
         />
       </main>
-
-      <MobileBottomNav />
     </div>
   );
 }

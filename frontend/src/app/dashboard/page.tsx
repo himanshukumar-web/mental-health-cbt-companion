@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileHeader from "@/components/MobileHeader";
 import WellnessScoreCard from "@/components/WellnessScoreCard";
 import InsightChartCard from "@/components/InsightChartCard";
@@ -714,8 +713,6 @@ export default function DashboardPage() {
           />
         </div>
       </div>
-
-      <MobileBottomNav />
     </div>
   );
 }

@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileHeader from "@/components/MobileHeader";
 // import VoiceController from "@/components/VoiceController";
 import EmptyState from "@/components/ui/EmptyState";
@@ -606,8 +605,6 @@ export default function JournalPage() {
           </div>
         )}
       </main>
-
-      <MobileBottomNav />
     </div>
   );
 }

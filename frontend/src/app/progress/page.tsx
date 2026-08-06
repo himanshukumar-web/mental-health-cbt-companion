@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileHeader from "@/components/MobileHeader";
 import CalendarHeatmap from "@/components/CalendarHeatmap";
 import type { HeatmapDay } from "@/types/heatmap";
@@ -249,8 +248,6 @@ export default function ProgressHubPage() {
           </div>
         </div>
       </main>
-
-      <MobileBottomNav />
     </div>
   );
 }

@@ -36,7 +36,8 @@ export const viewport: Viewport = {
 };
 
 import BackendPrewarmer from "@/components/BackendPrewarmer";
-import BottomNav from "@/components/BottomNav";
+import MobileBottomNav from "@/components/MobileBottomNav";
+import AndroidNativeHandler from "@/components/AndroidNativeHandler";
 
 export default function RootLayout({
   children,
@@ -61,10 +62,11 @@ export default function RootLayout({
       <body>
         <ErrorBoundary>
           <AuthProvider>
+            <AndroidNativeHandler />
             <BackendPrewarmer />
             <ToastProvider />
             {children}
-            <BottomNav />
+            <MobileBottomNav />
             <InstallPrompt />
           </AuthProvider>
         </ErrorBoundary>

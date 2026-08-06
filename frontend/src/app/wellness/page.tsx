@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileHeader from "@/components/MobileHeader";
 import WellnessPanel from "@/components/WellnessPanel";
 import QuickMoodLogger from "@/components/QuickMoodLogger";
@@ -223,8 +222,6 @@ export default function WellnessHubPage() {
       </main>
 
       <WellnessPanel userId={user.id} />
-
-      <MobileBottomNav />
     </div>
   );
 }

@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileHeader from "@/components/MobileHeader";
 import TimelineFeed from "@/components/TimelineFeed";
 import CalendarHeatmap from "@/components/CalendarHeatmap";
@@ -127,8 +126,6 @@ export default function TimelinePage() {
           userId={user.id}
         />
       </main>
-
-      <MobileBottomNav />
     </div>
   );
 }

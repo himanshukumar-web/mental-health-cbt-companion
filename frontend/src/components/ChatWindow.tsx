@@ -308,12 +308,21 @@ export default function ChatWindow({
       <style>{`
         @media (max-width: 767px) {
           .chat-messages-container {
-            padding: 12px 12px 165px !important;
+            padding: 12px 12px calc(160px + var(--keyboard-height, 0px)) !important;
+            -webkit-overflow-scrolling: touch;
           }
           .chat-floating-input-container {
-            bottom: calc(82px + env(safe-area-inset-bottom, 0px)) !important;
+            bottom: calc(76px + var(--keyboard-height, 0px) + env(safe-area-inset-bottom, 0px)) !important;
             left: 10px !important;
             right: 10px !important;
+          }
+          body.keyboard-open .mobile-bottom-nav {
+            transform: translateY(120px) !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+          }
+          body.keyboard-open .chat-floating-input-container {
+            bottom: calc(12px + var(--keyboard-height, 0px) + env(safe-area-inset-bottom, 0px)) !important;
           }
         }
       `}</style>

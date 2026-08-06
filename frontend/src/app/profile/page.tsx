@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileHeader from "@/components/MobileHeader";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import { motion } from "framer-motion";
@@ -321,8 +320,6 @@ export default function ProfilePage() {
           🚪 Sign Out of Account
         </button>
       </main>
-
-      <MobileBottomNav />
     </div>
   );
 }

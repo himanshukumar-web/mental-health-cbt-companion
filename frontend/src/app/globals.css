@@ -152,7 +152,12 @@ html.theme-transitioning, html.theme-transitioning *, html.theme-transitioning *
 /* ── Reset ─────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+:root {
+  --keyboard-height: 0px;
+}
+
 html, body {
+  min-height: 100%;
   height: 100%;
   background: var(--bg-primary);
   color: var(--text-primary);
@@ -162,6 +167,11 @@ html, body {
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+button, a, [role="button"] {
+  touch-action: manipulation;
 }
 
 /* ── Scrollbar ─────────────────────────────────────────────────────────────── */
