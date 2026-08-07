@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 
 const RENDER_BACKEND_URL =
@@ -9,6 +11,8 @@ const KEEP_ALIVE_INTERVAL = 3.5 * 60 * 1000; // 3.5 minutes
 
 export default function BackendPrewarmer() {
   const [status, setStatus] = useState<"idle" | "waking" | "ready">("idle");
+  const pathname = usePathname();
+  const { user } = useAuth();
 
   useEffect(() => {
     let isMounted = true;
@@ -38,10 +42,8 @@ export default function BackendPrewarmer() {
       }
     };
 
-    // Instant pre-warm as soon as user opens the site
     wakeUpBackend();
 
-    // Keep-alive ping every 3.5 mins to prevent Render free-tier cold sleep
     keepAliveTimer = setInterval(() => {
       fetch(`${RENDER_BACKEND_URL}/health`, { mode: "cors" }).catch(() => {});
     }, KEEP_ALIVE_INTERVAL);
@@ -51,6 +53,18 @@ export default function BackendPrewarmer() {
       if (keepAliveTimer) clearInterval(keepAliveTimer);
     };
   }, []);
+
+  // Hide warm-up loader on unauthenticated pages (Login, Signup, Splash)
+  if (
+    !user ||
+    !pathname ||
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/role-select"
+  ) {
+    return null;
+  }
 
   return (
     <AnimatePresence>
