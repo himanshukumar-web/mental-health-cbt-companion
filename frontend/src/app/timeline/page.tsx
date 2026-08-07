@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidTimeline from "@/components/mobile/AndroidTimeline";
 import Sidebar from "@/components/Sidebar";
 import MobileHeader from "@/components/MobileHeader";
 import TimelineFeed from "@/components/TimelineFeed";
@@ -16,6 +18,11 @@ import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 export default function TimelinePage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidTimeline />;
+  }
 
   const [category, setCategory] = useState<string>("all");
   const [search, setSearch] = useState<string>("");
