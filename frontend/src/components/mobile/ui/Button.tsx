@@ -76,20 +76,22 @@ export function MD3Button({
         alignItems: "center",
         justifyContent: "center",
         gap: "8px",
-        minHeight: variant === "fab" ? "56px" : "48px",
-        padding: variant === "fab" ? "0 20px" : "12px 20px",
+        height: variant === "fab" ? "56px" : "52px",
+        minHeight: variant === "fab" ? "56px" : "52px",
+        padding: variant === "fab" ? "0 20px" : "0 24px",
         borderRadius: variant === "fab" ? "16px" : "100px",
-        fontSize: "14px",
+        fontSize: "15px",
         fontWeight: 600,
         letterSpacing: "0.01em",
         width: fullWidth ? "100%" : "auto",
         cursor: disabled || loading ? "not-allowed" : "pointer",
         opacity: disabled ? 0.5 : 1,
-        transition: "all 0.2s cubic-bezier(0.2, 0, 0, 1)",
+        transition: "all 0.15s cubic-bezier(0.2, 0, 0, 1)",
         WebkitTapHighlightColor: "transparent",
         touchAction: "manipulation",
         userSelect: "none",
         fontFamily: "inherit",
+        boxSizing: "border-box",
         ...getVariantStyles(),
         ...style,
       }}
@@ -112,6 +114,9 @@ export function MD3Button({
       )}
       {children && <span>{children}</span>}
       <style>{`
+        button:active {
+          transform: scale(0.98);
+        }
         @keyframes md3Spin {
           to { transform: rotate(360deg); }
         }

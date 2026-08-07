@@ -19,7 +19,9 @@ export default memo(function AndroidMobileLayout({
     <div
       className={`android-mobile-root ${className}`}
       style={{
-        minHeight: "100vh",
+        minHeight: "100dvh",
+        width: "100%",
+        maxWidth: "100vw",
         background: "#0b0f1a",
         color: "#e8edf5",
         fontFamily: "'Outfit', 'Inter', -apple-system, Roboto, sans-serif",
@@ -29,7 +31,7 @@ export default memo(function AndroidMobileLayout({
         overflowX: "hidden",
         paddingTop: "env(safe-area-inset-top, 0px)",
         paddingBottom: hasBottomNav
-          ? "calc(80px + env(safe-area-inset-bottom, 0px))"
+          ? "calc(72px + env(safe-area-inset-bottom, 0px))"
           : "env(safe-area-inset-bottom, 0px)",
         boxSizing: "border-box",
         transform: "translateZ(0)",
@@ -38,7 +40,7 @@ export default memo(function AndroidMobileLayout({
       }}
     >
       <style>{`
-        /* Native Android 60 FPS Hardware Acceleration & Smooth Scroll */
+        /* Native Android 60 FPS Hardware Acceleration & Edge-to-Edge Layout */
         .android-mobile-root * {
           -webkit-tap-highlight-color: transparent;
           box-sizing: border-box;

@@ -28,6 +28,8 @@ export function MD3Input({
 
   const isPassword = type === "password";
   const actualType = isPassword && showPassword ? "text" : type;
+  const isFilled = value !== undefined && value !== null && String(value).length > 0;
+  const isFloating = focused || isFilled;
 
   return (
     <div style={{ marginBottom: "16px", width: "100%" }}>
@@ -43,26 +45,30 @@ export function MD3Input({
             : focused
             ? "1.5px solid #22c55e"
             : "1px solid rgba(255, 255, 255, 0.12)",
-          padding: "8px 14px",
-          minHeight: "56px",
+          padding: "0 16px",
+          height: "56px",
           transition: "all 0.2s cubic-bezier(0.2, 0, 0, 1)",
+          boxSizing: "border-box",
         }}
       >
         {leadingIcon && (
-          <span style={{ marginRight: "10px", color: focused ? "#22c55e" : "#8b95a7", fontSize: "18px", display: "flex" }}>
+          <span style={{ marginRight: "12px", color: error ? "#ef4444" : focused ? "#22c55e" : "#8b95a7", fontSize: "20px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             {leadingIcon}
           </span>
         )}
 
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", position: "relative", height: "100%" }}>
           <label
             style={{
-              fontSize: focused || value ? "11px" : "14px",
-              fontWeight: 500,
-              color: error ? "#fca5a5" : focused ? "#22c55e" : "#8b95a7",
-              transition: "all 0.15s ease",
+              position: "absolute",
+              top: isFloating ? "8px" : "18px",
+              left: 0,
+              fontSize: isFloating ? "11px" : "14px",
+              fontWeight: isFloating ? 600 : 500,
+              color: error ? "#fca5a5" : focused ? "#4ade80" : "#8b95a7",
+              transition: "all 0.18s cubic-bezier(0.2, 0, 0, 1)",
               pointerEvents: "none",
-              lineHeight: 1.2,
+              lineHeight: 1,
             }}
           >
             {label}
@@ -89,7 +95,9 @@ export function MD3Input({
               fontSize: "15px",
               fontWeight: 500,
               fontFamily: "inherit",
-              paddingTop: "2px",
+              paddingTop: isFloating ? "16px" : "0px",
+              margin: 0,
+              boxSizing: "border-box",
               ...style,
             }}
             {...props}
@@ -108,13 +116,15 @@ export function MD3Input({
               fontWeight: 600,
               cursor: "pointer",
               padding: "4px 8px",
+              marginLeft: "4px",
+              flexShrink: 0,
             }}
           >
             {showPassword ? "Hide" : "Show"}
           </button>
         ) : (
           trailingIcon && (
-            <span style={{ marginLeft: "8px", color: "#8b95a7", fontSize: "18px", display: "flex" }}>
+            <span style={{ marginLeft: "8px", color: "#8b95a7", fontSize: "18px", display: "flex", flexShrink: 0 }}>
               {trailingIcon}
             </span>
           )

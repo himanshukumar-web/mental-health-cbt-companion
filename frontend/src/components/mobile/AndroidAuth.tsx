@@ -36,7 +36,7 @@ export default function AndroidAuth({ initialMode = "login" }: { initialMode?: "
       setLoading(false);
     } else {
       setDone(true);
-      setTimeout(() => router.push("/dashboard"), 500);
+      setTimeout(() => router.push("/dashboard"), 400);
     }
   };
 
@@ -71,12 +71,13 @@ export default function AndroidAuth({ initialMode = "login" }: { initialMode?: "
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          padding: "24px 16px",
-          minHeight: "100vh",
+          padding: "20px 16px",
+          minHeight: "100dvh",
+          boxSizing: "border-box",
         }}
       >
         {/* Mobile Header Branding */}
-        <div style={{ textAlign: "center", marginBottom: "28px" }}>
+        <div style={{ textAlign: "center", marginBottom: "24px" }}>
           <div
             style={{
               width: "56px",
@@ -103,12 +104,13 @@ export default function AndroidAuth({ initialMode = "login" }: { initialMode?: "
         <div
           style={{
             display: "flex",
-            width: "100%",
-            maxWidth: "360px",
+            width: "92%",
+            maxWidth: "420px",
             background: "rgba(255, 255, 255, 0.06)",
             borderRadius: "100px",
             padding: "4px",
             marginBottom: "20px",
+            boxSizing: "border-box",
           }}
         >
           <button
@@ -153,8 +155,18 @@ export default function AndroidAuth({ initialMode = "login" }: { initialMode?: "
           </button>
         </div>
 
-        {/* Main Material 3 Auth Card */}
-        <MD3Card variant="elevated" style={{ width: "100%", maxWidth: "360px", padding: "24px" }}>
+        {/* Main Material 3 Auth Card - 92% width, max 420dp, 24dp padding, 24dp radius */}
+        <MD3Card
+          variant="elevated"
+          style={{
+            width: "92%",
+            maxWidth: "420px",
+            padding: "24px",
+            borderRadius: "24px",
+            boxShadow: "0 12px 36px rgba(0, 0, 0, 0.45)",
+            boxSizing: "border-box",
+          }}
+        >
           {error && (
             <div
               style={{
@@ -183,7 +195,7 @@ export default function AndroidAuth({ initialMode = "login" }: { initialMode?: "
               </MD3Button>
             </div>
           ) : mode === "login" ? (
-            <div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
               <MD3Input
                 label="Email Address"
                 type="email"
@@ -191,6 +203,8 @@ export default function AndroidAuth({ initialMode = "login" }: { initialMode?: "
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 leadingIcon="✉"
+                autoCapitalize="none"
+                autoCorrect="off"
               />
               <MD3Input
                 label="Password"
@@ -209,7 +223,7 @@ export default function AndroidAuth({ initialMode = "login" }: { initialMode?: "
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  margin: "20px 0",
+                  margin: "18px 0",
                   gap: "12px",
                 }}
               >
@@ -223,7 +237,7 @@ export default function AndroidAuth({ initialMode = "login" }: { initialMode?: "
               </MD3Button>
             </div>
           ) : (
-            <div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
               {/* Role Picker */}
               <div style={{ marginBottom: "16px" }}>
                 <label style={{ fontSize: "12px", fontWeight: 600, color: "#8b95a7", display: "block", marginBottom: "8px" }}>
@@ -282,6 +296,8 @@ export default function AndroidAuth({ initialMode = "login" }: { initialMode?: "
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 leadingIcon="✉"
+                autoCapitalize="none"
+                autoCorrect="off"
               />
               <MD3Input
                 label="Password"
@@ -297,7 +313,7 @@ export default function AndroidAuth({ initialMode = "login" }: { initialMode?: "
                   display: "flex",
                   alignItems: "flex-start",
                   gap: "10px",
-                  margin: "12px 0 20px 0",
+                  margin: "8px 0 16px 0",
                   cursor: "pointer",
                 }}
               >
