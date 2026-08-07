@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidDashboard from "@/components/mobile/AndroidDashboard";
 import Sidebar from "@/components/Sidebar";
 import MobileHeader from "@/components/MobileHeader";
 import WellnessScoreCard from "@/components/WellnessScoreCard";
@@ -58,6 +60,11 @@ const MINDFUL_QUOTES = [
 export default function DashboardPage() {
   const { user, userRole, loading: authLoading } = useAuth();
   const router = useRouter();
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidDashboard />;
+  }
 
   const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([]);
   const [journalCount, setJournalCount] = useState(0);
