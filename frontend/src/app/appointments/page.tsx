@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidAppointments from "@/components/mobile/AndroidAppointments";
 
 import { API_URL } from "@/lib/config";
 
@@ -27,6 +29,11 @@ const TIME_SLOTS = [
 export default function BookAppointmentPage() {
   const { user, userRole, loading } = useAuth();
   const router = useRouter();
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidAppointments />;
+  }
   const [step, setStep] = useState(1);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
