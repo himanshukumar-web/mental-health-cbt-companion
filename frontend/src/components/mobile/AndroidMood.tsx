@@ -1,15 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useMobileMoodData } from "@/hooks/mobile";
+import { formatMobileDate } from "@/utils/mobileUtils";
 import AndroidMobileLayout from "./AndroidMobileLayout";
-import { MD3TopAppBar } from "./ui/TopAppBar";
-import { MD3Card } from "./ui/Card";
-import { MD3Button } from "./ui/Button";
-import { MD3Input } from "./ui/Input";
-import { MD3LoadingState } from "./ui/FeedbackStates";
-import { API_URL } from "@/lib/config";
-import toast from "react-hot-toast";
+import {
+  TopAppBar,
+  MaterialCard,
+  PrimaryButton,
+  TextField,
+  LoadingSkeleton,
+  MoodCard,
+} from "./ui";
 
 const MOOD_EMOJIS = [
   { score: 1, emoji: "😭", label: "Terrible" },
@@ -26,71 +29,51 @@ const MOOD_EMOJIS = [
 
 export default function AndroidMood() {
   const { user } = useAuth();
+  const { moodEntries, loading, addMoodEntry } = useMobileMoodData(user?.id);
+
   const [selectedScore, setSelectedScore] = useState<number>(7);
   const [stressLevel, setStressLevel] = useState<number>(3);
   const [sleepHours, setSleepHours] = useState<string>("7.5");
   const [notes, setNotes] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
-  const [history, setHistory] = useState<any[]>([]);
-
-  useEffect(() => {
-    if (!user) return;
-    fetchMoodHistory();
-  }, [user]);
-
-  const fetchMoodHistory = async () => {
-    try {
-      const res = await fetch(`${API_URL}/mood-entries/${user?.id}`);
-      if (res.ok) {
-        const json = await res.json();
-        setHistory(json.mood_entries || []);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  const [saving, setSaving] = useState<boolean>(false);
 
   const handleSaveMood = async () => {
-    if (!user) return;
     const moodObj = MOOD_EMOJIS.find((m) => m.score === selectedScore) || MOOD_EMOJIS[6];
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/mood-entries`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: user.id,
-          mood_score: selectedScore,
-          mood_emoji: moodObj.emoji,
-          stress_level: stressLevel,
-          sleep_hours: parseFloat(sleepHours) || 7,
-          notes: notes.trim(),
-        }),
-      });
-
-      if (res.ok) {
-        toast.success("Mood logged successfully!");
-        setNotes("");
-        fetchMoodHistory();
-      } else {
-        toast.error("Failed to log mood.");
-      }
-    } catch (err) {
-      toast.error("Network error.");
-    } finally {
-      setLoading(false);
+    setSaving(true);
+    const success = await addMoodEntry({
+      mood_score: selectedScore,
+      mood_emoji: moodObj.emoji,
+      stress_level: stressLevel,
+      sleep_hours: parseFloat(sleepHours) || 7,
+      notes: notes.trim(),
+    });
+    if (success) {
+      setNotes("");
     }
+    setSaving(false);
   };
 
   const selectedEmojiObj = MOOD_EMOJIS.find((m) => m.score === selectedScore) || MOOD_EMOJIS[6];
 
+  if (loading) {
+    return (
+      <AndroidMobileLayout>
+        <TopAppBar title="Mood Check-in" subtitle="Track your daily emotional status" />
+        <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
+          <LoadingSkeleton height="160px" />
+          <LoadingSkeleton height="200px" />
+        </div>
+      </AndroidMobileLayout>
+    );
+  }
+
   return (
     <AndroidMobileLayout>
-      <MD3TopAppBar title="Mood Check-in" subtitle="Track your daily emotional status" />
+      <TopAppBar title="Mood Check-in" subtitle="Track your daily emotional status" />
 
       <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "20px" }}>
         {/* Active Selected Mood Display */}
-        <MD3Card variant="elevated" style={{ textAlign: "center", padding: "24px 16px" }}>
+        <MaterialCard variant="elevated" style={{ textAlign: "center", padding: "24px 16px" }}>
           <div style={{ fontSize: "56px", marginBottom: "8px" }}>{selectedEmojiObj.emoji}</div>
           <div style={{ fontSize: "20px", fontWeight: 800, color: "#e8edf5" }}>
             {selectedEmojiObj.label} ({selectedScore}/10)
@@ -100,13 +83,7 @@ export default function AndroidMood() {
           </p>
 
           {/* Emoji Grid Selector */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(5, 1fr)",
-              gap: "8px",
-            }}
-          >
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "8px" }}>
             {MOOD_EMOJIS.map((m) => (
               <button
                 key={m.score}
@@ -125,10 +102,10 @@ export default function AndroidMood() {
               </button>
             ))}
           </div>
-        </MD3Card>
+        </MaterialCard>
 
         {/* Stress & Sleep Inputs */}
-        <MD3Card variant="filled" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <MaterialCard variant="filled" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
               <span style={{ fontSize: "14px", fontWeight: 600, color: "#e8edf5" }}>Stress Level (1-10)</span>
@@ -144,7 +121,7 @@ export default function AndroidMood() {
             />
           </div>
 
-          <MD3Input
+          <TextField
             label="Sleep Duration (Hours)"
             type="number"
             value={sleepHours}
@@ -152,7 +129,7 @@ export default function AndroidMood() {
             leadingIcon="😴"
           />
 
-          <MD3Input
+          <TextField
             label="Journal / Context Notes (Optional)"
             type="text"
             placeholder="What triggered this mood?"
@@ -161,10 +138,10 @@ export default function AndroidMood() {
             leadingIcon="📝"
           />
 
-          <MD3Button fullWidth loading={loading} onClick={handleSaveMood}>
+          <PrimaryButton fullWidth loading={saving} onClick={handleSaveMood}>
             Save Mood Entry
-          </MD3Button>
-        </MD3Card>
+          </PrimaryButton>
+        </MaterialCard>
 
         {/* Recent History */}
         <div>
@@ -172,23 +149,14 @@ export default function AndroidMood() {
             Recent History
           </h2>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {history.slice(0, 5).map((entry, idx) => (
-              <MD3Card key={idx} variant="filled" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <span style={{ fontSize: "24px" }}>{entry.mood_emoji || "😊"}</span>
-                  <div>
-                    <div style={{ fontSize: "14px", fontWeight: 700, color: "#e8edf5" }}>
-                      Score {entry.mood_score}/10
-                    </div>
-                    {entry.notes && (
-                      <div style={{ fontSize: "12px", color: "#8b95a7", marginTop: "2px" }}>{entry.notes}</div>
-                    )}
-                  </div>
-                </div>
-                <span style={{ fontSize: "11px", color: "#8b95a7" }}>
-                  {new Date(entry.created_at || Date.now()).toLocaleDateString()}
-                </span>
-              </MD3Card>
+            {moodEntries.slice(0, 5).map((entry, idx) => (
+              <MoodCard
+                key={entry.id || idx}
+                emoji={entry.mood_emoji || "😊"}
+                score={entry.mood_score}
+                notes={entry.notes}
+                date={formatMobileDate(entry.created_at)}
+              />
             ))}
           </div>
         </div>

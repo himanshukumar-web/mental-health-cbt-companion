@@ -2,11 +2,15 @@
 
 import React, { useState } from "react";
 import AndroidMobileLayout from "./AndroidMobileLayout";
-import { MD3TopAppBar } from "./ui/TopAppBar";
-import { MD3Card } from "./ui/Card";
-import { MD3Button } from "./ui/Button";
-import { MD3Input } from "./ui/Input";
-import { MD3BottomSheet } from "./ui/BottomSheet";
+import {
+  TopAppBar,
+  MaterialCard,
+  PrimaryButton,
+  SecondaryButton,
+  TextField,
+  BottomSheet,
+  ProgressRing,
+} from "./ui";
 import toast from "react-hot-toast";
 
 interface Habit {
@@ -64,22 +68,23 @@ export default function AndroidHabits() {
   };
 
   const completedCount = habits.filter((h) => h.completed).length;
+  const percent = Math.round((completedCount / (habits.length || 1)) * 100);
 
   return (
     <AndroidMobileLayout>
-      <MD3TopAppBar
+      <TopAppBar
         title="Mindful Habits"
         subtitle="Daily wellness routines"
         actions={
-          <MD3Button variant="tonal" onClick={() => setShowAddSheet(true)} style={{ height: "36px", padding: "0 12px" }}>
+          <SecondaryButton onClick={() => setShowAddSheet(true)} style={{ minHeight: "36px", padding: "0 12px", borderRadius: "100px" }}>
             + Habit
-          </MD3Button>
+          </SecondaryButton>
         }
       />
 
       <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
         {/* Daily Summary Card */}
-        <MD3Card variant="elevated" style={{ background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)" }}>
+        <MaterialCard variant="elevated" style={{ background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
               <span style={{ fontSize: "12px", color: "#4ade80", fontWeight: 700 }}>TODAY'S PROGRESS</span>
@@ -87,30 +92,14 @@ export default function AndroidHabits() {
                 {completedCount} / {habits.length} <span style={{ fontSize: "14px", color: "#8b95a7" }}>Done</span>
               </div>
             </div>
-            <div
-              style={{
-                width: "56px",
-                height: "56px",
-                borderRadius: "50%",
-                background: "rgba(34, 197, 94, 0.15)",
-                border: "3px solid #22c55e",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "16px",
-                fontWeight: 800,
-                color: "#4ade80",
-              }}
-            >
-              {Math.round((completedCount / (habits.length || 1)) * 100)}%
-            </div>
+            <ProgressRing progress={percent} size={60} strokeWidth={5} />
           </div>
-        </MD3Card>
+        </MaterialCard>
 
         {/* Habit List */}
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           {habits.map((habit) => (
-            <MD3Card
+            <MaterialCard
               key={habit.id}
               clickable
               variant="filled"
@@ -161,33 +150,33 @@ export default function AndroidHabits() {
                   </div>
                 </div>
               </div>
-            </MD3Card>
+            </MaterialCard>
           ))}
         </div>
       </div>
 
       {/* Add Habit Sheet */}
-      <MD3BottomSheet isOpen={showAddSheet} onClose={() => setShowAddSheet(false)} title="Create New Habit">
+      <BottomSheet isOpen={showAddSheet} onClose={() => setShowAddSheet(false)} title="Create New Habit">
         <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          <MD3Input
+          <TextField
             label="Habit Name"
             type="text"
             placeholder="e.g. 15-Minute Evening Walk"
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
           />
-          <MD3Input
+          <TextField
             label="Emoji Icon"
             type="text"
             placeholder="🚶"
             value={newIcon}
             onChange={(e) => setNewIcon(e.target.value)}
           />
-          <MD3Button fullWidth onClick={handleAddHabit}>
+          <PrimaryButton fullWidth onClick={handleAddHabit}>
             Add Habit
-          </MD3Button>
+          </PrimaryButton>
         </div>
-      </MD3BottomSheet>
+      </BottomSheet>
     </AndroidMobileLayout>
   );
 }

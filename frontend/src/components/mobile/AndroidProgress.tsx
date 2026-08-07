@@ -1,12 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useMobileGamification } from "@/hooks/mobile";
 import AndroidMobileLayout from "./AndroidMobileLayout";
-import { MD3TopAppBar } from "./ui/TopAppBar";
-import { MD3Card } from "./ui/Card";
-import { MD3LoadingState } from "./ui/FeedbackStates";
-import { API_URL } from "@/lib/config";
+import { TopAppBar, MaterialCard, Badge, LoadingSkeleton, Tag } from "./ui";
 
 const ACHIEVEMENTS = [
   { id: "1", title: "First Step", desc: "Completed your first CBT check-in", icon: "🌱", unlocked: true },
@@ -18,47 +16,27 @@ const ACHIEVEMENTS = [
 
 export default function AndroidProgress() {
   const { user } = useAuth();
-  const [xp, setXp] = useState<number>(350);
-  const [level, setLevel] = useState<number>(3);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    if (!user) return;
-    async function fetchProgress() {
-      try {
-        const res = await fetch(`${API_URL}/gamification/xp/${user?.id}`);
-        if (res.ok) {
-          const json = await res.json();
-          setXp(json.xp || 350);
-          setLevel(json.level || 3);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchProgress();
-  }, [user]);
-
-  const nextLevelXp = level * 200;
-  const progressPercent = Math.min(100, Math.round((xp / nextLevelXp) * 100));
+  const { xp, level, nextLevelXp, progressPercent, loading } = useMobileGamification(user?.id);
 
   if (loading) {
     return (
       <AndroidMobileLayout>
-        <MD3LoadingState message="Loading your progress..." />
+        <TopAppBar title="Progress & Achievements" subtitle="Gamified CBT journey" />
+        <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
+          <LoadingSkeleton height="140px" />
+          <LoadingSkeleton height="200px" />
+        </div>
       </AndroidMobileLayout>
     );
   }
 
   return (
     <AndroidMobileLayout>
-      <MD3TopAppBar title="Progress & Achievements" subtitle="Gamified CBT journey" />
+      <TopAppBar title="Progress & Achievements" subtitle="Gamified CBT journey" />
 
       <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
         {/* Level & XP Card */}
-        <MD3Card variant="elevated" style={{ background: "linear-gradient(135deg, #182720 0%, #0f172a 100%)", borderColor: "rgba(34, 197, 94, 0.3)" }}>
+        <MaterialCard variant="elevated" style={{ background: "linear-gradient(135deg, #182720 0%, #0f172a 100%)", borderColor: "rgba(34, 197, 94, 0.3)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
             <div>
               <span style={{ fontSize: "12px", color: "#4ade80", fontWeight: 700 }}>CURRENT RANK</span>
@@ -101,7 +79,7 @@ export default function AndroidProgress() {
               />
             </div>
           </div>
-        </MD3Card>
+        </MaterialCard>
 
         {/* Achievements List */}
         <div>
@@ -110,7 +88,7 @@ export default function AndroidProgress() {
           </h2>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {ACHIEVEMENTS.map((a) => (
-              <MD3Card
+              <MaterialCard
                 key={a.id}
                 variant="filled"
                 style={{
@@ -139,12 +117,8 @@ export default function AndroidProgress() {
                   <div style={{ fontSize: "15px", fontWeight: 700, color: "#e8edf5" }}>{a.title}</div>
                   <div style={{ fontSize: "12px", color: "#8b95a7", marginTop: "2px" }}>{a.desc}</div>
                 </div>
-                {a.unlocked ? (
-                  <span style={{ fontSize: "12px", color: "#4ade80", fontWeight: 700 }}>UNLOCKED</span>
-                ) : (
-                  <span style={{ fontSize: "12px", color: "#8b95a7" }}>LOCKED</span>
-                )}
-              </MD3Card>
+                <Tag label={a.unlocked ? "UNLOCKED" : "LOCKED"} variant={a.unlocked ? "success" : "default"} />
+              </MaterialCard>
             ))}
           </div>
         </div>

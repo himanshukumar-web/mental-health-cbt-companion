@@ -4,11 +4,13 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AndroidMobileLayout from "./AndroidMobileLayout";
-import { MD3TopAppBar } from "./ui/TopAppBar";
-import { MD3Card } from "./ui/Card";
-import { MD3ListItem } from "./ui/ListItem";
-import { MD3Button } from "./ui/Button";
-import toast from "react-hot-toast";
+import {
+  TopAppBar,
+  MaterialCard,
+  ListItem,
+  OutlinedButton,
+  SnackBar,
+} from "./ui";
 
 export default function AndroidSettings() {
   const { signOut } = useAuth();
@@ -17,15 +19,16 @@ export default function AndroidSettings() {
   const [notifications, setNotifications] = useState<boolean>(true);
   const [haptics, setHaptics] = useState<boolean>(true);
   const [darkTheme, setDarkTheme] = useState<boolean>(true);
+  const [snackMessage, setSnackMessage] = useState<string | null>(null);
 
   return (
     <AndroidMobileLayout>
-      <MD3TopAppBar title="Settings" subtitle="App & Device Preferences" />
+      <TopAppBar title="Settings" subtitle="App & Device Preferences" />
 
       <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
         {/* Preference Controls */}
-        <MD3Card variant="filled" style={{ padding: "4px 0" }}>
-          <MD3ListItem
+        <MaterialCard variant="filled" style={{ padding: "4px 0" }}>
+          <ListItem
             leading="🔔"
             headline="Daily Reminders"
             supportingText="Receive gentle CBT check-in notifications"
@@ -35,7 +38,7 @@ export default function AndroidSettings() {
                 checked={notifications}
                 onChange={(e) => {
                   setNotifications(e.target.checked);
-                  toast.success(e.target.checked ? "Notifications enabled" : "Notifications disabled");
+                  setSnackMessage(e.target.checked ? "Notifications enabled" : "Notifications disabled");
                 }}
                 style={{ accentColor: "#22c55e", width: "20px", height: "20px" }}
               />
@@ -43,7 +46,7 @@ export default function AndroidSettings() {
             divider
           />
 
-          <MD3ListItem
+          <ListItem
             leading="📳"
             headline="Haptic Feedback"
             supportingText="Vibrate on tap & touch interactions"
@@ -60,7 +63,7 @@ export default function AndroidSettings() {
             divider
           />
 
-          <MD3ListItem
+          <ListItem
             leading="🌙"
             headline="Dark Mode"
             supportingText="Optimized for OLED displays"
@@ -73,20 +76,19 @@ export default function AndroidSettings() {
               />
             }
           />
-        </MD3Card>
+        </MaterialCard>
 
         {/* App Version Info */}
-        <MD3Card variant="elevated" style={{ textAlign: "center", padding: "20px" }}>
+        <MaterialCard variant="elevated" style={{ textAlign: "center", padding: "20px" }}>
           <div style={{ fontSize: "28px", marginBottom: "8px" }}>📱</div>
           <div style={{ fontSize: "16px", fontWeight: 700, color: "#e8edf5" }}>Sera Android Native App</div>
-          <div style={{ fontSize: "12px", color: "#8b95a7", marginTop: "2px" }}>Version 2.4.0 (Material Design 3 Build)</div>
+          <div style={{ fontSize: "12px", color: "#8b95a7", marginTop: "2px" }}>Version 2.4.0 (Material Design 3 Architecture)</div>
           <div style={{ fontSize: "11px", color: "#4ade80", marginTop: "8px", fontWeight: 600 }}>
             Capacitor Native Engine Active
           </div>
-        </MD3Card>
+        </MaterialCard>
 
-        <MD3Button
-          variant="outlined"
+        <OutlinedButton
           fullWidth
           onClick={async () => {
             await signOut();
@@ -95,7 +97,15 @@ export default function AndroidSettings() {
           style={{ borderColor: "rgba(239, 68, 68, 0.4)", color: "#ef4444" }}
         >
           Sign Out
-        </MD3Button>
+        </OutlinedButton>
+
+        {snackMessage && (
+          <SnackBar
+            message={snackMessage}
+            actionLabel="OK"
+            onAction={() => setSnackMessage(null)}
+          />
+        )}
       </div>
     </AndroidMobileLayout>
   );
