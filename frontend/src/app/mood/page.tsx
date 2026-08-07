@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidMood from "@/components/mobile/AndroidMood";
 import Sidebar from "@/components/Sidebar";
 import MobileHeader from "@/components/MobileHeader";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -36,6 +38,11 @@ const MOOD_OPTIONS = [
 export default function MoodTrackerPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidMood />;
+  }
   const [entries, setEntries] = useState<MoodEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
