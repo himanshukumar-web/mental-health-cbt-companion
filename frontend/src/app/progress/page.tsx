@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidProgress from "@/components/mobile/AndroidProgress";
 import Sidebar from "@/components/Sidebar";
 import MobileHeader from "@/components/MobileHeader";
 import CalendarHeatmap from "@/components/CalendarHeatmap";
@@ -16,6 +18,11 @@ import { API_URL } from "@/lib/config";
 export default function ProgressHubPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidProgress />;
+  }
 
   const [totalXP, setTotalXP] = useState(0);
   const [level, setLevel] = useState(1);
