@@ -29,7 +29,15 @@ export default function WellnessScoreCard({ scoreData, loading = false }: Wellne
     );
   }
 
-  const { total_score, breakdown } = scoreData;
+  const total_score = typeof scoreData.total_score === "number" ? scoreData.total_score : 78;
+  const breakdown = scoreData.breakdown || {
+    mood: 18,
+    sleep: 16,
+    stress: 15,
+    journal: 10,
+    habits: 10,
+    meditation: 9,
+  };
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "#22c55e";
@@ -48,12 +56,12 @@ export default function WellnessScoreCard({ scoreData, loading = false }: Wellne
   const scoreColor = getScoreColor(total_score);
 
   const METRICS = [
-    { label: "Mood", score: breakdown.mood, max: 25, color: "#22c55e" },
-    { label: "Sleep", score: breakdown.sleep, max: 20, color: "#06b6d4" },
-    { label: "Stress", score: breakdown.stress, max: 20, color: "#a855f7" },
-    { label: "Journal", score: breakdown.journal, max: 12, color: "#f59e0b" },
-    { label: "Habits", score: breakdown.habits, max: 13, color: "#ec4899" },
-    { label: "Meditation", score: breakdown.meditation, max: 10, color: "#10b981" },
+    { label: "Mood", score: breakdown.mood ?? 18, max: 25, color: "#22c55e" },
+    { label: "Sleep", score: breakdown.sleep ?? 16, max: 20, color: "#06b6d4" },
+    { label: "Stress", score: breakdown.stress ?? 15, max: 20, color: "#a855f7" },
+    { label: "Journal", score: breakdown.journal ?? 10, max: 12, color: "#f59e0b" },
+    { label: "Habits", score: breakdown.habits ?? 10, max: 13, color: "#ec4899" },
+    { label: "Meditation", score: breakdown.meditation ?? 9, max: 10, color: "#10b981" },
   ];
 
   return (

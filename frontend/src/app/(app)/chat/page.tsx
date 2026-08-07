@@ -220,6 +220,12 @@ function ChatPageInner() {
 }
 
 export default function ChatPage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidChat />;
+  }
+
   return (
     <Suspense fallback={
       <div style={{
