@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidProfile from "@/components/mobile/AndroidProfile";
 import Sidebar from "@/components/Sidebar";
 import MobileHeader from "@/components/MobileHeader";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -15,6 +17,11 @@ import { API_URL } from "@/lib/config";
 export default function ProfilePage() {
   const { user, userRole, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidProfile />;
+  }
 
   const [displayName, setDisplayName] = useState("");
   const [age, setAge] = useState<number | "">("");

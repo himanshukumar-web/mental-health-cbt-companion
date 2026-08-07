@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidSettings from "@/components/mobile/AndroidSettings";
 import Sidebar from "@/components/Sidebar";
 import MobileHeader from "@/components/MobileHeader";
 // import ThemeSelector from "@/components/ThemeSelector";
@@ -22,6 +24,11 @@ const LANGUAGES = [
 export default function SettingsPage() {
   const { user, loading: authLoading, theme, setTheme } = useAuth();
   const router = useRouter();
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidSettings />;
+  }
 
   const [language, setLanguage] = useState("en");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
