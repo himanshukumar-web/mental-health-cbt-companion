@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidJournal from "@/components/mobile/AndroidJournal";
 import Sidebar from "@/components/Sidebar";
 import MobileHeader from "@/components/MobileHeader";
 // import VoiceController from "@/components/VoiceController";
@@ -36,6 +38,11 @@ const SENTIMENT_COLORS: Record<string, { bg: string; text: string; icon: string 
 export default function JournalPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidJournal />;
+  }
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
