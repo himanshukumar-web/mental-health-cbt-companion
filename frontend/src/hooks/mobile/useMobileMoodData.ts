@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback } from "react";
+import { useMoodStore } from "@/stores/useMoodStore";
 import { API_URL } from "@/lib/config";
 import toast from "react-hot-toast";
 
 export function useMobileMoodData(userId?: string) {
-  const [moodEntries, setMoodEntries] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const { moodEntries, latestMood, loading, setMoodEntries, addMoodEntry, setLoading } = useMoodStore();
 
   const fetchMoodEntries = useCallback(async () => {
     if (!userId) {
@@ -25,13 +25,13 @@ export function useMobileMoodData(userId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, setMoodEntries, setLoading]);
 
   useEffect(() => {
     fetchMoodEntries();
   }, [fetchMoodEntries]);
 
-  const addMoodEntry = async (entry: {
+  const addMood = async (entry: {
     mood_score: number;
     mood_emoji: string;
     stress_level?: number;
@@ -50,6 +50,7 @@ export function useMobileMoodData(userId?: string) {
       });
       if (res.ok) {
         toast.success("Mood check-in saved! 🎉");
+        addMoodEntry(entry);
         fetchMoodEntries();
         return true;
       } else {
@@ -62,13 +63,11 @@ export function useMobileMoodData(userId?: string) {
     }
   };
 
-  const latestMood = moodEntries[0] || null;
-
   return {
     moodEntries,
     latestMood,
     loading,
     refetch: fetchMoodEntries,
-    addMoodEntry,
+    addMoodEntry: addMood,
   };
 }

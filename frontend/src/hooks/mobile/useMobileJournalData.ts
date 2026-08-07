@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback } from "react";
+import { useJournalStore } from "@/stores/useJournalStore";
 import { API_URL } from "@/lib/config";
 import toast from "react-hot-toast";
 
 export function useMobileJournalData(userId?: string) {
-  const [entries, setEntries] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const { entries, searchQuery, loading, setEntries, addEntry, setSearchQuery, setLoading } = useJournalStore();
 
   const fetchJournalEntries = useCallback(async () => {
     if (!userId) {
@@ -25,7 +25,7 @@ export function useMobileJournalData(userId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, setEntries, setLoading]);
 
   useEffect(() => {
     fetchJournalEntries();
@@ -45,6 +45,7 @@ export function useMobileJournalData(userId?: string) {
       });
       if (res.ok) {
         toast.success("Journal entry saved! 📝");
+        addEntry({ title: title.trim(), content: content.trim(), created_at: new Date().toISOString() });
         fetchJournalEntries();
         return true;
       } else {
@@ -59,6 +60,8 @@ export function useMobileJournalData(userId?: string) {
 
   return {
     entries,
+    searchQuery,
+    setSearchQuery,
     loading,
     refetch: fetchJournalEntries,
     createJournalEntry,

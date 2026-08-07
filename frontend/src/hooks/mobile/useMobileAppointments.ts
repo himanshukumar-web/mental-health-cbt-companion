@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback } from "react";
+import { useAppointmentStore } from "@/stores/useAppointmentStore";
 import { API_URL } from "@/lib/config";
 import toast from "react-hot-toast";
 
 export function useMobileAppointments(userId?: string) {
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const { appointments, doctors, selectedDoctor, loading, setAppointments, setDoctors, setSelectedDoctor, addAppointment, setLoading } = useAppointmentStore();
 
   const fetchAppointments = useCallback(async () => {
     if (!userId) {
@@ -25,7 +25,7 @@ export function useMobileAppointments(userId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, setAppointments, setLoading]);
 
   useEffect(() => {
     fetchAppointments();
@@ -48,6 +48,7 @@ export function useMobileAppointments(userId?: string) {
       });
       if (res.ok) {
         toast.success("Appointment booked successfully! 📅");
+        addAppointment(booking);
         fetchAppointments();
         return true;
       } else {
@@ -62,6 +63,9 @@ export function useMobileAppointments(userId?: string) {
 
   return {
     appointments,
+    doctors,
+    selectedDoctor,
+    setSelectedDoctor,
     loading,
     refetch: fetchAppointments,
     bookAppointment,
