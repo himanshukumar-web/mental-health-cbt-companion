@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useWebSocket, ChatMessage } from "@/hooks/useWebSocket";
+import { useWebSocket } from "@/hooks/useWebSocket";
 import { usePersona } from "@/hooks/usePersona";
 import AndroidMobileLayout from "./AndroidMobileLayout";
 import VoiceController from "@/components/VoiceController";
@@ -47,7 +47,7 @@ export default function AndroidChat() {
   };
 
   return (
-    <AndroidMobileLayout hasBottomNav={true} style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+    <AndroidMobileLayout hasBottomNav={true} style={{ display: "flex", flexDirection: "column", height: "100dvh", overflow: "hidden" }}>
       {/* Compact Android Chat Top Bar */}
       <div
         style={{
@@ -56,11 +56,13 @@ export default function AndroidChat() {
           zIndex: 1000,
           background: "rgba(11, 15, 26, 0.95)",
           backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
           borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-          padding: "calc(10px + env(safe-area-inset-top, 0px)) 16px 10px 16px",
+          padding: "calc(12px + env(safe-area-inset-top, 24px)) 16px 12px 16px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          flexShrink: 0,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -73,7 +75,7 @@ export default function AndroidChat() {
               background: "rgba(34, 197, 94, 0.12)",
               border: "1px solid rgba(34, 197, 94, 0.25)",
               borderRadius: "100px",
-              padding: "6px 12px",
+              padding: "6px 14px",
               color: "#4ade80",
               fontSize: "13px",
               fontWeight: 600,
@@ -137,6 +139,7 @@ export default function AndroidChat() {
             display: "flex",
             gap: "8px",
             overflowX: "auto",
+            flexShrink: 0,
           }}
         >
           {personas.map((p) => (
@@ -168,7 +171,7 @@ export default function AndroidChat() {
         </div>
       )}
 
-      {/* ChatGPT Style Message List */}
+      {/* Scrollable Message List */}
       <div
         style={{
           flex: 1,
@@ -301,7 +304,7 @@ export default function AndroidChat() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Sticky Bottom Composer */}
+      {/* Sticky Bottom Composer Above Bottom Navigation */}
       <div
         style={{
           position: "sticky",
@@ -313,6 +316,7 @@ export default function AndroidChat() {
           display: "flex",
           alignItems: "center",
           gap: "8px",
+          flexShrink: 0,
         }}
       >
         <div
@@ -331,6 +335,7 @@ export default function AndroidChat() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            onFocus={(e) => e.target.scrollIntoView({ behavior: "smooth", block: "center" })}
             placeholder="Type your message..."
             style={{
               flex: 1,
