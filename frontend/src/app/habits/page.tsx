@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidHabits from "@/components/mobile/AndroidHabits";
 import Sidebar from "@/components/Sidebar";
 import MobileHeader from "@/components/MobileHeader";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -17,6 +19,11 @@ interface Streaks { [habitId: string]: { current: number; longest: number } }
 export default function HabitsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidHabits />;
+  }
   const [habits, setHabits] = useState<HabitDef[]>([]);
   const [completions, setCompletions] = useState<HabitCompletion[]>([]);
   const [streaks, setStreaks] = useState<Streaks>({});
