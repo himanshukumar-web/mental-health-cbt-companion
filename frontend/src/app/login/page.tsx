@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidAuth from "@/components/mobile/AndroidAuth";
 
 const TAGLINES = [
   "A safe space to think clearly.",
@@ -357,6 +359,7 @@ function AuthPageInner() {
   const { user, userRole, loading } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
+  const isAndroid = useIsAndroid();
   const [mode, setMode] = useState<"login" | "signup">(
     params.get("mode") === "signup" ? "signup" : "login"
   );
@@ -372,6 +375,10 @@ function AuthPageInner() {
       }
     }
   }, [user, userRole, loading, router]);
+
+  if (isAndroid) {
+    return <AndroidAuth initialMode={mode} />;
+  }
 
   const leaves = [
     { x: "8%", y: "12%", size: 40, opacity: 0.15, rotate: 20 },
