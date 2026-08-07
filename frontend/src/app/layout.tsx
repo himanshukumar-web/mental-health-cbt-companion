@@ -5,6 +5,8 @@ import InstallPrompt from "@/components/InstallPrompt";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import ToastProvider from "@/components/ui/ToastProvider";
 import Script from "next/script";
+import BackendPrewarmer from "@/components/BackendPrewarmer";
+import AndroidNativeHandler from "@/components/AndroidNativeHandler";
 
 export const metadata: Metadata = {
   title: "Sera — CBT Companion",
@@ -35,10 +37,6 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-import BackendPrewarmer from "@/components/BackendPrewarmer";
-import MobileBottomNav from "@/components/MobileBottomNav";
-import AndroidNativeHandler from "@/components/AndroidNativeHandler";
-
 export default function RootLayout({
   children,
 }: {
@@ -66,7 +64,6 @@ export default function RootLayout({
             <BackendPrewarmer />
             <ToastProvider />
             {children}
-            <MobileBottomNav />
             <InstallPrompt />
           </AuthProvider>
         </ErrorBoundary>
