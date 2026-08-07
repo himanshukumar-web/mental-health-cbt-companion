@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { memo } from "react";
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: "elevated" | "filled" | "outlined";
@@ -8,7 +8,7 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
 }
 
-export function MaterialCard({
+export const MaterialCard = memo(function MaterialCard({
   variant = "filled",
   clickable = false,
   children,
@@ -48,9 +48,10 @@ export function MaterialCard({
         borderRadius: "20px",
         padding: "16px 20px",
         cursor: clickable || onClick ? "pointer" : "default",
-        transition: "transform 0.15s ease, background 0.2s ease, border-color 0.2s ease",
+        transform: "translateZ(0)",
         WebkitTapHighlightColor: "transparent",
         touchAction: "manipulation",
+        contain: "content",
         ...getVariantStyles(),
         ...style,
       }}
@@ -59,9 +60,9 @@ export function MaterialCard({
       {children}
     </div>
   );
-}
+});
 
-export function SectionCard({
+export const SectionCard = memo(function SectionCard({
   title,
   subtitle,
   children,
@@ -84,9 +85,9 @@ export function SectionCard({
       {children}
     </div>
   );
-}
+});
 
-export function MoodCard({
+export const MoodCard = memo(function MoodCard({
   emoji,
   score,
   label,
@@ -115,9 +116,9 @@ export function MoodCard({
       {date && <span style={{ fontSize: "11px", color: "#8b95a7" }}>{date}</span>}
     </MaterialCard>
   );
-}
+});
 
-export function JournalCard({
+export const JournalCard = memo(function JournalCard({
   title,
   content,
   date,
@@ -139,9 +140,9 @@ export function JournalCard({
       </p>
     </MaterialCard>
   );
-}
+});
 
-export function TherapistCard({
+export const TherapistCard = memo(function TherapistCard({
   name,
   title,
   specialty,
@@ -200,9 +201,9 @@ export function TherapistCard({
       )}
     </MaterialCard>
   );
-}
+});
 
-export function QuickActionCard({
+export const QuickActionCard = memo(function QuickActionCard({
   icon,
   title,
   subtitle,
@@ -249,9 +250,9 @@ export function QuickActionCard({
       </div>
     </MaterialCard>
   );
-}
+});
 
-export function StatCard({
+export const StatCard = memo(function StatCard({
   label,
   value,
   subtext,
@@ -274,4 +275,4 @@ export function StatCard({
       {subtext && <span style={{ fontSize: "11px", color: "#8b95a7" }}>{subtext}</span>}
     </MaterialCard>
   );
-}
+});

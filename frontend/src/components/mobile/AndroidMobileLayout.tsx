@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { memo } from "react";
 
 interface AndroidMobileLayoutProps {
   children: React.ReactNode;
@@ -9,7 +9,7 @@ interface AndroidMobileLayoutProps {
   style?: React.CSSProperties;
 }
 
-export default function AndroidMobileLayout({
+export default memo(function AndroidMobileLayout({
   children,
   hasBottomNav = true,
   className = "",
@@ -32,11 +32,13 @@ export default function AndroidMobileLayout({
           ? "calc(80px + env(safe-area-inset-bottom, 0px))"
           : "env(safe-area-inset-bottom, 0px)",
         boxSizing: "border-box",
+        transform: "translateZ(0)",
+        WebkitOverflowScrolling: "touch",
         ...style,
       }}
     >
       <style>{`
-        /* Native Android Scrollbar & Tap behavior */
+        /* Native Android 60 FPS Hardware Acceleration & Smooth Scroll */
         .android-mobile-root * {
           -webkit-tap-highlight-color: transparent;
           box-sizing: border-box;
@@ -44,14 +46,28 @@ export default function AndroidMobileLayout({
         .android-mobile-root {
           -webkit-user-select: none;
           user-select: none;
+          -webkit-font-smoothing: antialiased;
+          text-rendering: optimizeLegibility;
         }
         .android-mobile-root input,
         .android-mobile-root textarea {
           -webkit-user-select: text;
           user-select: text;
         }
+        @keyframes md3Spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes md3Shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        @keyframes md3SlideUp {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
       `}</style>
       {children}
     </div>
   );
-}
+});

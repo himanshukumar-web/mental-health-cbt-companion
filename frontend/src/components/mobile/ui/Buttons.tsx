@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { memo } from "react";
 
 interface BaseButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean;
@@ -9,7 +9,7 @@ interface BaseButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> 
   children?: React.ReactNode;
 }
 
-export function PrimaryButton({
+export const PrimaryButton = memo(function PrimaryButton({
   fullWidth = false,
   loading = false,
   icon,
@@ -39,10 +39,11 @@ export function PrimaryButton({
         cursor: disabled || loading ? "not-allowed" : "pointer",
         opacity: disabled ? 0.5 : 1,
         boxShadow: "0 4px 14px rgba(34, 197, 94, 0.3)",
-        transition: "all 0.2s cubic-bezier(0.2, 0, 0, 1)",
+        transform: "translateZ(0)",
         WebkitTapHighlightColor: "transparent",
         touchAction: "manipulation",
         fontFamily: "inherit",
+        willChange: "transform, opacity",
         ...style,
       }}
       {...props}
@@ -51,9 +52,9 @@ export function PrimaryButton({
       {children && <span>{children}</span>}
     </button>
   );
-}
+});
 
-export function SecondaryButton({
+export const SecondaryButton = memo(function SecondaryButton({
   fullWidth = false,
   loading = false,
   icon,
@@ -82,10 +83,11 @@ export function SecondaryButton({
         width: fullWidth ? "100%" : "auto",
         cursor: disabled || loading ? "not-allowed" : "pointer",
         opacity: disabled ? 0.5 : 1,
-        transition: "all 0.2s cubic-bezier(0.2, 0, 0, 1)",
+        transform: "translateZ(0)",
         WebkitTapHighlightColor: "transparent",
         touchAction: "manipulation",
         fontFamily: "inherit",
+        willChange: "transform, opacity",
         ...style,
       }}
       {...props}
@@ -94,9 +96,9 @@ export function SecondaryButton({
       {children && <span>{children}</span>}
     </button>
   );
-}
+});
 
-export function OutlinedButton({
+export const OutlinedButton = memo(function OutlinedButton({
   fullWidth = false,
   loading = false,
   icon,
@@ -125,10 +127,11 @@ export function OutlinedButton({
         width: fullWidth ? "100%" : "auto",
         cursor: disabled || loading ? "not-allowed" : "pointer",
         opacity: disabled ? 0.5 : 1,
-        transition: "all 0.2s cubic-bezier(0.2, 0, 0, 1)",
+        transform: "translateZ(0)",
         WebkitTapHighlightColor: "transparent",
         touchAction: "manipulation",
         fontFamily: "inherit",
+        willChange: "transform, opacity",
         ...style,
       }}
       {...props}
@@ -137,9 +140,9 @@ export function OutlinedButton({
       {children && <span>{children}</span>}
     </button>
   );
-}
+});
 
-export function DangerButton({
+export const DangerButton = memo(function DangerButton({
   fullWidth = false,
   loading = false,
   icon,
@@ -167,9 +170,10 @@ export function DangerButton({
         width: fullWidth ? "100%" : "auto",
         cursor: disabled || loading ? "not-allowed" : "pointer",
         opacity: disabled ? 0.5 : 1,
-        transition: "all 0.2s cubic-bezier(0.2, 0, 0, 1)",
+        transform: "translateZ(0)",
         WebkitTapHighlightColor: "transparent",
         fontFamily: "inherit",
+        willChange: "transform, opacity",
         ...style,
       }}
       {...props}
@@ -178,9 +182,9 @@ export function DangerButton({
       {children && <span>{children}</span>}
     </button>
   );
-}
+});
 
-export function IconButton({
+export const IconButton = memo(function IconButton({
   icon,
   style,
   disabled,
@@ -204,9 +208,10 @@ export function IconButton({
         justifyContent: "center",
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.5 : 1,
-        transition: "all 0.15s ease",
+        transform: "translateZ(0)",
         WebkitTapHighlightColor: "transparent",
         flexShrink: 0,
+        willChange: "transform, opacity",
         ...style,
       }}
       {...props}
@@ -214,9 +219,9 @@ export function IconButton({
       {icon}
     </button>
   );
-}
+});
 
-export function FAB({
+export const FAB = memo(function FAB({
   icon = "✏️",
   label,
   style,
@@ -243,9 +248,10 @@ export function FAB({
         fontWeight: 700,
         boxShadow: "0 8px 24px rgba(34, 197, 94, 0.35)",
         cursor: "pointer",
-        transition: "transform 0.15s ease, boxShadow 0.15s ease",
+        transform: "translateZ(0)",
         WebkitTapHighlightColor: "transparent",
         fontFamily: "inherit",
+        willChange: "transform, opacity",
         ...style,
       }}
       {...props}
@@ -254,9 +260,9 @@ export function FAB({
       {label && <span>{label}</span>}
     </button>
   );
-}
+});
 
-function Spinner({ color = "#ffffff" }: { color?: string }) {
+const Spinner = memo(function Spinner({ color = "#ffffff" }: { color?: string }) {
   return (
     <span
       style={{
@@ -270,4 +276,4 @@ function Spinner({ color = "#ffffff" }: { color?: string }) {
       }}
     />
   );
-}
+});
