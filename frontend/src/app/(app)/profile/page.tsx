@@ -14,14 +14,9 @@ import toast from "react-hot-toast";
 
 import { API_URL } from "@/lib/config";
 
-export default function ProfilePage() {
+function DesktopProfileView() {
   const { user, userRole, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
-  const isAndroid = useIsAndroid();
-
-  if (isAndroid) {
-    return <AndroidProfile />;
-  }
 
   const [displayName, setDisplayName] = useState("");
   const [age, setAge] = useState<number | "">("");
@@ -125,7 +120,6 @@ export default function ProfilePage() {
       <main className="app-main-layout" style={{ padding: "24px 20px", maxWidth: 800, overflow: "auto" }}>
         <MobileHeader title="User Profile" />
 
-        {/* Profile Card Header */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -165,7 +159,6 @@ export default function ProfilePage() {
           </div>
         </motion.div>
 
-        {/* Quick Menu Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 28 }}>
           {PROFILE_MENU.map((item) => (
             <Link key={item.href} href={item.href} style={{ textDecoration: "none" }}>
@@ -206,7 +199,6 @@ export default function ProfilePage() {
           ))}
         </div>
 
-        {/* Profile Details Card */}
         <div
           style={{
             padding: 24,
@@ -309,7 +301,6 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        {/* Logout Button Card */}
         <button
           onClick={handleSignOut}
           style={{
@@ -329,4 +320,14 @@ export default function ProfilePage() {
       </main>
     </div>
   );
+}
+
+export default function ProfilePage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidProfile />;
+  }
+
+  return <DesktopProfileView />;
 }

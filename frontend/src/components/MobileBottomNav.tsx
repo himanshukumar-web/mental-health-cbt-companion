@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAndroid } from "@/hooks/useIsAndroid";
 
@@ -108,9 +107,7 @@ export default function MobileBottomNav() {
               }}
             >
               {isActive && (
-                <motion.div
-                  layoutId="androidNavActiveCapsule"
-                  transition={{ type: "spring", stiffness: 450, damping: 32 }}
+                <div
                   style={{
                     position: "absolute",
                     inset: 0,
@@ -122,13 +119,18 @@ export default function MobileBottomNav() {
                   }}
                 />
               )}
-              <motion.span
-                animate={{ scale: isActive ? 1.15 : 1 }}
-                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                style={{ fontSize: "20px", zIndex: 1, display: "flex", alignItems: "center" }}
+              <span
+                style={{
+                  fontSize: "20px",
+                  zIndex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  transform: isActive ? "scale(1.15)" : "scale(1)",
+                  transition: "transform 0.2s ease",
+                }}
               >
                 {item.icon}
-              </motion.span>
+              </span>
             </div>
 
             {/* Label */}

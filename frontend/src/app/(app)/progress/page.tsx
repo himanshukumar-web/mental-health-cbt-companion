@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,17 +12,11 @@ import CalendarHeatmap from "@/components/CalendarHeatmap";
 import type { HeatmapDay } from "@/types/heatmap";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import { motion } from "framer-motion";
-
 import { API_URL } from "@/lib/config";
 
-export default function ProgressHubPage() {
+function DesktopProgressView() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const isAndroid = useIsAndroid();
-
-  if (isAndroid) {
-    return <AndroidProgress />;
-  }
 
   const [totalXP, setTotalXP] = useState(0);
   const [level, setLevel] = useState(1);
@@ -136,7 +130,6 @@ export default function ProgressHubPage() {
       <main className="app-main-layout" style={{ padding: "24px 20px", maxWidth: 960, overflow: "auto" }}>
         <MobileHeader title="Progress Hub" />
 
-        {/* Header */}
         <div style={{ marginBottom: 24 }}>
           <span style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#3b82f6", letterSpacing: "0.08em" }}>
             Progress & Insights Hub
@@ -149,7 +142,6 @@ export default function ProgressHubPage() {
           </p>
         </div>
 
-        {/* Quick Stats Overview Banner */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -180,7 +172,6 @@ export default function ProgressHubPage() {
           </div>
         </motion.div>
 
-        {/* Activity Heatmap Overview */}
         <div style={{ marginBottom: 28 }}>
           <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 12, fontFamily: "var(--font-display)" }}>
             📅 90-Day Mindful Consistency
@@ -188,7 +179,6 @@ export default function ProgressHubPage() {
           <CalendarHeatmap data={heatmapData} onDayClick={() => router.push("/timeline")} />
         </div>
 
-        {/* Module Hub Cards */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", margin: 0, fontFamily: "var(--font-display)" }}>
             ⚡ Progress Modules
@@ -257,4 +247,14 @@ export default function ProgressHubPage() {
       </main>
     </div>
   );
+}
+
+export default function ProgressHubPage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidProgress />;
+  }
+
+  return <DesktopProgressView />;
 }

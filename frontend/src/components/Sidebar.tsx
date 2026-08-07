@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeSelector from "@/components/ThemeSelector";
 import GlobalSearch from "@/components/GlobalSearch";
-import { motion } from "framer-motion";
 
 interface NavGroup {
   category: string;
@@ -252,8 +251,7 @@ export default function Sidebar() {
                   )}
 
                   {isActive && (
-                    <motion.div
-                      layoutId="activeSideDot"
+                    <div
                       style={{
                         position: "absolute",
                         left: -16,

@@ -16,14 +16,10 @@ interface HabitDef { id: string; name: string; icon: string; color: string; }
 interface HabitCompletion { habit_definition_id: string; date: string; }
 interface Streaks { [habitId: string]: { current: number; longest: number } }
 
-export default function HabitsPage() {
+function DesktopHabitsView() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const isAndroid = useIsAndroid();
 
-  if (isAndroid) {
-    return <AndroidHabits />;
-  }
   const [habits, setHabits] = useState<HabitDef[]>([]);
   const [completions, setCompletions] = useState<HabitCompletion[]>([]);
   const [streaks, setStreaks] = useState<Streaks>({});
@@ -62,7 +58,6 @@ export default function HabitsPage() {
   const toggleHabit = async (habitId: string) => {
     if (!user) return;
     const completed = !isCompleted(habitId, today);
-    // Optimistic update
     if (completed) {
       setCompletions(prev => [...prev, { habit_definition_id: habitId, date: today }]);
     } else {
@@ -77,7 +72,7 @@ export default function HabitsPage() {
       if (completed) toast.success("Habit completed! 🎉", { duration: 2000 });
       fetchData();
     } catch {
-      fetchData(); // Revert on error
+      fetchData();
     }
   };
 
@@ -85,7 +80,6 @@ export default function HabitsPage() {
   const todayTotal = habits.length;
   const completionPct = todayTotal > 0 ? Math.round((todayCompleted / todayTotal) * 100) : 0;
 
-  // Last 7 days
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
@@ -115,7 +109,6 @@ export default function HabitsPage() {
           </p>
         </div>
 
-        {/* Progress Ring */}
         <div style={{
           padding: "24px", borderRadius: 20,
           background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
@@ -151,7 +144,6 @@ export default function HabitsPage() {
           </div>
         </div>
 
-        {/* Today&apos;s Habits */}
         <div style={{ marginBottom: 32 }}>
           <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>
             Today&apos;s Habits
@@ -209,7 +201,6 @@ export default function HabitsPage() {
           </div>
         </div>
 
-        {/* Weekly View */}
         <div>
           <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>
             This Week
@@ -268,4 +259,14 @@ export default function HabitsPage() {
       </main>
     </div>
   );
+}
+
+export default function HabitsPage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidHabits />;
+  }
+
+  return <DesktopHabitsView />;
 }

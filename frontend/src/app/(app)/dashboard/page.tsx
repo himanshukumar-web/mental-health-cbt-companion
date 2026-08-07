@@ -19,7 +19,6 @@ import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import Link from "next/link";
 import { PersonalizedInsight } from "@/types/persona";
 import { motion } from "framer-motion";
-
 import { API_URL } from "@/lib/config";
 
 interface MoodEntry {
@@ -57,14 +56,9 @@ const MINDFUL_QUOTES = [
   { text: "Small steps every day lead to profound emotional healing.", author: "Sera CBT" },
 ];
 
-export default function DashboardPage() {
+function DesktopDashboardView() {
   const { user, userRole, loading: authLoading } = useAuth();
   const router = useRouter();
-  const isAndroid = useIsAndroid();
-
-  if (isAndroid) {
-    return <AndroidDashboard />;
-  }
 
   const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([]);
   const [journalCount, setJournalCount] = useState(0);
@@ -75,7 +69,6 @@ export default function DashboardPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Daily Mindful Goals state
   const [habitsDone, setHabitsDone] = useState<{ [key: string]: boolean }>({
     meditation: false,
     journal: false,
@@ -92,7 +85,6 @@ export default function DashboardPage() {
     if (!authLoading && !user) router.replace("/login");
   }, [user, authLoading, router]);
 
-  // Determine time-of-day greeting
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return { text: "Good Morning", icon: "🌅" };
@@ -128,10 +120,6 @@ export default function DashboardPage() {
         const jList = json.journal_entries || [];
         setJournalCount(jList.length);
         if (jList.length > 0) setHabitsDone((prev) => ({ ...prev, journal: true }));
-      }
-      if (cbtRes.status === "fulfilled" && cbtRes.value.ok) {
-        // const json = await cbtRes.value.json();
-        // setCbtCount((json.worksheets || []).length);
       }
       if (xpRes.status === "fulfilled" && xpRes.value.ok) {
         const json = await xpRes.value.json();
@@ -206,10 +194,8 @@ export default function DashboardPage() {
           @media (max-width: 1100px) { .desktop-right-sidebar-container { display: none !important; } }
         `}</style>
 
-        {/* Main Left Content */}
         <main style={{ flex: 1, minWidth: 0 }}>
           <MobileHeader title="Dashboard" />
-          {/* Header & Patient Quick Nav Bar */}
           <div
             style={{
               display: "flex",
@@ -242,7 +228,6 @@ export default function DashboardPage() {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              {/* XP & Level Badge */}
               <Link
                 href="/achievements"
                 style={{
@@ -262,7 +247,6 @@ export default function DashboardPage() {
                 🏆 Lvl {userLevel} ({userXP} XP)
               </Link>
 
-              {/* Streak Badge */}
               <div
                 style={{
                   padding: "8px 14px",
@@ -280,12 +264,10 @@ export default function DashboardPage() {
                 🔥 {streakDays}-Day Streak
               </div>
 
-              {/* Patient Notifications */}
               <PatientNotificationBell userId={user.id} />
             </div>
           </div>
 
-          {/* Daily Mindfulness Quote Banner */}
           <div
             style={{
               padding: "16px 20px",
@@ -326,7 +308,6 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {/* Role-Specific Appointment Banner */}
           {userRole === "admin" ? (
             <div
               style={{
@@ -427,7 +408,6 @@ export default function DashboardPage() {
             )
           )}
 
-          {/* Quick Actions Grid */}
           <div style={{ marginBottom: 24 }}>
             <h3 style={{ fontSize: 16, fontWeight: 800, color: "var(--text-primary)", marginBottom: 12, fontFamily: "var(--font-display)" }}>
               Quick Wellness Actions ⚡
@@ -463,7 +443,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* 1-Tap Quick Mood Check-In Widget */}
           <div style={{ marginBottom: 24 }}>
             <QuickMoodLogger
               userId={user.id}
@@ -474,7 +453,6 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Main 2-Column Hero Grid: AI Therapy Companion + Habits Checklist */}
           <div
             style={{
               display: "grid",
@@ -483,7 +461,6 @@ export default function DashboardPage() {
               marginBottom: 24,
             }}
           >
-            {/* AI Therapy Companion Launch Card */}
             <div
               style={{
                 padding: 24,
@@ -566,7 +543,6 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            {/* Daily Mindful Goals / Habits Checklist */}
             <div
               style={{
                 padding: 24,
@@ -604,7 +580,6 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Habit Checklist */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {[
                     { key: "meditation", icon: "🧘", label: "5-min Meditation", path: "/meditation" },
@@ -679,12 +654,10 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* AI Wellness Score Engine Card */}
           <div style={{ marginBottom: 24 }}>
             <WellnessScoreCard scoreData={currentScore} loading={scoreLoading} />
           </div>
 
-          {/* Therapeutic Persona Switcher */}
           <div
             style={{
               padding: 20,
@@ -703,13 +676,11 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Personalized AI Insights Chart */}
           <div style={{ marginBottom: 24 }}>
             <InsightChartCard insights={insights} />
           </div>
         </main>
 
-        {/* Desktop Right Sidebar */}
         <div className="desktop-right-sidebar-container">
           <DesktopRightSidebar
             moodEntries={moodEntries}
@@ -722,4 +693,14 @@ export default function DashboardPage() {
       </div>
     </div>
   );
+}
+
+export default function DashboardPage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidDashboard />;
+  }
+
+  return <DesktopDashboardView />;
 }

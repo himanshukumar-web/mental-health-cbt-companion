@@ -26,19 +26,14 @@ const TIME_SLOTS = [
   "04:00 PM", "04:30 PM", "05:00 PM", "05:30 PM",
 ];
 
-export default function BookAppointmentPage() {
+function DesktopAppointmentsView() {
   const { user, userRole, loading } = useAuth();
   const router = useRouter();
-  const isAndroid = useIsAndroid();
 
-  if (isAndroid) {
-    return <AndroidAppointments />;
-  }
   const [step, setStep] = useState(1);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
 
-  // Form state
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
@@ -63,7 +58,6 @@ export default function BookAppointmentPage() {
     }
   }, [user, userRole, loading, router]);
 
-  // Fetch doctors
   useEffect(() => {
     (async () => {
       try {
@@ -77,7 +71,6 @@ export default function BookAppointmentPage() {
     })();
   }, []);
 
-  // Generate next 14 days
   const dates = Array.from({ length: 14 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i + 1);
@@ -189,10 +182,8 @@ export default function BookAppointmentPage() {
         @keyframes scaleIn { from { transform: scale(0.9); opacity:0; } to { transform: scale(1); opacity:1; } }
       `}</style>
 
-      {/* Background */}
       <div style={{ position: "absolute", top: "5%", right: "5%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(34,197,94,0.04) 0%, transparent 70%)", pointerEvents: "none" }} />
 
-      {/* Navbar */}
       <nav style={{
         maxWidth: 900, margin: "0 auto", padding: isMobile ? "16px 0" : "24px 0",
         display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -215,7 +206,6 @@ export default function BookAppointmentPage() {
       </nav>
 
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        {/* Title */}
         <div style={{ textAlign: "center", marginBottom: isMobile ? 24 : 40, animation: "fadeIn 0.5s ease" }}>
           <h1 style={{
             fontFamily: "var(--font-display)", fontSize: "clamp(22px, 4vw, 36px)",
@@ -228,7 +218,6 @@ export default function BookAppointmentPage() {
           </p>
         </div>
 
-        {/* Progress Steps */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "center",
           gap: 0, marginBottom: 40, animation: "fadeIn 0.5s ease 0.1s both",
@@ -267,7 +256,6 @@ export default function BookAppointmentPage() {
           ))}
         </div>
 
-        {/* Step 1: Select Doctor */}
         {step === 1 && (
           <div style={{ animation: "fadeIn 0.4s ease" }}>
             {loadingDoctors ? (
@@ -337,7 +325,6 @@ export default function BookAppointmentPage() {
                           ⭐ {doc.experience_years}+ years experience
                         </div>
                         
-                        {/* Direct action buttons */}
                         <div style={{ display: "flex", gap: 10, width: "100%" }}>
                           <button
                             onClick={() => { setSelectedDoctor(doc); setStep(2); }}
@@ -362,7 +349,6 @@ export default function BookAppointmentPage() {
           </div>
         )}
 
-        {/* Step 2: Date & Time */}
         {step === 2 && (
           <div style={{ animation: "fadeIn 0.4s ease" }}>
             <div style={{
@@ -371,7 +357,6 @@ export default function BookAppointmentPage() {
               border: "0.5px solid var(--border-secondary)",
               marginBottom: 24,
             }}>
-              {/* Selected doctor badge */}
               <div style={{
                 display: "flex", alignItems: "center", gap: 12,
                 padding: "12px 16px", borderRadius: 12,
@@ -396,7 +381,6 @@ export default function BookAppointmentPage() {
                 }}>Change</button>
               </div>
 
-              {/* Date picker */}
               <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)", marginBottom: 16 }}>
                 Select Date
               </h3>
@@ -437,7 +421,6 @@ export default function BookAppointmentPage() {
                 })}
               </div>
 
-              {/* Time slots */}
               <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)", marginBottom: 16 }}>
                 Select Time Slot
               </h3>
@@ -468,7 +451,6 @@ export default function BookAppointmentPage() {
               </div>
             </div>
 
-            {/* Notes */}
             <div style={{
               padding: "24px", borderRadius: 16,
               background: "var(--bg-glass)", border: "0.5px solid var(--border-secondary)",
@@ -491,7 +473,6 @@ export default function BookAppointmentPage() {
               />
             </div>
 
-            {/* Actions */}
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <button onClick={() => setStep(1)} style={{
                 padding: "12px 24px", borderRadius: 12,
@@ -515,7 +496,6 @@ export default function BookAppointmentPage() {
           </div>
         )}
 
-        {/* Step 3: Confirm */}
         {step === 3 && (
           <div style={{ animation: "fadeIn 0.4s ease", maxWidth: 560, margin: "0 auto" }}>
             <div style={{
@@ -532,7 +512,6 @@ export default function BookAppointmentPage() {
                 Please review your appointment details
               </p>
 
-              {/* Details */}
               <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 28 }}>
                 {[
                   { icon: "🩺", label: "Doctor", value: `Dr. ${selectedDoctor?.full_name}` },
@@ -556,7 +535,6 @@ export default function BookAppointmentPage() {
                 ))}
               </div>
 
-              {/* Action buttons */}
               <div style={{ display: "flex", gap: 12 }}>
                 <button onClick={() => setStep(2)} style={{
                   flex: 1, padding: "14px", borderRadius: 12,
@@ -591,4 +569,14 @@ export default function BookAppointmentPage() {
       </div>
     </div>
   );
+}
+
+export default function BookAppointmentPage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidAppointments />;
+  }
+
+  return <DesktopAppointmentsView />;
 }

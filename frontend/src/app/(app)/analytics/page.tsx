@@ -36,14 +36,10 @@ interface MoodEntry {
   water_intake: number | null;
 }
 
-export default function AnalyticsPage() {
+function DesktopAnalyticsView() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const isAndroid = useIsAndroid();
 
-  if (isAndroid) {
-    return <AndroidAnalytics />;
-  }
   const [data, setData] = useState<MoodEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeframe, setTimeframe] = useState<"7d" | "30d" | "all">("30d");
@@ -111,7 +107,6 @@ export default function AnalyticsPage() {
       <main className="app-main-layout" style={{ padding: "24px 20px", maxWidth: 1120, overflow: "auto" }}>
         <MobileHeader title="Analytics & Insights" />
 
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 16 }}>
           <div>
             <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(24px, 4vw, 32px)", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
@@ -162,7 +157,6 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Top Metric Cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 28 }}>
           <div style={{ padding: 20, borderRadius: 18, background: "var(--bg-glass)", border: "1px solid var(--border-secondary)" }}>
             <div style={{ fontSize: 12, color: "var(--text-tertiary)", fontWeight: 600 }}>Average Mood</div>
@@ -181,7 +175,6 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Heatmap Section */}
         <div style={{ marginBottom: 28 }}>
           <CalendarHeatmap
             data={heatmapData}
@@ -190,7 +183,6 @@ export default function AnalyticsPage() {
           />
         </div>
 
-        {/* Chart 1: Mood Score Progression + AI Insight */}
         <div style={{ padding: 24, borderRadius: 20, background: "var(--bg-glass)", backdropFilter: "blur(16px)", border: "1px solid var(--border-secondary)", marginBottom: 28 }}>
           <h3 style={{ fontSize: 17, fontWeight: 800, color: "var(--text-primary)", margin: "0 0 16px", fontFamily: "var(--font-display)" }}>
             📈 Mood Score & Emotional Stability
@@ -213,7 +205,6 @@ export default function AnalyticsPage() {
             </ResponsiveContainer>
           </div>
 
-          {/* AI Insight Box */}
           <div
             style={{
               marginTop: 16,
@@ -238,7 +229,6 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Chart 2: Sleep vs Stress Correlation + AI Insight */}
         <div style={{ padding: 24, borderRadius: 20, background: "var(--bg-glass)", backdropFilter: "blur(16px)", border: "1px solid var(--border-secondary)", marginBottom: 28 }}>
           <h3 style={{ fontSize: 17, fontWeight: 800, color: "var(--text-primary)", margin: "0 0 16px", fontFamily: "var(--font-display)" }}>
             🌙 Sleep Hours vs Stress Levels
@@ -257,7 +247,6 @@ export default function AnalyticsPage() {
             </ResponsiveContainer>
           </div>
 
-          {/* AI Insight Box */}
           <div
             style={{
               marginTop: 16,
@@ -282,14 +271,12 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Day Details Modal */}
         <DayDetailsModal
           details={selectedDayDetails}
           onClose={clearDayDetails}
           loading={modalLoading}
         />
 
-        {/* Export Modal */}
         <ExportModal
           isOpen={exportOpen}
           onClose={() => setExportOpen(false)}
@@ -298,4 +285,14 @@ export default function AnalyticsPage() {
       </main>
     </div>
   );
+}
+
+export default function AnalyticsPage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidAnalytics />;
+  }
+
+  return <DesktopAnalyticsView />;
 }

@@ -7,7 +7,6 @@ import { useIsAndroid } from "@/hooks/useIsAndroid";
 import AndroidSettings from "@/components/mobile/AndroidSettings";
 import Sidebar from "@/components/Sidebar";
 import MobileHeader from "@/components/MobileHeader";
-// import ThemeSelector from "@/components/ThemeSelector";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import toast from "react-hot-toast";
 
@@ -21,14 +20,9 @@ const LANGUAGES = [
   { code: "de", label: "German 🇩🇪" },
 ];
 
-export default function SettingsPage() {
+function DesktopSettingsView() {
   const { user, loading: authLoading, theme, setTheme } = useAuth();
   const router = useRouter();
-  const isAndroid = useIsAndroid();
-
-  if (isAndroid) {
-    return <AndroidSettings />;
-  }
 
   const [language, setLanguage] = useState("en");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -161,7 +155,6 @@ export default function SettingsPage() {
       <main className="app-main-layout" style={{ padding: "24px 20px", maxWidth: 800, overflow: "auto" }}>
         <MobileHeader title="Settings & Preferences" />
 
-        {/* Header */}
         <div style={{ marginBottom: 28 }}>
           <h1
             style={{
@@ -179,7 +172,6 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        {/* Appearance & Language Card */}
         <div
           style={{
             padding: "24px",
@@ -201,7 +193,6 @@ export default function SettingsPage() {
             Appearance & Language
           </h2>
 
-          {/* Language Selection */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-tertiary)", display: "block", marginBottom: 6 }}>
               Interface Language
@@ -228,7 +219,6 @@ export default function SettingsPage() {
             </select>
           </div>
 
-          {/* Theme Toggle */}
           <div
             style={{
               display: "flex",
@@ -283,7 +273,6 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        {/* Data Privacy & Account Management */}
         <div
           style={{
             padding: "24px",
@@ -339,7 +328,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Delete Confirmation Modal */}
         {showDeleteModal && (
           <div
             style={{
@@ -428,4 +416,14 @@ export default function SettingsPage() {
       </main>
     </div>
   );
+}
+
+export default function SettingsPage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidSettings />;
+  }
+
+  return <DesktopSettingsView />;
 }

@@ -15,27 +15,30 @@ export default function InstallPrompt() {
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    // Check if already running as PWA
+    // Check if running as native Android app (Capacitor) or PWA standalone
+    if (typeof window !== "undefined") {
+      const isCapacitor = (window as unknown as { Capacitor?: unknown }).Capacitor !== undefined || window.location.protocol === "capacitor:";
+      if (isCapacitor) {
+        setIsStandalone(true);
+        return;
+      }
+    }
+
     const standalone = window.matchMedia("(display-mode: standalone)").matches
       || (navigator as unknown as { standalone?: boolean }).standalone === true;
     const timer = setTimeout(() => setIsStandalone(standalone), 0);
     if (standalone) return () => clearTimeout(timer);
 
-    // Check if user previously dismissed
     const dismissed = localStorage.getItem("sera_install_dismissed");
     if (dismissed) {
       const dismissedAt = parseInt(dismissed, 10);
-      // Show again after 7 days
       if (Date.now() - dismissedAt < 7 * 24 * 60 * 60 * 1000) return;
     }
 
-    // Detect iOS (Safari)
     const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as unknown as { MSStream?: unknown }).MSStream;
     const iosTimer = setTimeout(() => setIsIOS(isIOSDevice), 0);
 
-    // iOS Safari doesn't fire beforeinstallprompt, show manual guide
     if (isIOSDevice) {
-      // Only show if not in standalone mode
       const inSafari = /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS/.test(navigator.userAgent);
       if (inSafari) {
         setTimeout(() => setShowBanner(true), 3000);
@@ -46,7 +49,6 @@ export default function InstallPrompt() {
       };
     }
 
-    // Android / Desktop Chrome — capture the install prompt
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -81,10 +83,8 @@ export default function InstallPrompt() {
     localStorage.setItem("sera_install_dismissed", String(Date.now()));
   }, []);
 
-  // Don't render anything if already installed or banner not shown
   if (isStandalone || !showBanner) return null;
 
-  // iOS instruction modal
   if (showIOSGuide) {
     return (
       <>
@@ -162,7 +162,6 @@ export default function InstallPrompt() {
     );
   }
 
-  // Standard install banner
   return (
     <div style={{
       position: "fixed", bottom: 16, left: 16, right: 16, zIndex: 9999,

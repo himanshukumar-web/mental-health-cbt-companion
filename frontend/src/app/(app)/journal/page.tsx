@@ -7,7 +7,6 @@ import { useIsAndroid } from "@/hooks/useIsAndroid";
 import AndroidJournal from "@/components/mobile/AndroidJournal";
 import Sidebar from "@/components/Sidebar";
 import MobileHeader from "@/components/MobileHeader";
-// import VoiceController from "@/components/VoiceController";
 import EmptyState from "@/components/ui/EmptyState";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import { motion } from "framer-motion";
@@ -35,14 +34,10 @@ const SENTIMENT_COLORS: Record<string, { bg: string; text: string; icon: string 
   mixed: { bg: "rgba(168,85,247,0.12)", text: "#a855f7", icon: "🤔" },
 };
 
-export default function JournalPage() {
+function DesktopJournalView() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const isAndroid = useIsAndroid();
 
-  if (isAndroid) {
-    return <AndroidJournal />;
-  }
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -95,7 +90,6 @@ export default function JournalPage() {
     };
   }
 
-  // Speech-to-text Voice Journaling
   const toggleVoiceRecording = () => {
     if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
       toast.error("Speech recognition is not supported in this browser.");
@@ -144,7 +138,6 @@ export default function JournalPage() {
     }
   };
 
-  // AI Auto-Title Generator
   const generateAiTitle = () => {
     if (!content.trim()) {
       toast.error("Write some content first!");
@@ -263,7 +256,6 @@ export default function JournalPage() {
           </p>
         </div>
 
-        {/* Search & Filter Bar */}
         <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
           <input
             type="text"
@@ -304,7 +296,6 @@ export default function JournalPage() {
           ))}
         </div>
 
-        {/* New Entry CTA */}
         {!showEditor && (
           <motion.button
             whileHover={{ scale: 1.01 }}
@@ -336,7 +327,6 @@ export default function JournalPage() {
           </motion.button>
         )}
 
-        {/* Journal Editor Box */}
         {showEditor && (
           <div
             style={{
@@ -354,7 +344,6 @@ export default function JournalPage() {
               </h2>
 
               <div style={{ display: "flex", gap: 8 }}>
-                {/* Voice Journaling Button */}
                 <button
                   onClick={toggleVoiceRecording}
                   style={{
@@ -371,7 +360,6 @@ export default function JournalPage() {
                   {recording ? "🔴 Stop Recording" : "🎙️ Voice Journal"}
                 </button>
 
-                {/* AI Title Generator */}
                 <button
                   onClick={generateAiTitle}
                   style={{
@@ -472,7 +460,6 @@ export default function JournalPage() {
           </div>
         )}
 
-        {/* Entry List */}
         {entries.length === 0 ? (
           <EmptyState
             icon="📝"
@@ -534,7 +521,6 @@ export default function JournalPage() {
                     {entry.content}
                   </p>
 
-                  {/* AI Summary Box */}
                   {entry.ai_summary && (
                     <div
                       style={{
@@ -551,7 +537,6 @@ export default function JournalPage() {
                     </div>
                   )}
 
-                  {/* Emotion Pills */}
                   {Object.keys(emotionObj).length > 0 && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                       {Object.entries(emotionObj).map(([eName, eScore]) => (
@@ -614,4 +599,14 @@ export default function JournalPage() {
       </main>
     </div>
   );
+}
+
+export default function JournalPage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidJournal />;
+  }
+
+  return <DesktopJournalView />;
 }

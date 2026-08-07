@@ -3,40 +3,56 @@
 import { useState, useEffect } from "react";
 
 export function useIsAndroid() {
-  const [isAndroid, setIsAndroid] = useState<boolean>(false);
-
-  useEffect(() => {
-    const detectAndroid = async () => {
-      // 1. Check URL query override for testing in browser (e.g. ?platform=android or ?mobile=true)
-      if (typeof window !== "undefined") {
-        const search = window.location.search;
-        if (search.includes("platform=android") || search.includes("mobile=true")) {
-          setIsAndroid(true);
-          return;
+  const [isAndroid, setIsAndroid] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const search = window.location.search;
+      if (search.includes("platform=android") || search.includes("mobile=true")) {
+        return true;
+      }
+      if (typeof navigator !== "undefined") {
+        const ua = navigator.userAgent || "";
+        if (/Android/i.test(ua) && (/wv/i.test(ua) || /Capacitor/i.test(ua) || /Android/i.test(ua))) {
+          // If in Capacitor WebView or mobile testing, default to true immediately
+          if (typeof (window as any).Capacitor !== "undefined" || search.includes("platform=android")) {
+            return true;
+          }
         }
       }
+      if (typeof (window as any).Capacitor !== "undefined") {
+        const cap = (window as any).Capacitor;
+        if (cap.isNativePlatform?.() || cap.getPlatform?.() === "android") {
+          return true;
+        }
+      }
+    }
+    return false;
+  });
 
-      // 2. Check Capacitor Native Platform
+  useEffect(() => {
+    let isMounted = true;
+    const detectAndroid = async () => {
       try {
         const { Capacitor } = await import("@capacitor/core");
         if (Capacitor.isNativePlatform() || Capacitor.getPlatform() === "android") {
-          setIsAndroid(true);
+          if (isMounted) setIsAndroid(true);
           return;
         }
       } catch (err) {
         /* Ignore capacitor import error in pure web environments */
       }
 
-      // 3. Optional userAgent check for Android WebView
       if (typeof navigator !== "undefined") {
         const ua = navigator.userAgent || "";
-        if (/Android/i.test(ua) && /wv|Capacitor/i.test(ua)) {
-          setIsAndroid(true);
+        if (/Android/i.test(ua) && (/wv/i.test(ua) || /Capacitor/i.test(ua))) {
+          if (isMounted) setIsAndroid(true);
         }
       }
     };
 
     detectAndroid();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return isAndroid;

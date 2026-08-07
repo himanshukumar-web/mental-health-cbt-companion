@@ -179,7 +179,6 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
 
 function SignupForm({ onSwitch }: { onSwitch: () => void }) {
   const { signUp } = useAuth();
-  // const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -238,7 +237,6 @@ function SignupForm({ onSwitch }: { onSwitch: () => void }) {
         </div>
       )}
 
-      {/* Role toggle */}
       <div style={{ marginBottom: 20 }}>
         <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "#8b95a7", marginBottom: 8, letterSpacing: "0.04em", textTransform: "uppercase" }}>
           I am a
@@ -353,19 +351,21 @@ function SignupForm({ onSwitch }: { onSwitch: () => void }) {
   );
 }
 
-// ── Reads ?mode=signup from URL to pre-select tab ─────────────────────────────
+function AndroidAuthWrapper() {
+  const params = useSearchParams();
+  const initialMode = params.get("mode") === "signup" ? "signup" : "login";
+  return <AndroidAuth initialMode={initialMode} />;
+}
 
-function AuthPageInner() {
+function DesktopAuthInner() {
   const { user, userRole, loading } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
-  const isAndroid = useIsAndroid();
   const [mode, setMode] = useState<"login" | "signup">(
     params.get("mode") === "signup" ? "signup" : "login"
   );
   const [tagline] = useState(() => TAGLINES[Math.floor(Math.random() * TAGLINES.length)]);
 
-  // Already signed in — redirect based on role
   useEffect(() => {
     if (!loading && user) {
       if (userRole) {
@@ -375,10 +375,6 @@ function AuthPageInner() {
       }
     }
   }, [user, userRole, loading, router]);
-
-  if (isAndroid) {
-    return <AndroidAuth initialMode={mode} />;
-  }
 
   const leaves = [
     { x: "8%", y: "12%", size: 40, opacity: 0.15, rotate: 20 },
@@ -406,7 +402,6 @@ function AuthPageInner() {
         }
       `}</style>
 
-      {/* Ambient glow orbs */}
       <div style={{ position: "absolute", top: "10%", left: "15%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(34,197,94,0.06) 0%, transparent 70%)", pointerEvents: "none" }} />
       <div style={{ position: "absolute", bottom: "10%", right: "10%", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(59,130,246,0.04) 0%, transparent 70%)", pointerEvents: "none" }} />
 
@@ -419,14 +414,12 @@ function AuthPageInner() {
         border: "0.5px solid rgba(255,255,255,0.06)",
         animation: "fadeSlide 0.5s ease",
       }}>
-        {/* Left green panel */}
         <div className="login-left-panel" style={{
           width: 340, flexShrink: 0,
           background: "linear-gradient(160deg, #059669 0%, #047857 50%, #065f46 100%)",
           padding: "48px 36px", display: "flex", flexDirection: "column",
           justifyContent: "space-between", position: "relative", overflow: "hidden",
         }}>
-          {/* Decorative circles */}
           <div style={{ position: "absolute", top: -40, right: -40, width: 180, height: 180, borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
           <div style={{ position: "absolute", bottom: -60, left: -40, width: 220, height: 220, borderRadius: "50%", background: "rgba(255,255,255,0.04)" }} />
 
@@ -475,9 +468,7 @@ function AuthPageInner() {
           </p>
         </div>
 
-        {/* Right form panel — DARK */}
         <div className="login-form-panel" style={{ flex: 1, background: "#111827", padding: "48px 40px", overflowY: "auto" }}>
-          {/* Tab switcher */}
           <div style={{ display: "flex", marginBottom: 32, gap: 4, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 4 }}>
             {(["login", "signup"] as const).map(m => (
               <button
@@ -499,7 +490,6 @@ function AuthPageInner() {
             ))}
           </div>
 
-          {/* Animated form swap */}
           <div key={mode} style={{ animation: "fadeSlide 0.3s ease" }}>
             {mode === "login"
               ? <LoginForm onSwitch={() => setMode("signup")} />
@@ -513,9 +503,19 @@ function AuthPageInner() {
 }
 
 export default function LoginPage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return (
+      <Suspense fallback={null}>
+        <AndroidAuthWrapper />
+      </Suspense>
+    );
+  }
+
   return (
-    <Suspense>
-      <AuthPageInner />
+    <Suspense fallback={null}>
+      <DesktopAuthInner />
     </Suspense>
   );
 }

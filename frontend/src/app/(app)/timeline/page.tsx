@@ -15,14 +15,9 @@ import { useTimeline } from "@/hooks/useTimeline";
 import { useHeatmap } from "@/hooks/useHeatmap";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 
-export default function TimelinePage() {
+function DesktopTimelineView() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const isAndroid = useIsAndroid();
-
-  if (isAndroid) {
-    return <AndroidTimeline />;
-  }
 
   const [category, setCategory] = useState<string>("all");
   const [search, setSearch] = useState<string>("");
@@ -47,7 +42,6 @@ export default function TimelinePage() {
       <main className="app-main-layout" style={{ padding: "24px 20px", maxWidth: 1120, overflow: "auto" }}>
         <MobileHeader title="Timeline & Heatmap" />
 
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 16 }}>
           <div>
             <span style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "#22c55e", letterSpacing: "0.08em" }}>
@@ -101,7 +95,6 @@ export default function TimelinePage() {
           </div>
         </div>
 
-        {/* GitHub-style Contribution Heatmap */}
         <div style={{ marginBottom: 28 }}>
           <CalendarHeatmap
             data={heatmapData}
@@ -110,7 +103,6 @@ export default function TimelinePage() {
           />
         </div>
 
-        {/* Timeline Feed */}
         <TimelineFeed
           items={timeline}
           loading={timelineLoading}
@@ -119,14 +111,12 @@ export default function TimelinePage() {
           onOpenExport={() => setExportOpen(true)}
         />
 
-        {/* Day Details Modal */}
         <DayDetailsModal
           details={selectedDayDetails}
           onClose={clearDayDetails}
           loading={modalLoading}
         />
 
-        {/* Export Modal */}
         <ExportModal
           isOpen={exportOpen}
           onClose={() => setExportOpen(false)}
@@ -135,4 +125,14 @@ export default function TimelinePage() {
       </main>
     </div>
   );
+}
+
+export default function TimelinePage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidTimeline />;
+  }
+
+  return <DesktopTimelineView />;
 }

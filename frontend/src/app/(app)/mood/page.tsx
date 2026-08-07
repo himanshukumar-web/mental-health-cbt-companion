@@ -9,7 +9,6 @@ import Sidebar from "@/components/Sidebar";
 import MobileHeader from "@/components/MobileHeader";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import toast from "react-hot-toast";
-
 import { API_URL } from "@/lib/config";
 
 interface MoodEntry {
@@ -35,21 +34,16 @@ const MOOD_OPTIONS = [
   { score: 5, emoji: "😄", label: "Great", color: "#06b6d4" },
 ];
 
-export default function MoodTrackerPage() {
+function DesktopMoodView() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const isAndroid = useIsAndroid();
 
-  if (isAndroid) {
-    return <AndroidMood />;
-  }
   const [entries, setEntries] = useState<MoodEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<MoodEntry | null>(null);
 
-  // Form state
   const [moodScore, setMoodScore] = useState(3);
   const [stressLevel, setStressLevel] = useState(5);
   const [anxietyLevel, setAnxietyLevel] = useState(5);
@@ -175,7 +169,6 @@ export default function MoodTrackerPage() {
           @keyframes popIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
         `}</style>
 
-        {/* Header */}
         <div style={{ marginBottom: 28 }}>
           <h1 style={{
             fontFamily: "var(--font-display)", fontSize: "clamp(24px, 4vw, 32px)",
@@ -188,7 +181,6 @@ export default function MoodTrackerPage() {
           </p>
         </div>
 
-        {/* Today&apos;s Quick Status */}
         {todayEntry && !showForm && (
           <div style={{
             padding: "20px 24px", borderRadius: 16,
@@ -221,7 +213,6 @@ export default function MoodTrackerPage() {
           </div>
         )}
 
-        {/* New Entry Button */}
         {!showForm && (
           <button
             id="new-mood-entry"
@@ -239,7 +230,6 @@ export default function MoodTrackerPage() {
           </button>
         )}
 
-        {/* Form */}
         {showForm && (
           <div style={{
             padding: "28px 24px", borderRadius: 20,
@@ -264,7 +254,6 @@ export default function MoodTrackerPage() {
               >✕</button>
             </div>
 
-            {/* Mood Picker */}
             <div style={{ marginBottom: 28 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "block" }}>
                 Mood
@@ -294,7 +283,6 @@ export default function MoodTrackerPage() {
               </div>
             </div>
 
-            {/* Sliders Grid */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
               <SliderInput label="Stress Level" value={stressLevel} onChange={setStressLevel} max={10} color="#ef4444" icon="🔥" />
               <SliderInput label="Anxiety Level" value={anxietyLevel} onChange={setAnxietyLevel} max={10} color="#f59e0b" icon="😰" />
@@ -303,13 +291,11 @@ export default function MoodTrackerPage() {
               <SliderInput label="Water (glasses)" value={waterIntake} onChange={setWaterIntake} max={15} color="#3b82f6" icon="💧" />
             </div>
 
-            {/* Toggles */}
             <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
               <ToggleChip label="Exercise" emoji="🏃" active={exerciseDone} onToggle={() => setExerciseDone(!exerciseDone)} />
               <ToggleChip label="Meditation" emoji="🧘" active={meditationDone} onToggle={() => setMeditationDone(!meditationDone)} />
             </div>
 
-            {/* Notes */}
             <div style={{ marginBottom: 24 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8, display: "block" }}>
                 Notes (optional)
@@ -329,7 +315,6 @@ export default function MoodTrackerPage() {
               />
             </div>
 
-            {/* Save Button */}
             <button
               id="save-mood"
               onClick={handleSave}
@@ -347,7 +332,6 @@ export default function MoodTrackerPage() {
           </div>
         )}
 
-        {/* History */}
         <div style={{ marginBottom: 16 }}>
           <h2 style={{
             fontSize: 16, fontWeight: 700, color: "var(--text-primary)",
@@ -462,4 +446,14 @@ function ToggleChip({ label, emoji, active, onToggle }: {
       {emoji} {label} {active && "✓"}
     </button>
   );
+}
+
+export default function MoodTrackerPage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidMood />;
+  }
+
+  return <DesktopMoodView />;
 }
