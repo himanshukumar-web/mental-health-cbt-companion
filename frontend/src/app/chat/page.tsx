@@ -4,6 +4,8 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidChat from "@/components/mobile/AndroidChat";
 import ChatWindow from "@/components/ChatWindow";
 import CrisisPanel from "@/components/CrisisPanel";
 import Sidebar from "@/components/Sidebar";
