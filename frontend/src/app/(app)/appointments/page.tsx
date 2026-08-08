@@ -195,7 +195,7 @@ function DesktopAppointmentsView() {
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: isMobile ? 14 : 16, boxShadow: "0 0 20px rgba(34,197,94,0.3)",
           }}>🌿</div>
-          <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: isMobile ? 16 : 18, color: "var(--text-primary)" }}>Sera</span>
+          <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: isMobile ? 16 : 18, color: "var(--text-primary)" }}>MindMate</span>
         </Link>
         <Link href="/" style={{
           padding: isMobile ? "5px 12px" : "7px 16px", borderRadius: 10,

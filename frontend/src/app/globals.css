@@ -542,6 +542,10 @@ button { cursor: pointer; font-family: var(--font-sans); }
 }
 
 @media (max-width: 767px) {
+  .desktop-sidebar {
+    display: none !important;
+  }
+
   .app-main-layout {
     margin-left: 0 !important;
     padding-left: 12px !important;

@@ -11,6 +11,8 @@ import EmptyState from "@/components/ui/EmptyState";
 import { useAssessments } from "@/hooks/useAssessments";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import { motion } from "framer-motion";
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidAssessments from "@/components/mobile/AndroidAssessments";
 import {
   ResponsiveContainer,
   LineChart,
@@ -30,7 +32,7 @@ interface ComparisonResult {
   score_delta: number;
 }
 
-export default function AssessmentsPage() {
+function DesktopAssessmentsView() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -338,4 +340,14 @@ export default function AssessmentsPage() {
       </main>
     </div>
   );
+}
+
+export default function AssessmentsPage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidAssessments />;
+  }
+
+  return <DesktopAssessmentsView />;
 }

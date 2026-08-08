@@ -3,7 +3,7 @@ import { KeyboardResize, KeyboardStyle } from '@capacitor/keyboard';
 
 const config: CapacitorConfig = {
   appId: 'com.sera.app',
-  appName: 'Sera',
+  appName: 'MindMate',
   webDir: 'out',
   plugins: {
     Keyboard: {

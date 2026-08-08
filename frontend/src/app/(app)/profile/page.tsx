@@ -153,7 +153,7 @@ function DesktopProfileView() {
           </div>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", margin: 0, fontFamily: "var(--font-display)" }}>
-              {displayName || "Sera Member"}
+              {displayName || "MindMate Member"}
             </h1>
             <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "2px 0 0" }}>{user.email}</p>
           </div>

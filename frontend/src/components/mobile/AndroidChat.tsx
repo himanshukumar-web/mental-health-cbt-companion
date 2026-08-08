@@ -83,7 +83,7 @@ export default function AndroidChat() {
             }}
           >
             <span>{activePersona?.avatar || "🤖"}</span>
-            <span>{activePersona?.name || "Dr. Sera"}</span>
+            <span>{activePersona?.name || "Dr. MindMate"}</span>
             <span style={{ fontSize: "10px" }}>▼</span>
           </button>
 
@@ -297,7 +297,7 @@ export default function AndroidChat() {
                   animation: "md3Pulse 1s infinite alternate",
                 }}
               />
-              Sera is typing...
+              MindMate is typing...
             </div>
           </div>
         )}

@@ -52,7 +52,7 @@ export function exportReportAsPDF(title: string, contentHtml: string, _filename?
         </style>
       </head>
       <body>
-        <h1>🌿 Sera CBT Companion — ${title}</h1>
+        <h1>🌿 MindMate CBT Companion — ${title}</h1>
         <div>Generated on ${new Date().toLocaleDateString()}</div>
         <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
         ${contentHtml}

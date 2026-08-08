@@ -9,7 +9,7 @@ import BackendPrewarmer from "@/components/BackendPrewarmer";
 import AndroidNativeHandler from "@/components/AndroidNativeHandler";
 
 export const metadata: Metadata = {
-  title: "Sera — CBT Companion",
+  title: "MindMate — CBT Companion",
   description:
     "A compassionate, evidence-based CBT companion powered by multi-agent AI. Talk through your thoughts, feelings, and challenges in a safe, private space.",
   keywords: ["CBT", "mental health", "therapy companion", "AI", "cognitive behavioral therapy"],
@@ -17,10 +17,10 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Sera",
+    title: "MindMate",
   },
   openGraph: {
-    title: "Sera — Your CBT Companion",
+    title: "MindMate — Your CBT Companion",
     description: "Evidence-based mental health support powered by multi-agent AI.",
     type: "website",
   },

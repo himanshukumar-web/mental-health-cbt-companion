@@ -7,6 +7,8 @@ import Sidebar from "@/components/Sidebar";
 import MobileHeader from "@/components/MobileHeader";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import toast from "react-hot-toast";
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidCBT from "@/components/mobile/AndroidCBT";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -23,7 +25,7 @@ interface CBTWorksheet {
   created_at: string;
 }
 
-export default function CBTPage() {
+function DesktopCBTView() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [worksheets, setWorksheets] = useState<CBTWorksheet[]>([]);
@@ -547,4 +549,14 @@ export default function CBTPage() {
       </main>
     </div>
   );
+}
+
+export default function CBTPage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidCBT />;
+  }
+
+  return <DesktopCBTView />;
 }

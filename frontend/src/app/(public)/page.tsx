@@ -20,7 +20,7 @@ const FEATURES = [
   {
     icon: "📝",
     title: "AI-Powered Journal",
-    desc: "Write freely while Sera automatically analyzes sentiment, emotional tones, and key insights.",
+    desc: "Write freely while MindMate automatically analyzes sentiment, emotional tones, and key insights.",
   },
   {
     icon: "✅",
@@ -106,7 +106,7 @@ export default function LandingPage() {
           <div style={{ display: "flex", alignItems: "center", gap: "var(--logo-gap, 10px)" }}>
             <Link href="/" style={{ display: "flex", alignItems: "center", gap: "var(--logo-gap, 10px)" }}>
               <div className="nav-logo-icon">🌿</div>
-              <span className="nav-logo-text">Sera</span>
+              <span className="nav-logo-text">MindMate</span>
             </Link>
             <ThemeSelector />
           </div>
@@ -298,7 +298,7 @@ export default function LandingPage() {
           borderTop: "0.5px solid var(--border-tertiary)",
           fontSize: 12, color: "var(--text-tertiary)",
         }}>
-          Sera is not a licensed therapist. In crisis? Call iCall: 9152987821 (India)
+          MindMate is not a licensed therapist. In crisis? Call iCall: 9152987821 (India)
         </footer>
       </div>
     </main>

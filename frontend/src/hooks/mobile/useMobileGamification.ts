@@ -18,8 +18,19 @@ export function useMobileGamification(userId?: string) {
       const res = await fetch(`${API_URL}/gamification/xp/${userId}`);
       if (res.ok) {
         const json = await res.json();
-        setXp(json.xp || 350);
-        setLevel(json.level || 3);
+        if (json.xp && typeof json.xp === "object") {
+          setXp(Number(json.xp.total_xp ?? json.xp.xp ?? 350));
+          setLevel(Number(json.xp.level ?? 3));
+        } else if (typeof json.xp === "number") {
+          setXp(json.xp);
+          setLevel(Number(json.level ?? 3));
+        } else if (typeof json.total_xp === "number") {
+          setXp(json.total_xp);
+          setLevel(Number(json.level ?? 3));
+        } else {
+          setXp(350);
+          setLevel(3);
+        }
       }
     } catch (err) {
       console.error("Error fetching gamification XP:", err);

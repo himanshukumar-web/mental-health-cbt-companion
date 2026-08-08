@@ -28,7 +28,7 @@ const DAILY_QUOTES = [
 ];
 
 const QUICK_ACTIONS = [
-  { icon: "🤖", title: "AI Therapy", subtitle: "Talk with Sera", href: "/chat", bg: "rgba(34, 197, 94, 0.15)", border: "rgba(34, 197, 94, 0.3)" },
+  { icon: "🤖", title: "AI Therapy", subtitle: "Talk with MindMate", href: "/chat", bg: "rgba(34, 197, 94, 0.15)", border: "rgba(34, 197, 94, 0.3)" },
   { icon: "🎭", title: "Log Mood", subtitle: "Track emotions", href: "/mood", bg: "rgba(245, 158, 11, 0.15)", border: "rgba(245, 158, 11, 0.3)" },
   { icon: "📝", title: "Voice Journal", subtitle: "Daily reflection", href: "/journal", bg: "rgba(236, 72, 153, 0.15)", border: "rgba(236, 72, 153, 0.3)" },
   { icon: "🧘", title: "Meditation", subtitle: "Calm your mind", href: "/meditation", bg: "rgba(16, 185, 129, 0.15)", border: "rgba(16, 185, 129, 0.3)" },
@@ -47,6 +47,9 @@ export default function AndroidDashboard() {
   const { entries: journalEntries } = useMobileJournalData(user?.id);
   const { currentScore } = useWellnessScore(user?.id);
   const { activePersona } = usePersona(user?.id);
+
+  const safeXp = typeof xp === "number" ? xp : typeof xp === "object" && xp !== null ? Number((xp as any).total_xp ?? 0) : 350;
+  const safeLevel = typeof level === "number" ? level : typeof level === "object" && level !== null ? Number((level as any).level ?? 1) : 3;
 
   const greetingInfo = getGreeting();
   const overallScore = typeof currentScore === "object" && currentScore !== null ? (currentScore as any).overall_score ?? 78 : typeof currentScore === "number" ? currentScore : 78;
@@ -209,7 +212,7 @@ export default function AndroidDashboard() {
                   }}
                 />
                 <span style={{ fontSize: "12px", color: "#4ade80", fontWeight: 700, letterSpacing: "0.04em" }}>
-                  {activePersona?.name || "Dr. Sera"} is Online
+                  {activePersona?.name || "Dr. MindMate"} is Online
                 </span>
               </div>
               <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#ffffff", margin: 0, letterSpacing: "-0.02em" }}>
@@ -306,7 +309,7 @@ export default function AndroidDashboard() {
                 {overallScore} <span style={{ fontSize: "12px", color: "#8b95a7" }}>/100</span>
               </div>
               <div style={{ fontSize: "11px", color: "#e8edf5", opacity: 0.8 }}>
-                Guided by {activePersona?.name || "Sera"}
+                Guided by {activePersona?.name || "MindMate"}
               </div>
             </MaterialCard>
 
@@ -316,10 +319,10 @@ export default function AndroidDashboard() {
                 GAMIFICATION
               </div>
               <div style={{ fontSize: "28px", fontWeight: 800, color: "#fbbf24", margin: "4px 0" }}>
-                Lvl {level}
+                Lvl {safeLevel}
               </div>
               <div style={{ fontSize: "11px", color: "#8b95a7" }}>
-                {xp} XP Earned
+                {safeXp} XP Earned
               </div>
             </MaterialCard>
           </div>

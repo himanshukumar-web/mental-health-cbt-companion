@@ -136,7 +136,7 @@ export default function Sidebar() {
         </div>
         <div>
           <div style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-display)", letterSpacing: "-0.02em" }}>
-            Sera CBT
+            MindMate CBT
           </div>
           <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
             AI Companion

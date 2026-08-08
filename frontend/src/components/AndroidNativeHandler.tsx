@@ -56,20 +56,16 @@ export default function AndroidNativeHandler() {
         appListener = await App.addListener("backButton", ({ canGoBack }) => {
           const path = window.location.pathname;
 
-          // Inside AI Chat -> Go to Dashboard
-          if (path === "/chat") {
-            router.push("/dashboard");
-            return;
-          }
+          // Critical top-level pages -> Press twice to exit
+          const isTopLevel = ["/dashboard", "/login", "/"].includes(path);
 
-          // On Dashboard or Login -> Press back twice to exit
-          if (path === "/dashboard" || path === "/login" || path === "/") {
+          if (isTopLevel) {
             const now = Date.now();
             if (now - lastBackPressRef.current < 2000) {
               App.exitApp();
             } else {
               lastBackPressRef.current = now;
-              toast("Press back again to exit Sera", {
+              toast("Press back again to exit MindMate", {
                 icon: "👋",
                 duration: 2000,
                 id: "exit-toast",
@@ -78,7 +74,13 @@ export default function AndroidNativeHandler() {
             return;
           }
 
-          // Subpages -> Go back
+          // Special case: AI Chat -> Go back to Dashboard
+          if (path === "/chat") {
+            router.push("/dashboard");
+            return;
+          }
+
+          // Navigate back
           if (canGoBack) {
             router.back();
           } else {

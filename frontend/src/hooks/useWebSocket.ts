@@ -80,7 +80,7 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
     connectionError: null,
   });
 
-  const defaultGreeting = activeGreeting || "Hi, I'm Sera — your CBT companion. 🌿 This is a safe space to talk through whatever's on your mind. I use evidence-based CBT techniques to help you explore your thoughts and feelings. How are you doing today?";
+  const defaultGreeting = activeGreeting || "Hi, I'm MindMate — your CBT companion. 🌿 This is a safe space to talk through whatever's on your mind. I use evidence-based CBT techniques to help you explore your thoughts and feelings. How are you doing today?";
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {

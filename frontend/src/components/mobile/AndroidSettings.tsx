@@ -81,7 +81,7 @@ export default function AndroidSettings() {
         {/* App Version Info */}
         <MaterialCard variant="elevated" style={{ textAlign: "center", padding: "20px" }}>
           <div style={{ fontSize: "28px", marginBottom: "8px" }}>📱</div>
-          <div style={{ fontSize: "16px", fontWeight: 700, color: "#e8edf5" }}>Sera Android Native App</div>
+          <div style={{ fontSize: "16px", fontWeight: 700, color: "#e8edf5" }}>MindMate Android Native App</div>
           <div style={{ fontSize: "12px", color: "#8b95a7", marginTop: "2px" }}>Version 2.4.0 (Material Design 3 Architecture)</div>
           <div style={{ fontSize: "11px", color: "#4ade80", marginTop: "8px", fontWeight: 600 }}>
             Capacitor Native Engine Active

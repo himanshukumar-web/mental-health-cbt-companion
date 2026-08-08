@@ -7,10 +7,12 @@ import Sidebar from "@/components/Sidebar";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import { requestNotificationPermission, scheduleSmartReminders } from "@/utils/notifications";
 import toast from "react-hot-toast";
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidReminders from "@/components/mobile/AndroidReminders";
 
 import { API_URL } from "@/lib/config";
 
-export default function RemindersPage() {
+function DesktopRemindersView() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -394,4 +396,14 @@ export default function RemindersPage() {
       </main>
     </div>
   );
+}
+
+export default function RemindersPage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidReminders />;
+  }
+
+  return <DesktopRemindersView />;
 }

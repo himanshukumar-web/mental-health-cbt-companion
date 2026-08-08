@@ -82,7 +82,7 @@ export default function AndroidAnalytics() {
         {/* Insight Highlights */}
         <MD3Card variant="filled" style={{ borderLeft: "4px solid #22c55e" }}>
           <div style={{ fontSize: "14px", fontWeight: 700, color: "#e8edf5", marginBottom: "4px" }}>
-            💡 Sera Insight
+            💡 MindMate Insight
           </div>
           <p style={{ fontSize: "13px", color: "#8b95a7", margin: 0, lineHeight: 1.5 }}>
             Your highest mood scores occur on days you complete morning meditation and sleep 7+ hours.

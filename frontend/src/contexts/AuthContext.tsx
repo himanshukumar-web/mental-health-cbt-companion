@@ -54,8 +54,28 @@ const AuthContext = createContext<AuthContextValue>({
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<UserRole>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("sera_auth_user");
+        if (cached) return JSON.parse(cached);
+      } catch {
+        /* ignore */
+      }
+    }
+    return null;
+  });
+  const [userRole, setUserRole] = useState<UserRole>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const role = localStorage.getItem("sera_auth_role") as UserRole;
+        if (role) return role;
+      } catch {
+        /* ignore */
+      }
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(true);
   const [theme, setThemeState] = useState<AppTheme>("default");
 
@@ -103,8 +123,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Initial session
     supabase.auth.getSession().then(({ data }) => {
       const u = data.session?.user ?? null;
-      setUser(u);
-      setUserRole((u?.user_metadata?.role as UserRole) ?? null);
+      if (u) {
+        setUser(u);
+        const r = (u?.user_metadata?.role as UserRole) ?? "user";
+        setUserRole(r);
+        try {
+          localStorage.setItem("sera_auth_user", JSON.stringify(u));
+          localStorage.setItem("sera_auth_role", r);
+        } catch {
+          /* ignore */
+        }
+      }
+      setLoading(false);
+    }).catch(() => {
       setLoading(false);
     });
 
@@ -112,7 +143,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       const u = session?.user ?? null;
       setUser(u);
-      setUserRole((u?.user_metadata?.role as UserRole) ?? null);
+      const r = (u?.user_metadata?.role as UserRole) ?? null;
+      setUserRole(r);
+      if (u) {
+        try {
+          localStorage.setItem("sera_auth_user", JSON.stringify(u));
+          if (r) localStorage.setItem("sera_auth_role", r);
+        } catch {
+          /* ignore */
+        }
+      } else {
+        try {
+          localStorage.removeItem("sera_auth_user");
+          localStorage.removeItem("sera_auth_role");
+        } catch {
+          /* ignore */
+        }
+      }
     });
 
     return () => listener.subscription.unsubscribe();
@@ -126,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ? `${window.location.origin}/role-select`
       : undefined;
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -134,18 +181,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         emailRedirectTo,
       },
     });
+    if (data.user) {
+      setUser(data.user);
+      setUserRole(role);
+      try {
+        localStorage.setItem("sera_auth_user", JSON.stringify(data.user));
+        localStorage.setItem("sera_auth_role", role);
+      } catch {
+        /* ignore */
+      }
+    }
     return error?.message ?? null;
   }, []);
 
   const signIn = useCallback(async (email: string, password: string): Promise<string | null> => {
     if (!supabase) return "Supabase is not configured.";
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (data?.user) {
+      setUser(data.user);
+      const r = (data.user?.user_metadata?.role as UserRole) ?? "user";
+      setUserRole(r);
+      try {
+        localStorage.setItem("sera_auth_user", JSON.stringify(data.user));
+        localStorage.setItem("sera_auth_role", r);
+      } catch {
+        /* ignore */
+      }
+    }
     return error?.message ?? null;
   }, []);
 
   const signOut = useCallback(async () => {
-    await supabase?.auth.signOut();
+    try {
+      localStorage.removeItem("sera_auth_user");
+      localStorage.removeItem("sera_auth_role");
+    } catch {
+      /* ignore */
+    }
+    setUser(null);
     setUserRole(null);
+    await supabase?.auth.signOut();
   }, []);
 
   const updateRole = useCallback(async (role: "user" | "admin"): Promise<string | null> => {
@@ -155,6 +230,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     if (error) return error.message;
     setUserRole(role);
+    try {
+      localStorage.setItem("sera_auth_role", role);
+    } catch {
+      /* ignore */
+    }
     return null;
   }, []);
 

@@ -252,7 +252,7 @@ function DesktopJournalView() {
             AI Reflective Journal 📝
           </h1>
           <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: "4px 0 0" }}>
-            Write or speak your thoughts freely — Sera performs automated sentiment, cognitive, and emotion breakdown.
+            Write or speak your thoughts freely — MindMate performs automated sentiment, cognitive, and emotion breakdown.
           </p>
         </div>
 
@@ -533,7 +533,7 @@ function DesktopJournalView() {
                         lineHeight: 1.5,
                       }}
                     >
-                      <strong style={{ color: "#a855f7" }}>✨ Sera AI Summary:</strong> {entry.ai_summary}
+                      <strong style={{ color: "#a855f7" }}>✨ MindMate AI Summary:</strong> {entry.ai_summary}
                     </div>
                   )}
 
@@ -552,7 +552,7 @@ function DesktopJournalView() {
                             fontWeight: 600,
                           }}
                         >
-                          {eName}: {Math.round(eScore * 100)}%
+                          {eName}: {typeof eScore === "number" ? Math.round(eScore * (eScore <= 1 ? 100 : 1)) : String(eScore)}%
                         </span>
                       ))}
                     </div>

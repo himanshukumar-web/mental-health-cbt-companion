@@ -8,6 +8,9 @@ import MobileHeader from "@/components/MobileHeader";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import toast from "react-hot-toast";
 
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidBreathing from "@/components/mobile/AndroidBreathing";
+
 import { API_URL } from "@/lib/config";
 
 interface BreathingTechnique {
@@ -58,7 +61,7 @@ const BREATHING_TECHNIQUES: BreathingTechnique[] = [
   },
 ];
 
-export default function BreathingPage() {
+function DesktopBreathingView() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -398,4 +401,14 @@ export default function BreathingPage() {
       </main>
     </div>
   );
+}
+
+export default function BreathingPage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidBreathing />;
+  }
+
+  return <DesktopBreathingView />;
 }

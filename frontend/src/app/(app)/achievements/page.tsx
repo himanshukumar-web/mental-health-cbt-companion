@@ -9,6 +9,8 @@ import DailyChallengesCard from "@/components/DailyChallengesCard";
 import { useChallenges } from "@/hooks/useChallenges";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import { motion } from "framer-motion";
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidProgress from "@/components/mobile/AndroidProgress";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -28,7 +30,7 @@ const WEEKLY_CHALLENGES = [
   { id: "w3", title: "Complete 1 CBT Thought Record", reward: "50 XP", current: 1, max: 1, color: "#06b6d4" },
 ];
 
-export default function AchievementsPage() {
+function DesktopAchievementsView() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -58,8 +60,8 @@ export default function AchievementsPage() {
 
       if (xpRes.ok) {
         const json = await xpRes.json();
-        xp = json.xp?.total_xp || 0;
-        lvl = json.xp?.level || 1;
+        xp = typeof json.xp === "object" && json.xp !== null ? Number(json.xp.total_xp ?? json.xp.xp ?? 0) : typeof json.xp === "number" ? json.xp : 0;
+        lvl = typeof json.xp === "object" && json.xp !== null ? Number(json.xp.level ?? 1) : typeof json.level === "number" ? json.level : 1;
         setTotalXP(xp);
         setLevel(lvl);
       }
@@ -367,4 +369,14 @@ export default function AchievementsPage() {
       </main>
     </div>
   );
+}
+
+export default function AchievementsPage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidProgress />;
+  }
+
+  return <DesktopAchievementsView />;
 }

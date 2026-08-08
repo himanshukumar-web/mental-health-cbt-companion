@@ -9,18 +9,15 @@ export function useIsAndroid() {
       if (search.includes("platform=android") || search.includes("mobile=true")) {
         return true;
       }
-      if (typeof navigator !== "undefined") {
-        const ua = navigator.userAgent || "";
-        if (/Android/i.test(ua) && (/wv/i.test(ua) || /Capacitor/i.test(ua) || /Android/i.test(ua))) {
-          // If in Capacitor WebView or mobile testing, default to true immediately
-          if (typeof (window as any).Capacitor !== "undefined" || search.includes("platform=android")) {
-            return true;
-          }
-        }
-      }
       if (typeof (window as any).Capacitor !== "undefined") {
         const cap = (window as any).Capacitor;
-        if (cap.isNativePlatform?.() || cap.getPlatform?.() === "android") {
+        if (cap.isNativePlatform?.() || cap.getPlatform?.() === "android" || cap.platform === "android") {
+          return true;
+        }
+      }
+      if (typeof navigator !== "undefined") {
+        const ua = navigator.userAgent || "";
+        if (/Android/i.test(ua) || /wv/i.test(ua) || /Capacitor/i.test(ua)) {
           return true;
         }
       }
@@ -37,13 +34,13 @@ export function useIsAndroid() {
           if (isMounted) setIsAndroid(true);
           return;
         }
-      } catch (err) {
+      } catch {
         /* Ignore capacitor import error in pure web environments */
       }
 
       if (typeof navigator !== "undefined") {
         const ua = navigator.userAgent || "";
-        if (/Android/i.test(ua) && (/wv/i.test(ua) || /Capacitor/i.test(ua))) {
+        if (/Android/i.test(ua) || /wv/i.test(ua) || /Capacitor/i.test(ua)) {
           if (isMounted) setIsAndroid(true);
         }
       }

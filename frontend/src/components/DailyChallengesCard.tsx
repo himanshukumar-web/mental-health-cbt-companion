@@ -76,10 +76,10 @@ export default function DailyChallengesCard({
           <span style={{ fontSize: 20 }}>🔥</span>
           <div>
             <div style={{ fontSize: 14, fontWeight: 800, color: "#f59e0b" }}>
-              {streak.current_streak} Day Streak
+              {typeof streak?.current_streak === "number" ? streak.current_streak : 0} Day Streak
             </div>
             <div style={{ fontSize: 10, color: "var(--text-tertiary)" }}>
-              Best: {streak.longest_streak} days
+              Best: {typeof streak?.longest_streak === "number" ? streak.longest_streak : 0} days
             </div>
           </div>
         </div>

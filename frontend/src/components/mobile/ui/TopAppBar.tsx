@@ -24,7 +24,15 @@ export function MD3TopAppBar({
     if (onBack) {
       onBack();
     } else {
-      router.back();
+      try {
+        if (typeof window !== "undefined" && window.history.length > 1) {
+          router.back();
+        } else {
+          router.push("/dashboard");
+        }
+      } catch {
+        router.push("/dashboard");
+      }
     }
   };
 

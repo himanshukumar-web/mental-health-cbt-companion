@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidWellness from "@/components/mobile/AndroidWellness";
 import Sidebar from "@/components/Sidebar";
 import MobileHeader from "@/components/MobileHeader";
 import WellnessPanel from "@/components/WellnessPanel";
@@ -13,7 +15,7 @@ import { motion } from "framer-motion";
 
 import { API_URL } from "@/lib/config";
 
-export default function WellnessHubPage() {
+function DesktopWellnessView() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -225,3 +227,14 @@ export default function WellnessHubPage() {
     </div>
   );
 }
+
+export default function WellnessHubPage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidWellness />;
+  }
+
+  return <DesktopWellnessView />;
+}
+

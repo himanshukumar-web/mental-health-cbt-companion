@@ -14,6 +14,7 @@ import {
   Badge,
   LoadingSkeleton,
 } from "./ui";
+import toast from "react-hot-toast";
 
 const MOCK_DOCTORS = [
   { id: "doc1", name: "Dr. Sarah Jenkins", title: "Licensed Clinical Psychologist", specialty: "Anxiety & CBT", rating: "4.9 ⭐", avatar: "🩺" },
@@ -45,6 +46,7 @@ export default function AndroidAppointments() {
     });
     if (success) {
       setSelectedDoctor(null);
+      toast.success("Appointment scheduled successfully! 🎉");
     }
     setSubmitting(false);
   };

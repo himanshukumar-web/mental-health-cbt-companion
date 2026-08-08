@@ -890,7 +890,7 @@ export default function ChatWindow({
                         {isUser
                           ? msg.content
                           : renderMarkdown(
-                              index === 0 && msg.content.includes("Hi, I'm Sera") && activePersona.greeting
+                              index === 0 && (msg.content.includes("Hi, I'm MindMate") || msg.content.includes("Hi, I'm Sera")) && activePersona.greeting
                                 ? activePersona.greeting
                                 : msg.content
                             )}

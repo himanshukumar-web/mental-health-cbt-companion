@@ -18,6 +18,11 @@ export default function AndroidProgress() {
   const { user } = useAuth();
   const { xp, level, nextLevelXp, progressPercent, loading } = useMobileGamification(user?.id);
 
+  const safeXp = typeof xp === "number" ? xp : typeof xp === "object" && xp !== null ? Number((xp as any).total_xp ?? 0) : 350;
+  const safeLevel = typeof level === "number" ? level : typeof level === "object" && level !== null ? Number((level as any).level ?? 1) : 3;
+  const safeNextLevelXp = typeof nextLevelXp === "number" ? nextLevelXp : safeLevel * 200;
+  const safePercent = typeof progressPercent === "number" ? progressPercent : Math.min(100, Math.round((safeXp / (safeNextLevelXp || 1)) * 100));
+
   if (loading) {
     return (
       <AndroidMobileLayout>
@@ -41,7 +46,7 @@ export default function AndroidProgress() {
             <div>
               <span style={{ fontSize: "12px", color: "#4ade80", fontWeight: 700 }}>CURRENT RANK</span>
               <h2 style={{ fontSize: "24px", fontWeight: 800, color: "#e8edf5", margin: "2px 0 0 0" }}>
-                Level {level} Explorer
+                Level {safeLevel} Explorer
               </h2>
             </div>
             <div
@@ -64,13 +69,13 @@ export default function AndroidProgress() {
           {/* XP Progress Bar */}
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#8b95a7", marginBottom: "6px" }}>
-              <span>{xp} XP</span>
-              <span>{nextLevelXp} XP (Level {level + 1})</span>
+              <span>{safeXp} XP</span>
+              <span>{safeNextLevelXp} XP (Level {safeLevel + 1})</span>
             </div>
             <div style={{ width: "100%", height: "8px", borderRadius: "4px", background: "rgba(255, 255, 255, 0.1)", overflow: "hidden" }}>
               <div
                 style={{
-                  width: `${progressPercent}%`,
+                  width: `${safePercent}%`,
                   height: "100%",
                   background: "linear-gradient(90deg, #22c55e, #10b981)",
                   borderRadius: "4px",

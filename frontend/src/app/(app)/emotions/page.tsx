@@ -6,6 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import toast from "react-hot-toast";
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidEmotions from "@/components/mobile/AndroidEmotions";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -22,7 +24,7 @@ const EMOTION_COLORS: Record<string, string> = {
   neutral: "#9ca3af",
 };
 
-export default function EmotionsPage() {
+function DesktopEmotionsView() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [text, setText] = useState("");
@@ -260,4 +262,14 @@ export default function EmotionsPage() {
       </main>
     </div>
   );
+}
+
+export default function EmotionsPage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidEmotions />;
+  }
+
+  return <DesktopEmotionsView />;
 }

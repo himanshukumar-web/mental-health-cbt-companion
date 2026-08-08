@@ -9,8 +9,18 @@ import { MD3Input } from "./ui/Input";
 import { MD3Card } from "./ui/Card";
 
 export default function AndroidAuth({ initialMode = "login" }: { initialMode?: "login" | "signup" }) {
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const { user, userRole, loading: authLoading, signIn, signUp, signInWithGoogle } = useAuth();
   const router = useRouter();
+
+  React.useEffect(() => {
+    if (!authLoading && user) {
+      if (userRole === "admin") {
+        router.replace("/admin");
+      } else {
+        router.replace("/dashboard");
+      }
+    }
+  }, [user, userRole, authLoading, router]);
 
   const [mode, setMode] = useState<"login" | "signup">(initialMode);
   const [email, setEmail] = useState("");
@@ -95,7 +105,7 @@ export default function AndroidAuth({ initialMode = "login" }: { initialMode?: "
             🌿
           </div>
           <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#e8edf5", margin: "0 0 4px 0", letterSpacing: "-0.02em" }}>
-            Sera Companion
+            MindMate Companion
           </h1>
           <p style={{ fontSize: "14px", color: "#8b95a7", margin: 0 }}>Your personal CBT mental health space</p>
         </div>
@@ -324,7 +334,7 @@ export default function AndroidAuth({ initialMode = "login" }: { initialMode?: "
                   style={{ marginTop: "3px", accentColor: "#22c55e" }}
                 />
                 <span style={{ fontSize: "12px", color: "#8b95a7", lineHeight: 1.4 }}>
-                  I understand Sera is a supportive CBT tool, not a medical emergency service.
+                  I understand MindMate is a supportive CBT tool, not a medical emergency service.
                 </span>
               </label>
 

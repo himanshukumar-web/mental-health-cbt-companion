@@ -8,7 +8,7 @@ export interface PersonaItem {
 }
 
 const DEFAULT_PERSONAS: PersonaItem[] = [
-  { id: "sera-cbt", name: "Dr. Sera", avatar: "🌿", description: "Empathetic CBT Guide" },
+  { id: "sera-cbt", name: "Dr. MindMate", avatar: "🌿", description: "Empathetic CBT Guide" },
   { id: "marcus-mindful", name: "Marcus", avatar: "🧘", description: "Mindfulness & Breathing Coach" },
   { id: "elena-journal", name: "Elena", avatar: "📝", description: "Reflective Journaling Mentor" },
 ];

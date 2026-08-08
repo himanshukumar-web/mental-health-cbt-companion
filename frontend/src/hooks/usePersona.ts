@@ -9,13 +9,13 @@ const API_URL = getApiUrl();
 const DEFAULT_PERSONAS: Persona[] = [
   {
     id: "cbt",
-    name: "Sera",
+    name: "MindMate",
     title: "CBT Therapist",
     avatar: "🌿",
     color: "#22c55e",
     description: "Structured cognitive behavioral therapy, thought reframing, and cognitive distortion identification.",
     prompt: "",
-    greeting: "Hi, I'm Sera — your CBT companion. 🌿 This is a safe space to talk through whatever's on your mind. I use evidence-based CBT techniques to help you reframe unhelpful thoughts. How are you feeling today?",
+    greeting: "Hi, I'm MindMate — your CBT companion. 🌿 This is a safe space to talk through whatever's on your mind. I use evidence-based CBT techniques to help you reframe unhelpful thoughts. How are you feeling today?",
   },
   {
     id: "compassionate",

@@ -123,8 +123,10 @@ function DesktopDashboardView() {
       }
       if (xpRes.status === "fulfilled" && xpRes.value.ok) {
         const json = await xpRes.value.json();
-        setUserXP(json.xp?.total_xp || 0);
-        setUserLevel(json.xp?.level || 1);
+        const parsedXp = typeof json.xp === "object" && json.xp !== null ? Number(json.xp.total_xp ?? json.xp.xp ?? 0) : typeof json.xp === "number" ? json.xp : 0;
+        const parsedLevel = typeof json.xp === "object" && json.xp !== null ? Number(json.xp.level ?? 1) : typeof json.level === "number" ? json.level : 1;
+        setUserXP(parsedXp);
+        setUserLevel(parsedLevel);
       }
       if (insightsRes.status === "fulfilled" && insightsRes.value.ok) {
         const json = await insightsRes.value.json();

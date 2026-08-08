@@ -62,7 +62,7 @@ export default function MobileHeader({ title }: { title?: string }) {
               display: "block",
             }}
           >
-            {title || "Sera CBT"}
+            {title || "MindMate CBT"}
           </span>
           <span style={{ fontSize: 9, color: "#22c55e", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>
             AI Companion

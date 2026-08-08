@@ -1,6 +1,6 @@
 {
-  "name": "Sera — CBT Companion",
-  "short_name": "Sera",
+  "name": "MindMate — CBT Companion",
+  "short_name": "MindMate",
   "description": "Your AI CBT companion for mental health support. Evidence-based therapy techniques with real-time safety monitoring.",
   "start_url": "/",
   "display": "standalone",

@@ -8,6 +8,8 @@ import MobileHeader from "@/components/MobileHeader";
 // import AudioStreamer from "@/components/AudioStreamer";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import toast from "react-hot-toast";
+import { useIsAndroid } from "@/hooks/useIsAndroid";
+import AndroidMeditation from "@/components/mobile/AndroidMeditation";
 
 import { API_URL } from "@/lib/config";
 
@@ -120,7 +122,7 @@ const MEDITATION_LIBRARY: MeditationSession[] = [
 
 const CATEGORIES = ["All", "Anxiety", "Stress", "Sleep", "Focus", "Depression", "Relaxation"];
 
-export default function MeditationPage() {
+function DesktopMeditationView() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -552,4 +554,14 @@ export default function MeditationPage() {
       </main>
     </div>
   );
+}
+
+export default function MeditationPage() {
+  const isAndroid = useIsAndroid();
+
+  if (isAndroid) {
+    return <AndroidMeditation />;
+  }
+
+  return <DesktopMeditationView />;
 }

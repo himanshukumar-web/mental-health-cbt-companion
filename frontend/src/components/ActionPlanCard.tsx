@@ -63,7 +63,7 @@ export default function ActionPlanCard({ plan }: { plan: ActionPlan }) {
             Your Personalized Wellness Action Plan
           </h3>
           <p style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-            Generated based on your conversation with Sera
+            Generated based on your conversation with MindMate
           </p>
         </div>
       </div>

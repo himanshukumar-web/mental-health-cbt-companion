@@ -29,10 +29,11 @@ export default memo(function AndroidMobileLayout({
         flexDirection: "column",
         position: "relative",
         overflowX: "hidden",
+        overflowY: "auto",
         paddingTop: "env(safe-area-inset-top, 0px)",
         paddingBottom: hasBottomNav
-          ? "calc(72px + env(safe-area-inset-bottom, 0px))"
-          : "env(safe-area-inset-bottom, 0px)",
+          ? "calc(88px + env(safe-area-inset-bottom, 0px))"
+          : "calc(24px + env(safe-area-inset-bottom, 0px))",
         boxSizing: "border-box",
         transform: "translateZ(0)",
         WebkitOverflowScrolling: "touch",

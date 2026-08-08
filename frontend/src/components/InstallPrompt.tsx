@@ -115,9 +115,9 @@ export default function InstallPrompt() {
             <h3 style={{
               fontSize: 18, fontWeight: 700, color: "var(--text-primary, #e8edf5)",
               fontFamily: "var(--font-display, 'Outfit', sans-serif)", marginBottom: 4,
-            }}>Install Sera App</h3>
+            }}>Install MindMate App</h3>
             <p style={{ fontSize: 13, color: "var(--text-secondary, #8b95a7)" }}>
-              Follow these steps to add Sera to your home screen
+              Follow these steps to add MindMate to your home screen
             </p>
           </div>
 
@@ -125,7 +125,7 @@ export default function InstallPrompt() {
             {[
               { step: "1", icon: "⬆️", text: "Tap the Share button at the bottom of Safari" },
               { step: "2", icon: "➕", text: "Scroll down and tap \"Add to Home Screen\"" },
-              { step: "3", icon: "✅", text: "Tap \"Add\" to install Sera" },
+              { step: "3", icon: "✅", text: "Tap \"Add\" to install MindMate" },
             ].map((item) => (
               <div key={item.step} style={{
                 display: "flex", alignItems: "center", gap: 14,
@@ -184,7 +184,7 @@ export default function InstallPrompt() {
         <div style={{
           fontSize: 14, fontWeight: 600,
           color: "var(--text-primary, #e8edf5)", marginBottom: 2,
-        }}>Install Sera</div>
+        }}>Install MindMate</div>
         <div style={{
           fontSize: 12, color: "var(--text-secondary, #8b95a7)",
           lineHeight: 1.4,

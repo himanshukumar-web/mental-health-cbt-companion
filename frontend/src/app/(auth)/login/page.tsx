@@ -102,7 +102,7 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
     <div>
       <div style={{ marginBottom: 28 }}>
         <h2 style={{ fontSize: 22, fontWeight: 600, color: "#e8edf5", margin: "0 0 6px" }}>Welcome back</h2>
-        <p style={{ fontSize: 14, color: "#8b95a7", margin: 0 }}>Continue your journey with Sera</p>
+        <p style={{ fontSize: 14, color: "#8b95a7", margin: 0 }}>Continue your journey with MindMate</p>
       </div>
 
       {error && (
@@ -315,7 +315,7 @@ function SignupForm({ onSwitch }: { onSwitch: () => void }) {
           {agreed && <span style={{ color: "white", fontSize: 11, fontWeight: 700 }}>✓</span>}
         </div>
         <span style={{ fontSize: 13, color: "#8b95a7", lineHeight: 1.5 }}>
-          I understand Sera is a supportive tool, not a replacement for professional mental health care.
+          I understand MindMate is a supportive tool, not a replacement for professional mental health care.
         </span>
       </label>
 
@@ -432,7 +432,7 @@ function DesktopAuthInner() {
                 fontSize: 20, animation: "float 3s ease infinite",
               }}>🌿</div>
               <div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>Sera</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>MindMate</div>
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", letterSpacing: "0.08em" }}>CBT COMPANION</div>
               </div>
             </div>
@@ -504,6 +504,18 @@ function DesktopAuthInner() {
 
 export default function LoginPage() {
   const isAndroid = useIsAndroid();
+  const { user, userRole, loading: authLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      if (userRole === "admin") {
+        router.replace("/admin");
+      } else {
+        router.replace("/dashboard");
+      }
+    }
+  }, [user, userRole, authLoading, router]);
 
   if (isAndroid) {
     return (
