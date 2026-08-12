@@ -7,12 +7,31 @@ import { getApiUrl } from "@/lib/config";
 const API_URL = getApiUrl();
 
 export function useTimeline(userId?: string, category: string = "all", searchQuery: string = "") {
-  const [timeline, setTimeline] = useState<TimelineItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const cacheKey = userId ? `sera_timeline_${userId}_${category}` : null;
+  const [timeline, setTimeline] = useState<TimelineItem[]>(() => {
+    if (typeof window !== "undefined" && cacheKey && !searchQuery) {
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) return JSON.parse(cached);
+      } catch {
+        /* ignore */
+      }
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window !== "undefined" && cacheKey && !searchQuery) {
+      try {
+        if (localStorage.getItem(cacheKey)) return false;
+      } catch {
+        /* ignore */
+      }
+    }
+    return true;
+  });
 
   const fetchTimeline = useCallback(async () => {
     if (!userId) return;
-    setLoading(true);
     try {
       const url = new URL(`${API_URL}/timeline/${userId}`);
       if (category) url.searchParams.append("category", category);
@@ -21,14 +40,22 @@ export function useTimeline(userId?: string, category: string = "all", searchQue
       const res = await fetch(url.toString());
       if (res.ok) {
         const data = await res.json();
-        setTimeline(data.timeline || []);
+        const items = data.timeline || [];
+        setTimeline(items);
+        if (cacheKey && !searchQuery) {
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(items));
+          } catch {
+            /* ignore */
+          }
+        }
       }
     } catch (err) {
       console.error("Error fetching timeline:", err);
     } finally {
       setLoading(false);
     }
-  }, [userId, category, searchQuery]);
+  }, [userId, category, searchQuery, cacheKey]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

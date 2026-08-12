@@ -1,7 +1,7 @@
 /* ── Design tokens ─────────────────────────────────────────────────────────── */
 :root {
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-display: 'Outfit', sans-serif;
+  --font-sans: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: var(--font-outfit), 'Outfit', sans-serif;
 
   /* Surface */
   --bg-primary:   #0b0f1a;

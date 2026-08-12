@@ -69,6 +69,28 @@ function DesktopDashboardView() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Instant SWR cache hydration
+  useEffect(() => {
+    if (typeof window !== "undefined" && user?.id) {
+      try {
+        const raw = localStorage.getItem(`sera_dash_${user.id}`);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.moodEntries) setMoodEntries(parsed.moodEntries);
+          if (parsed.journalCount !== undefined) setJournalCount(parsed.journalCount);
+          if (parsed.userXP !== undefined) setUserXP(parsed.userXP);
+          if (parsed.userLevel !== undefined) setUserLevel(parsed.userLevel);
+          if (parsed.streakDays !== undefined) setStreakDays(parsed.streakDays);
+          if (parsed.insights) setInsights(parsed.insights);
+          if (parsed.appointments) setAppointments(parsed.appointments);
+          setLoading(false);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [user?.id]);
+
   const [habitsDone, setHabitsDone] = useState<{ [key: string]: boolean }>({
     meditation: false,
     journal: false,
@@ -109,38 +131,70 @@ function DesktopDashboardView() {
 
       const [moodRes, journalRes, cbtRes, xpRes, insightsRes, apptRes] = results;
 
+      let freshEntries: MoodEntry[] = [];
+      let freshJournalCount = 0;
+      let freshXP = userXP;
+      let freshLevel = userLevel;
+      let freshStreak = streakDays;
+      let freshInsights: PersonalizedInsight[] = [];
+      let freshAppointments: Appointment[] = [];
+
       if (moodRes.status === "fulfilled" && moodRes.value.ok) {
         const json = await moodRes.value.json();
-        const entries: MoodEntry[] = json.mood_entries || [];
-        setMoodEntries(entries);
-        if (entries.length > 0) setStreakDays(Math.min(entries.length, 7));
+        freshEntries = json.mood_entries || [];
+        setMoodEntries(freshEntries);
+        if (freshEntries.length > 0) {
+          freshStreak = Math.min(freshEntries.length, 7);
+          setStreakDays(freshStreak);
+        }
       }
       if (journalRes.status === "fulfilled" && journalRes.value.ok) {
         const json = await journalRes.value.json();
         const jList = json.journal_entries || [];
-        setJournalCount(jList.length);
+        freshJournalCount = jList.length;
+        setJournalCount(freshJournalCount);
         if (jList.length > 0) setHabitsDone((prev) => ({ ...prev, journal: true }));
       }
       if (xpRes.status === "fulfilled" && xpRes.value.ok) {
         const json = await xpRes.value.json();
-        const parsedXp = typeof json.xp === "object" && json.xp !== null ? Number(json.xp.total_xp ?? json.xp.xp ?? 0) : typeof json.xp === "number" ? json.xp : 0;
-        const parsedLevel = typeof json.xp === "object" && json.xp !== null ? Number(json.xp.level ?? 1) : typeof json.level === "number" ? json.level : 1;
-        setUserXP(parsedXp);
-        setUserLevel(parsedLevel);
+        freshXP = typeof json.xp === "object" && json.xp !== null ? Number(json.xp.total_xp ?? json.xp.xp ?? 0) : typeof json.xp === "number" ? json.xp : 0;
+        freshLevel = typeof json.xp === "object" && json.xp !== null ? Number(json.xp.level ?? 1) : typeof json.level === "number" ? json.level : 1;
+        setUserXP(freshXP);
+        setUserLevel(freshLevel);
       }
       if (insightsRes.status === "fulfilled" && insightsRes.value.ok) {
         const json = await insightsRes.value.json();
-        setInsights(json.insights || []);
+        freshInsights = json.insights || [];
+        setInsights(freshInsights);
       }
       if (apptRes.status === "fulfilled" && apptRes.value.ok) {
         const json = await apptRes.value.json();
-        setAppointments(json.appointments || []);
+        freshAppointments = json.appointments || [];
+        setAppointments(freshAppointments);
+      }
+
+      // Persist snapshot to cache for instant sub-millisecond next load
+      try {
+        localStorage.setItem(
+          `sera_dash_${user.id}`,
+          JSON.stringify({
+            moodEntries: freshEntries,
+            journalCount: freshJournalCount,
+            userXP: freshXP,
+            userLevel: freshLevel,
+            streakDays: freshStreak,
+            insights: freshInsights,
+            appointments: freshAppointments,
+          })
+        );
+      } catch {
+        /* ignore */
       }
     } catch {
       /* ignore */
     }
     setLoading(false);
-  }, [user]);
+  }, [user, userXP, userLevel, streakDays]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

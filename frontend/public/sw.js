@@ -1,13 +1,15 @@
 // Sera PWA Service Worker
 // Network-first for API, Cache-first for static assets
 
-const CACHE_NAME = "sera-pwa-v1";
+const CACHE_NAME = "sera-pwa-v2";
 const OFFLINE_URL = "/offline.html";
 
 // Static assets to pre-cache on install
 const PRECACHE_ASSETS = [
   "/",
   "/offline.html",
+  "/manifest.json",
+  "/favicon.ico",
   "/icon-192.png",
   "/icon-512.png",
   "/apple-touch-icon.png",

@@ -76,8 +76,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     return null;
   });
-  const [loading, setLoading] = useState(true);
-  const [theme, setThemeState] = useState<AppTheme>("default");
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("sera_auth_user");
+        if (cached) return false;
+      } catch {
+        /* ignore */
+      }
+    }
+    return !supabase ? false : true;
+  });
+  const [theme, setThemeState] = useState<AppTheme>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return (localStorage.getItem("app-theme") as AppTheme) || "default";
+      } catch {
+        /* ignore */
+      }
+    }
+    return "default";
+  });
 
   const applyTheme = (t: AppTheme) => {
     if (typeof document !== "undefined") {

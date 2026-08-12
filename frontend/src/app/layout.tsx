@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import InstallPrompt from "@/components/InstallPrompt";
@@ -7,6 +8,18 @@ import ToastProvider from "@/components/ui/ToastProvider";
 import Script from "next/script";
 import BackendPrewarmer from "@/components/BackendPrewarmer";
 import AndroidNativeHandler from "@/components/AndroidNativeHandler";
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-outfit",
+});
 
 export const metadata: Metadata = {
   title: "MindMate — CBT Companion",
@@ -37,27 +50,34 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL
+  ? new URL(process.env.NEXT_PUBLIC_API_URL).origin
+  : "https://mental-health-cbt-companion.onrender.com";
+
+const SUPABASE_ORIGIN = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin
+  : null;
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
       <head>
-        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-        <meta httpEquiv="Pragma" content="no-cache" />
-        <meta httpEquiv="Expires" content="0" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
+        <link rel="preconnect" href={API_ORIGIN} crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href={API_ORIGIN} />
+        {SUPABASE_ORIGIN && (
+          <>
+            <link rel="preconnect" href={SUPABASE_ORIGIN} crossOrigin="anonymous" />
+            <link rel="dns-prefetch" href={SUPABASE_ORIGIN} />
+          </>
+        )}
       </head>
-      <body>
+      <body className={`${inter.className}`}>
         <ErrorBoundary>
           <AuthProvider>
             <AndroidNativeHandler />
@@ -88,3 +108,4 @@ export default function RootLayout({
     </html>
   );
 }
+
