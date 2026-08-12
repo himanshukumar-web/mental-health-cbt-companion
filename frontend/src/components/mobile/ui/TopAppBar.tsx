@@ -46,7 +46,8 @@ export function MD3TopAppBar({
         backdropFilter: "blur(16px)",
         WebkitBackdropFilter: "blur(16px)",
         borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-        paddingTop: "calc(12px + env(safe-area-inset-top, 0px))",
+        // AndroidMobileLayout already reserves the status-bar inset.
+        paddingTop: "12px",
         paddingBottom: "12px",
         paddingLeft: "16px",
         paddingRight: "16px",

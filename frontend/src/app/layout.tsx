@@ -95,10 +95,10 @@ export default function RootLayout({
               window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js')
                   .then(function(reg) {
-                    console.log('Sera SW registered:', reg.scope);
+                    console.log('MindMate SW registered:', reg.scope);
                   })
                   .catch(function(err) {
-                    console.log('Sera SW registration failed:', err);
+                    console.log('MindMate SW registration failed:', err);
                   });
               });
             }
@@ -108,4 +108,3 @@ export default function RootLayout({
     </html>
   );
 }
-

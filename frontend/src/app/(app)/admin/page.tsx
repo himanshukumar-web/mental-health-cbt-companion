@@ -634,7 +634,7 @@ function AdminDashboardInner() {
           </button>
         ))}
 
-        {/* Option for Sera AI Chat (not named Home) */}
+        {/* Option for MindMate AI Chat (not named Home) */}
         <Link href="/chat" style={{
           display: "flex", alignItems: "center", gap: 12,
           padding: "12px 14px", borderRadius: 10,
@@ -642,7 +642,7 @@ function AdminDashboardInner() {
           marginBottom: 4, transition: "all 0.2s",
         }}>
           <span style={{ fontSize: 18 }}>🌿</span>
-          Sera AI Chat
+          MindMate AI Chat
         </Link>
 
         {/* Spacer */}

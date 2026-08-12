@@ -506,7 +506,7 @@ function MyAppointmentsPageInner() {
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: isMobile ? 14 : 16, boxShadow: "0 0 20px rgba(34,197,94,0.3)",
             }}>🌿</div>
-            <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: isMobile ? 16 : 18, color: "var(--text-primary)" }}>Sera</span>
+            <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: isMobile ? 16 : 18, color: "var(--text-primary)" }}>MindMate</span>
           </Link>
           <ThemeSelector />
         </div>

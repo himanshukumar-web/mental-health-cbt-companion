@@ -76,17 +76,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     return null;
   });
-  const [loading, setLoading] = useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const cached = localStorage.getItem("sera_auth_user");
-        if (cached) return false;
-      } catch {
-        /* ignore */
-      }
-    }
-    return !supabase ? false : true;
-  });
+  // Never make route decisions from a cached profile. Supabase persists the
+  // actual session in its own storage; wait for that session to initialize.
+  const [loading, setLoading] = useState(() => Boolean(supabase));
   const [theme, setThemeState] = useState<AppTheme>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -149,6 +141,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           localStorage.setItem("sera_auth_user", JSON.stringify(u));
           localStorage.setItem("sera_auth_role", r);
+        } catch {
+          /* ignore */
+        }
+      } else {
+        setUser(null);
+        setUserRole(null);
+        try {
+          localStorage.removeItem("sera_auth_user");
+          localStorage.removeItem("sera_auth_role");
         } catch {
           /* ignore */
         }

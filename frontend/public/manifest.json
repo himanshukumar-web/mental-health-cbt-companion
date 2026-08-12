@@ -45,7 +45,7 @@
       "name": "Start Chat",
       "short_name": "Chat",
       "url": "/chat",
-      "description": "Open a therapy session with Sera",
+      "description": "Open a therapy session with MindMate",
       "icons": [
         {
           "src": "/icon-192.png",

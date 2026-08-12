@@ -82,7 +82,7 @@ export default function AndroidAuth({ initialMode = "login" }: { initialMode?: "
           alignItems: "center",
           justifyContent: "center",
           padding: "20px 16px",
-          minHeight: "100dvh",
+          minHeight: "100%",
           boxSizing: "border-box",
         }}
       >

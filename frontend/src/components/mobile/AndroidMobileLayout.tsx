@@ -19,7 +19,8 @@ export default memo(function AndroidMobileLayout({
     <div
       className={`android-mobile-root ${className}`}
       style={{
-        minHeight: "100dvh",
+        height: "100dvh",
+        minHeight: 0,
         width: "100%",
         maxWidth: "100vw",
         background: "#0b0f1a",
@@ -30,6 +31,10 @@ export default memo(function AndroidMobileLayout({
         position: "relative",
         overflowX: "hidden",
         overflowY: "auto",
+        overscrollBehaviorY: "contain",
+        // This is the sole vertical scroll owner for standard Android screens.
+        // Keeping safe-area padding here prevents every page from having to
+        // guess at status-bar and BottomNav offsets.
         paddingTop: "env(safe-area-inset-top, 0px)",
         paddingBottom: hasBottomNav
           ? "calc(88px + env(safe-area-inset-bottom, 0px))"

@@ -47,7 +47,7 @@ export default function AndroidChat() {
   };
 
   return (
-    <AndroidMobileLayout hasBottomNav={true} style={{ display: "flex", flexDirection: "column", height: "100dvh", overflow: "hidden" }}>
+    <AndroidMobileLayout hasBottomNav={true} style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       {/* Compact Android Chat Top Bar */}
       <div
         style={{
@@ -58,7 +58,7 @@ export default function AndroidChat() {
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
           borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-          padding: "calc(12px + env(safe-area-inset-top, 24px)) 16px 12px 16px",
+          padding: "12px 16px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -175,6 +175,7 @@ export default function AndroidChat() {
       <div
         style={{
           flex: 1,
+          minHeight: 0,
           overflowY: "auto",
           padding: "16px",
           display: "flex",
@@ -307,8 +308,8 @@ export default function AndroidChat() {
       {/* Sticky Bottom Composer Above Bottom Navigation */}
       <div
         style={{
-          position: "sticky",
-          bottom: "calc(72px + env(safe-area-inset-bottom, 0px))",
+          position: "relative",
+          bottom: "auto",
           zIndex: 1100,
           background: "#0b0f1a",
           borderTop: "1px solid rgba(255, 255, 255, 0.08)",

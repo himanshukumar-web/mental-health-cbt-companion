@@ -53,7 +53,7 @@ const MINDFUL_QUOTES = [
   { text: "You don't have to control your thoughts. You just have to stop letting them control you.", author: "Dan Millman" },
   { text: "Peace begins when expectation ends.", author: "Sri Sri Ravi Shankar" },
   { text: "Feelings come and go like clouds in a windy sky. Conscious breathing is my anchor.", author: "Thich Nhat Hanh" },
-  { text: "Small steps every day lead to profound emotional healing.", author: "Sera CBT" },
+  { text: "Small steps every day lead to profound emotional healing.", author: "MindMate CBT" },
 ];
 
 function DesktopDashboardView() {

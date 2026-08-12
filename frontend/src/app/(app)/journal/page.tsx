@@ -464,7 +464,7 @@ function DesktopJournalView() {
           <EmptyState
             icon="📝"
             title="No Journal Entries Yet"
-            description="Start writing or speaking your thoughts. Sera automatically analyzes emotions, cognitive patterns, and sentiment."
+            description="Start writing or speaking your thoughts. MindMate automatically analyzes emotions, cognitive patterns, and sentiment."
             actionText="Write First Entry"
             onAction={() => setShowEditor(true)}
             tip="Daily journaling reduces intrusive thoughts by up to 40%."

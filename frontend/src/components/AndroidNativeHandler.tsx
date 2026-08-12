@@ -21,6 +21,8 @@ export default function AndroidNativeHandler() {
         const { Capacitor } = await import("@capacitor/core");
         if (!Capacitor.isNativePlatform()) return;
 
+        document.documentElement.classList.add("native-android");
+
         const { App } = await import("@capacitor/app");
         const { StatusBar, Style } = await import("@capacitor/status-bar");
         const { Keyboard } = await import("@capacitor/keyboard");
@@ -95,6 +97,7 @@ export default function AndroidNativeHandler() {
     initNativePlugins();
 
     return () => {
+      document.documentElement.classList.remove("native-android");
       if (appListener && typeof appListener.remove === "function") appListener.remove();
       if (keyboardShowListener && typeof keyboardShowListener.remove === "function") keyboardShowListener.remove();
       if (keyboardHideListener && typeof keyboardHideListener.remove === "function") keyboardHideListener.remove();

@@ -126,7 +126,7 @@ export default function RoleSelectPage() {
           fontSize: 22, boxShadow: "0 0 24px rgba(34,197,94,0.3)",
           animation: "float 3s ease infinite",
         }}>🌿</div>
-        <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 24, color: "var(--text-primary)" }}>Sera</span>
+        <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 24, color: "var(--text-primary)" }}>MindMate</span>
       </div>
 
       {/* Welcome text */}
