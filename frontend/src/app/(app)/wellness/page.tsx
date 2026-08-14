@@ -10,6 +10,7 @@ import Sidebar from "@/components/Sidebar";
 import MobileHeader from "@/components/MobileHeader";
 import WellnessPanel from "@/components/WellnessPanel";
 import QuickMoodLogger from "@/components/QuickMoodLogger";
+import HealthMeasurePanel from "@/components/HealthMeasurePanel";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import { motion } from "framer-motion";
 
@@ -153,6 +154,11 @@ function DesktopWellnessView() {
         {/* 1-Tap Quick Mood Check-In Widget */}
         <div style={{ marginBottom: 28 }}>
           <QuickMoodLogger userId={user.id} onMoodLogged={fetchData} />
+        </div>
+
+        {/* Health Measure — Daily Check-in + Weekly Summary */}
+        <div style={{ marginBottom: 28 }}>
+          <HealthMeasurePanel userId={user.id} />
         </div>
 
         {/* Wellness Tools Grid */}

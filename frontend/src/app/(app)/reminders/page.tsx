@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/Sidebar";
+import MobileHeader from "@/components/MobileHeader";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import { requestNotificationPermission, scheduleSmartReminders } from "@/utils/notifications";
 import toast from "react-hot-toast";
@@ -11,6 +12,113 @@ import { useIsAndroid } from "@/hooks/useIsAndroid";
 import AndroidReminders from "@/components/mobile/AndroidReminders";
 
 import { API_URL } from "@/lib/config";
+
+/* ── Styled toggle switch ────────────────────────────────────────────────── */
+
+function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      style={{
+        position: "relative",
+        width: 44,
+        height: 24,
+        borderRadius: 12,
+        border: "none",
+        background: checked
+          ? "linear-gradient(135deg, #22c55e, #16a34a)"
+          : "var(--bg-tertiary)",
+        cursor: "pointer",
+        transition: "background 0.2s ease",
+        flexShrink: 0,
+        padding: 0,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: 2,
+          left: checked ? 22 : 2,
+          width: 20,
+          height: 20,
+          borderRadius: "50%",
+          background: "white",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+          transition: "left 0.2s ease",
+        }}
+      />
+    </button>
+  );
+}
+
+/* ── Reminder row component ──────────────────────────────────────────────── */
+
+function ReminderRow({
+  icon,
+  title,
+  description,
+  enabled,
+  onToggle,
+  children,
+}: {
+  icon: string;
+  title: string;
+  description: string;
+  enabled: boolean;
+  onToggle: (v: boolean) => void;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        flexWrap: "wrap",
+        gap: 12,
+        padding: "12px 0",
+        borderBottom: "1px solid var(--border-secondary)",
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 180 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
+          {icon} {title}
+        </div>
+        <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 2 }}>
+          {description}
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        {children}
+        <ToggleSwitch checked={enabled} onChange={onToggle} />
+      </div>
+    </div>
+  );
+}
+
+/* ── Health measure reminder storage (localStorage — no backend changes) ── */
+
+const HM_STORAGE_KEY = "healthMeasure_reminder_prefs";
+
+function getHealthMeasurePrefs(): { enabled: boolean; time: string } {
+  if (typeof window === "undefined") return { enabled: true, time: "09:00" };
+  try {
+    const raw = localStorage.getItem(HM_STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return { enabled: true, time: "09:00" };
+}
+
+function saveHealthMeasurePrefs(prefs: { enabled: boolean; time: string }) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(HM_STORAGE_KEY, JSON.stringify(prefs));
+  } catch { /* ignore */ }
+}
+
+/* ── Desktop view ────────────────────────────────────────────────────────── */
 
 function DesktopRemindersView() {
   const { user, loading: authLoading } = useAuth();
@@ -26,12 +134,21 @@ function DesktopRemindersView() {
   const [sleepTime, setSleepTime] = useState("22:30");
   const [moodEnabled, setMoodEnabled] = useState(true);
   const [moodTime, setMoodTime] = useState("21:00");
+  const [healthMeasureEnabled, setHealthMeasureEnabled] = useState(true);
+  const [healthMeasureTime, setHealthMeasureTime] = useState("09:00");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
   }, [user, authLoading, router]);
+
+  // Load health measure prefs from localStorage
+  useEffect(() => {
+    const prefs = getHealthMeasurePrefs();
+    setHealthMeasureEnabled(prefs.enabled);
+    setHealthMeasureTime(prefs.time);
+  }, []);
 
   const fetchReminders = useCallback(async () => {
     if (!user) return;
@@ -69,9 +186,16 @@ function DesktopRemindersView() {
     if (!user) return;
     setSaving(true);
     await requestNotificationPermission();
+
+    // Save health measure prefs to localStorage
+    saveHealthMeasurePrefs({ enabled: healthMeasureEnabled, time: healthMeasureTime });
+
+    // Schedule browser reminders
     scheduleSmartReminders({
       waterIntervalMinutes: waterEnabled ? waterInterval : undefined,
+      healthMeasureTime: healthMeasureEnabled ? healthMeasureTime : undefined,
     });
+
     try {
       const res = await fetch(`${API_URL}/reminders/${user.id}`, {
         method: "PUT",
@@ -101,11 +225,20 @@ function DesktopRemindersView() {
     setSaving(false);
   };
 
+  const timeInputStyle = {
+    padding: "6px 10px",
+    borderRadius: 8,
+    background: "var(--bg-secondary)",
+    border: "0.5px solid var(--border-secondary)",
+    color: "var(--text-primary)",
+    fontSize: 13,
+  };
+
   if (authLoading || loading)
     return (
       <>
         <Sidebar />
-        <div style={{ marginLeft: 260 }}>
+        <div className="app-main-layout">
           <PageSkeleton />
         </div>
       </>
@@ -121,18 +254,8 @@ function DesktopRemindersView() {
       }}
     >
       <Sidebar />
-      <main
-        style={{
-          flex: 1,
-          marginLeft: 260,
-          padding: "32px 28px",
-          maxWidth: 800,
-          overflow: "auto",
-        }}
-      >
-        <style>{`
-          @media (max-width: 767px) { main { margin-left: 0 !important; padding: 16px !important; } }
-        `}</style>
+      <main className="app-main-layout" style={{ padding: "24px 20px", maxWidth: 800, overflow: "auto" }}>
+        <MobileHeader title="Reminder Schedules" />
 
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
@@ -161,216 +284,113 @@ function DesktopRemindersView() {
             marginBottom: 28,
             display: "flex",
             flexDirection: "column",
-            gap: 20,
+            gap: 0,
           }}
         >
-          {/* Mood Checkin */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 12,
-            }}
+          {/* Health Measure — NEW */}
+          <ReminderRow
+            icon="🩺"
+            title="Daily Health Measure"
+            description="Morning reminder to complete your daily wellness check-in"
+            enabled={healthMeasureEnabled}
+            onToggle={setHealthMeasureEnabled}
           >
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
-                😊 Evening Mood Check-in
-              </div>
-              <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-                Prompt to record your daily mood and stress
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <input
-                type="time"
-                value={moodTime}
-                onChange={(e) => setMoodTime(e.target.value)}
-                disabled={!moodEnabled}
-                style={{
-                  padding: "6px 10px",
-                  borderRadius: 8,
-                  background: "var(--bg-secondary)",
-                  border: "0.5px solid var(--border-secondary)",
-                  color: "var(--text-primary)",
-                  fontSize: 13,
-                }}
-              />
-              <input
-                type="checkbox"
-                checked={moodEnabled}
-                onChange={(e) => setMoodEnabled(e.target.checked)}
-              />
-            </div>
-          </div>
+            <input
+              type="time"
+              value={healthMeasureTime}
+              onChange={(e) => setHealthMeasureTime(e.target.value)}
+              disabled={!healthMeasureEnabled}
+              style={timeInputStyle}
+            />
+          </ReminderRow>
+
+          {/* Mood Checkin */}
+          <ReminderRow
+            icon="😊"
+            title="Evening Mood Check-in"
+            description="Prompt to record your daily mood and stress"
+            enabled={moodEnabled}
+            onToggle={setMoodEnabled}
+          >
+            <input
+              type="time"
+              value={moodTime}
+              onChange={(e) => setMoodTime(e.target.value)}
+              disabled={!moodEnabled}
+              style={timeInputStyle}
+            />
+          </ReminderRow>
 
           {/* Journal */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 12,
-            }}
+          <ReminderRow
+            icon="📝"
+            title="Nightly Reflection Journal"
+            description="Reminder to write down your thoughts"
+            enabled={journalEnabled}
+            onToggle={setJournalEnabled}
           >
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
-                📝 Nightly Reflection Journal
-              </div>
-              <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-                Reminder to write down your thoughts
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <input
-                type="time"
-                value={journalTime}
-                onChange={(e) => setJournalTime(e.target.value)}
-                disabled={!journalEnabled}
-                style={{
-                  padding: "6px 10px",
-                  borderRadius: 8,
-                  background: "var(--bg-secondary)",
-                  border: "0.5px solid var(--border-secondary)",
-                  color: "var(--text-primary)",
-                  fontSize: 13,
-                }}
-              />
-              <input
-                type="checkbox"
-                checked={journalEnabled}
-                onChange={(e) => setJournalEnabled(e.target.checked)}
-              />
-            </div>
-          </div>
+            <input
+              type="time"
+              value={journalTime}
+              onChange={(e) => setJournalTime(e.target.value)}
+              disabled={!journalEnabled}
+              style={timeInputStyle}
+            />
+          </ReminderRow>
 
           {/* Meditation */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 12,
-            }}
+          <ReminderRow
+            icon="🧘"
+            title="Morning Meditation"
+            description="Start your morning with 5 minutes of grounding"
+            enabled={meditationEnabled}
+            onToggle={setMeditationEnabled}
           >
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
-                🧘 Morning Meditation
-              </div>
-              <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-                Start your morning with 5 minutes of grounding
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <input
-                type="time"
-                value={meditationTime}
-                onChange={(e) => setMeditationTime(e.target.value)}
-                disabled={!meditationEnabled}
-                style={{
-                  padding: "6px 10px",
-                  borderRadius: 8,
-                  background: "var(--bg-secondary)",
-                  border: "0.5px solid var(--border-secondary)",
-                  color: "var(--text-primary)",
-                  fontSize: 13,
-                }}
-              />
-              <input
-                type="checkbox"
-                checked={meditationEnabled}
-                onChange={(e) => setMeditationEnabled(e.target.checked)}
-              />
-            </div>
-          </div>
+            <input
+              type="time"
+              value={meditationTime}
+              onChange={(e) => setMeditationTime(e.target.value)}
+              disabled={!meditationEnabled}
+              style={timeInputStyle}
+            />
+          </ReminderRow>
 
           {/* Water */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 12,
-            }}
+          <ReminderRow
+            icon="💧"
+            title="Hydration Interval"
+            description="Periodic water intake reminder during daytime"
+            enabled={waterEnabled}
+            onToggle={setWaterEnabled}
           >
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
-                💧 Hydration Interval
-              </div>
-              <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-                Periodic water intake reminder during daytime
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <select
-                value={waterInterval}
-                onChange={(e) => setWaterInterval(parseInt(e.target.value))}
-                disabled={!waterEnabled}
-                style={{
-                  padding: "6px 10px",
-                  borderRadius: 8,
-                  background: "var(--bg-secondary)",
-                  border: "0.5px solid var(--border-secondary)",
-                  color: "var(--text-primary)",
-                  fontSize: 13,
-                }}
-              >
-                <option value={30}>Every 30 mins</option>
-                <option value={60}>Every 60 mins</option>
-                <option value={120}>Every 2 hours</option>
-              </select>
-              <input
-                type="checkbox"
-                checked={waterEnabled}
-                onChange={(e) => setWaterEnabled(e.target.checked)}
-              />
-            </div>
-          </div>
+            <select
+              value={waterInterval}
+              onChange={(e) => setWaterInterval(parseInt(e.target.value))}
+              disabled={!waterEnabled}
+              style={timeInputStyle}
+            >
+              <option value={30}>Every 30 mins</option>
+              <option value={60}>Every 60 mins</option>
+              <option value={120}>Every 2 hours</option>
+            </select>
+          </ReminderRow>
 
           {/* Sleep */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 12,
-            }}
+          <ReminderRow
+            icon="🌙"
+            title="Sleep Wind-down"
+            description="Screen time cool-off reminder"
+            enabled={sleepEnabled}
+            onToggle={setSleepEnabled}
           >
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
-                🌙 Sleep Wind-down
-              </div>
-              <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-                Screen time cool-off reminder
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <input
-                type="time"
-                value={sleepTime}
-                onChange={(e) => setSleepTime(e.target.value)}
-                disabled={!sleepEnabled}
-                style={{
-                  padding: "6px 10px",
-                  borderRadius: 8,
-                  background: "var(--bg-secondary)",
-                  border: "0.5px solid var(--border-secondary)",
-                  color: "var(--text-primary)",
-                  fontSize: 13,
-                }}
-              />
-              <input
-                type="checkbox"
-                checked={sleepEnabled}
-                onChange={(e) => setSleepEnabled(e.target.checked)}
-              />
-            </div>
-          </div>
+            <input
+              type="time"
+              value={sleepTime}
+              onChange={(e) => setSleepTime(e.target.value)}
+              disabled={!sleepEnabled}
+              style={timeInputStyle}
+            />
+          </ReminderRow>
 
           <button
             onClick={handleSave}
@@ -387,7 +407,7 @@ function DesktopRemindersView() {
               fontSize: 14,
               fontWeight: 600,
               cursor: saving ? "default" : "pointer",
-              marginTop: 12,
+              marginTop: 20,
             }}
           >
             {saving ? "Saving..." : "Save Reminder Schedule ✨"}

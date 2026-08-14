@@ -11,8 +11,7 @@ import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import { motion } from "framer-motion";
 import { useIsAndroid } from "@/hooks/useIsAndroid";
 import AndroidProgress from "@/components/mobile/AndroidProgress";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { API_URL } from "@/lib/config";
 
 interface Badge {
   id: string;

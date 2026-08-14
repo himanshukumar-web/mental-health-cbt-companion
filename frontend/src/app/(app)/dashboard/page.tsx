@@ -13,6 +13,7 @@ import PersonaSelector from "@/components/PersonaSelector";
 import PatientNotificationBell from "@/components/PatientNotificationBell";
 import QuickMoodLogger from "@/components/QuickMoodLogger";
 import DesktopRightSidebar from "@/components/DesktopRightSidebar";
+import HealthMeasurePanel from "@/components/HealthMeasurePanel";
 import { useWellnessScore } from "@/hooks/useWellnessScore";
 import { usePersona } from "@/hooks/usePersona";
 import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -211,7 +212,7 @@ function DesktopDashboardView() {
     return (
       <>
         <Sidebar />
-        <div style={{ marginLeft: 250 }}>
+        <div className="app-main-layout">
           <PageSkeleton />
         </div>
       </>
@@ -362,6 +363,11 @@ function DesktopDashboardView() {
             >
               ↻ Next
             </button>
+          </div>
+
+          {/* Health Measure compact widget */}
+          <div style={{ marginBottom: 24 }}>
+            <HealthMeasurePanel userId={user.id} compact />
           </div>
 
           {userRole === "admin" ? (
