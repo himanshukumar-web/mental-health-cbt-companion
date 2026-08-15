@@ -83,37 +83,57 @@ function ChatPageInner() {
     pinConversation,
     archiveConversation,
     deleteConversation,
+    loading: historyLoading,
   } = useChatHistory(user?.id, selectedPersonaId);
 
+  // Sync conversation selection / creation with sessionId
   useEffect(() => {
     if (loading) return;
 
     const querySession = params.get("session") || params.get("conversation");
-    const timer = setTimeout(() => {
-      if (querySession) {
-        setSessionId(querySession);
-      } else if (activeConversationId) {
-        setSessionId(activeConversationId);
-      } else if (user) {
-        setSessionId(user.id);
+    if (querySession) {
+      setSessionId(querySession);
+      setActiveConversationId(querySession);
+      return;
+    }
+
+    if (activeConversationId) {
+      setSessionId(activeConversationId);
+      return;
+    }
+
+    if (user && !historyLoading) {
+      if (conversations.length > 0) {
+        setActiveConversationId(conversations[0].id);
+        setSessionId(conversations[0].id);
       } else {
-        let localSession = localStorage.getItem("sera_guest_session");
-        if (!localSession) {
-          localSession = crypto.randomUUID();
-          localStorage.setItem("sera_guest_session", localSession);
-        }
-        setSessionId(localSession);
+        // Auto-create initial conversation for authenticated user
+        createConversation(selectedPersonaId).then((newConv) => {
+          if (newConv) {
+            setActiveConversationId(newConv.id);
+            setSessionId(newConv.id);
+          }
+        });
       }
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [user, loading, params, activeConversationId]);
+    } else if (!user && !loading) {
+      let localSession = localStorage.getItem("sera_guest_session");
+      if (!localSession) {
+        localSession = crypto.randomUUID();
+        localStorage.setItem("sera_guest_session", localSession);
+      }
+      setSessionId(localSession);
+    }
+  }, [user, loading, params, activeConversationId, conversations, historyLoading, selectedPersonaId, createConversation, setActiveConversationId]);
+
+  const activeConvId = activeConversationId || (user && sessionId && sessionId !== user.id ? sessionId : null);
 
   const { messages, wsState, crisis, routerSuggestion, sendMessage, dismissCrisis, dismissRouterSuggestion, manualReconnect } =
-    useWebSocket(sessionId, user?.id);
+    useWebSocket(sessionId, user?.id, undefined, activeConvId);
 
   const handleNewChat = async () => {
     const newConv = await createConversation(selectedPersonaId);
     if (newConv) {
+      setActiveConversationId(newConv.id);
       setSessionId(newConv.id);
     }
   };

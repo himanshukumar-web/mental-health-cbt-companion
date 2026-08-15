@@ -685,8 +685,8 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str
 
             # Persist to DB (non-blocking, fire-and-forget)
             conv_id = data.get("conversation_id")
-            await crud.save_message(session_id, "user", content, threat_level, user_id)
-            await crud.save_message(session_id, "assistant", full_response, "normal", user_id)
+            await crud.save_message(session_id, "user", content, threat_level, user_id, conversation_id=conv_id)
+            await crud.save_message(session_id, "assistant", full_response, "normal", user_id, conversation_id=conv_id)
 
             if conv_id:
                 await crud.update_conversation_metadata(conv_id, full_response)
@@ -1050,6 +1050,17 @@ async def update_reminders_endpoint(user_id: str, req: RemindersRequest):
     data = {k: v for k, v in req.model_dump().items() if v is not None}
     r = await crud.upsert_reminders(user_id, data)
     return {"reminders": r}
+
+
+class GenerateDailyRemindersRequest(BaseModel):
+    local_date: str  # YYYY-MM-DD in user's local timezone
+
+
+@app.post("/reminders/{user_id}/generate-daily")
+async def generate_daily_reminders_endpoint(user_id: str, req: GenerateDailyRemindersRequest):
+    """Generate daily task reminders for incomplete tasks. Deduplicated by type + date."""
+    result = await crud.generate_daily_reminders(user_id, req.local_date)
+    return result
 
 
 # ── Analytics ─────────────────────────────────────────────────────────────────

@@ -49,8 +49,24 @@ export default function AndroidReminders() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ journal_enabled: journalEnabled, journal_time: journalTime, meditation_enabled: meditationEnabled, meditation_time: meditationTime, mood_enabled: moodEnabled, mood_time: moodTime }),
       });
-      if (res.ok) toast.success("Reminders updated! 🔔");
-      else toast.error("Update failed");
+      if (res.ok) {
+        toast.success("Reminders updated! 🔔");
+        try {
+          const now = new Date();
+          const localDate = [
+            now.getFullYear(),
+            String(now.getMonth() + 1).padStart(2, "0"),
+            String(now.getDate()).padStart(2, "0"),
+          ].join("-");
+          fetch(`${API_URL}/reminders/${user.id}/generate-daily`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ local_date: localDate }),
+          }).catch(() => {});
+        } catch { /* ignore */ }
+      } else {
+        toast.error("Update failed");
+      }
     } catch { toast.error("Network error"); }
     setSaving(false);
   };

@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { usePersona } from "@/hooks/usePersona";
+import { useChatHistory } from "@/hooks/useChatHistory";
 import AndroidMobileLayout from "./AndroidMobileLayout";
 import VoiceController from "@/components/VoiceController";
 
@@ -16,9 +17,49 @@ const SUGGESTIONS = [
 
 export default function AndroidChat() {
   const { user } = useAuth();
-  const sessionId = user?.id || "guest_android_session";
-  const { messages, wsState, sendMessage } = useWebSocket(sessionId, user?.id);
-  const { personas, activePersona, selectPersona } = usePersona(user?.id);
+  const { personas, activePersona, selectPersona, selectedPersonaId } = usePersona(user?.id);
+  const {
+    conversations,
+    activeConversationId,
+    setActiveConversationId,
+    createConversation,
+    loading: historyLoading,
+  } = useChatHistory(user?.id, selectedPersonaId);
+
+  const [sessionId, setSessionId] = useState<string>("");
+
+  useEffect(() => {
+    if (activeConversationId) {
+      setSessionId(activeConversationId);
+      return;
+    }
+
+    if (user && !historyLoading) {
+      if (conversations.length > 0) {
+        setActiveConversationId(conversations[0].id);
+        setSessionId(conversations[0].id);
+      } else {
+        createConversation(selectedPersonaId).then((newConv) => {
+          if (newConv) {
+            setActiveConversationId(newConv.id);
+            setSessionId(newConv.id);
+          }
+        });
+      }
+    } else if (!user) {
+      let localSession = localStorage.getItem("sera_guest_android_session");
+      if (!localSession) {
+        localSession = crypto.randomUUID();
+        localStorage.setItem("sera_guest_android_session", localSession);
+      }
+      setSessionId(localSession);
+    }
+  }, [user, activeConversationId, conversations, historyLoading, selectedPersonaId, createConversation, setActiveConversationId]);
+
+  const activeConvId = activeConversationId || (user && sessionId && sessionId !== user.id ? sessionId : null);
+  const currentSession = sessionId || user?.id || "guest_android_session";
+
+  const { messages, wsState, sendMessage } = useWebSocket(currentSession, user?.id, undefined, activeConvId);
   const isStreaming = wsState.isStreaming;
 
   const [input, setInput] = useState("");
@@ -114,17 +155,31 @@ export default function AndroidChat() {
             }}
           />
           <button
-            onClick={() => window.location.reload()}
+            onClick={async () => {
+              if (user) {
+                const newConv = await createConversation(selectedPersonaId);
+                if (newConv) {
+                  setActiveConversationId(newConv.id);
+                  setSessionId(newConv.id);
+                }
+              } else {
+                const newSession = crypto.randomUUID();
+                localStorage.setItem("sera_guest_android_session", newSession);
+                setSessionId(newSession);
+              }
+            }}
             style={{
-              background: "none",
-              border: "none",
-              color: "#8b95a7",
-              fontSize: "13px",
+              background: "rgba(255, 255, 255, 0.08)",
+              border: "1px solid rgba(255, 255, 255, 0.12)",
+              borderRadius: "8px",
+              color: "#e2e8f0",
+              fontSize: "12px",
+              fontWeight: 500,
               cursor: "pointer",
-              padding: "4px 8px",
+              padding: "4px 10px",
             }}
           >
-            Clear
+            + New
           </button>
         </div>
       </div>

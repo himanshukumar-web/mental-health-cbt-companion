@@ -577,7 +577,7 @@ def sqlite_create_session(session_id, mood_score=None, user_id=None):
         conn.close()
 
 
-def sqlite_save_message(session_id, role, content, threat_level="normal", user_id=None):
+def sqlite_save_message(session_id, role, content, threat_level="normal", user_id=None, conversation_id=None):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     msg_id = str(uuid.uuid4())
@@ -592,9 +592,9 @@ def sqlite_save_message(session_id, role, content, threat_level="normal", user_i
             
         encrypted = encrypt_message(content, settings.encryption_key)
         cursor.execute("""
-        INSERT INTO messages (id, session_id, role, content_encrypted, threat_level, timestamp)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """, (msg_id, session_id, role, encrypted, threat_level, timestamp))
+        INSERT INTO messages (id, session_id, role, content_encrypted, threat_level, timestamp, conversation_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (msg_id, session_id, role, encrypted, threat_level, timestamp, conversation_id))
         conn.commit()
         return True
     except Exception as e:
@@ -806,6 +806,7 @@ async def save_message(
     content: str,
     threat_level: str = "normal",
     user_id: str | None = None,
+    conversation_id: str | None = None,
 ) -> bool:
     """Encrypt and save a message to the database."""
     db = get_supabase()
@@ -828,19 +829,22 @@ async def save_message(
                 print("Supabase check/create session error:", e)
 
             encrypted = encrypt_message(content, settings.encryption_key)
-            db.table("messages").insert({
+            msg_data = {
                 "session_id": session_id,
                 "role": role,
                 "content_encrypted": encrypted,
                 "threat_level": threat_level,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-            }).execute()
+            }
+            if conversation_id:
+                msg_data["conversation_id"] = conversation_id
+            db.table("messages").insert(msg_data).execute()
             return True
         except Exception as e:
             print("Supabase save message error:", e)
 
     # Fallback to local SQLite
-    return sqlite_save_message(session_id, role, content, threat_level, user_id)
+    return sqlite_save_message(session_id, role, content, threat_level, user_id, conversation_id)
 
 
 async def get_session_history(session_id: str, limit: int = 20) -> list[dict]:
@@ -3827,3 +3831,118 @@ def _search_snippet(text: str, query: str, max_len: int = 120) -> str:
     if end < len(text):
         snippet += "..."
     return snippet
+
+
+# ── Daily Task Reminder Generation ──────────────────────────────────────────
+
+DAILY_TASKS = [
+    {
+        "key": "mood",
+        "type": "daily_mood_reminder",
+        "title": "Mood Check-in 😊",
+        "message": "Your daily Mood Check-in is waiting. Take a moment to record how you're feeling today.",
+        "link": "/mood",
+        "enabled_field": "mood_enabled",
+    },
+    {
+        "key": "journal",
+        "type": "daily_journal_reminder",
+        "title": "Reflection Journal 📝",
+        "message": "Your daily Journal entry is waiting. Take a moment to write down your thoughts.",
+        "link": "/journal",
+        "enabled_field": "journal_enabled",
+    },
+    {
+        "key": "meditation",
+        "type": "daily_meditation_reminder",
+        "title": "Morning Meditation 🧘",
+        "message": "Your daily Meditation session is waiting. Start your day with 5 minutes of grounding.",
+        "link": "/meditation",
+        "enabled_field": "meditation_enabled",
+    },
+    {
+        "key": "health_measure",
+        "type": "daily_health_measure_reminder",
+        "title": "Daily Health Measure 🩺",
+        "message": "Your daily Health Measure is waiting. Take a moment to complete today's wellness check-in.",
+        "link": "/wellness",
+        "enabled_field": None,  # Uses localStorage on frontend; always generate if no completion
+    },
+]
+
+
+async def generate_daily_reminders(user_id: str, local_date: str) -> dict:
+    """
+    Check which daily tasks are incomplete for the given local_date (YYYY-MM-DD)
+    and create notification records for each. Deduplicated by type + date prefix.
+    Returns summary of created/skipped reminders.
+    """
+    created = []
+    skipped = []
+
+    # 1. Fetch user's reminder preferences
+    reminders_prefs = await get_reminders(user_id)
+
+    # 2. Fetch today's existing notifications to prevent duplicates
+    existing_notifications = await get_user_notifications(user_id, limit=50)
+    today_notif_types = set()
+    for n in existing_notifications:
+        # Check if notification was created today (same date) and matches a daily type
+        n_date = (n.get("created_at") or "")[:10]
+        if n_date == local_date:
+            today_notif_types.add(n.get("type", ""))
+
+    # 3. Check task completions for today
+    today_mood = await get_mood_entries(user_id, start_date=local_date, end_date=local_date)
+    today_journal = await get_journal_entries(user_id)
+    # Filter journal entries to today
+    today_journal = [j for j in today_journal if (j.get("created_at") or "")[:10] == local_date]
+
+    # Check habit completions for meditation
+    habit_completions = await get_habit_completions(user_id, start_date=local_date, end_date=local_date)
+    habits = await get_habit_definitions(user_id)
+    meditation_habit_ids = [h["id"] for h in habits if "meditat" in (h.get("name") or "").lower()]
+    meditation_done = any(
+        c.get("habit_definition_id") in meditation_habit_ids and c.get("completed")
+        for c in habit_completions
+    )
+
+    completions = {
+        "mood": len(today_mood) > 0,
+        "journal": len(today_journal) > 0,
+        "meditation": meditation_done,
+        "health_measure": False,  # Always remind — frontend checks localStorage
+    }
+
+    # 4. Generate reminders for incomplete tasks
+    for task in DAILY_TASKS:
+        task_key = task["key"]
+        notif_type = task["type"]
+
+        # Check if already sent today
+        if notif_type in today_notif_types:
+            skipped.append(task_key)
+            continue
+
+        # Check if enabled in preferences
+        if task["enabled_field"] and reminders_prefs:
+            if not reminders_prefs.get(task["enabled_field"], True):
+                skipped.append(task_key)
+                continue
+
+        # Check if already completed today
+        if completions.get(task_key, False):
+            skipped.append(task_key)
+            continue
+
+        # Create notification
+        await create_notification(
+            user_id=user_id,
+            notif_type=notif_type,
+            title=task["title"],
+            message=task["message"],
+            link=task["link"],
+        )
+        created.append(task_key)
+
+    return {"created": created, "skipped": skipped, "date": local_date}

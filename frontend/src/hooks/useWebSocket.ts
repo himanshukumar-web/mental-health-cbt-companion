@@ -69,7 +69,7 @@ const RECONNECT_BASE_MS = 2_000;
 const RECONNECT_MAX_MS = 30_000;
 const MAX_RECONNECT_ATTEMPTS = 10;
 
-export function useWebSocket(sessionId: string, userId?: string, activeGreeting?: string) {
+export function useWebSocket(sessionId: string, userId?: string, activeGreeting?: string, conversationId?: string | null) {
   const wsRef = useRef<WebSocket | null>(null);
   const [wsState, setWsState] = useState<WSState>({
     isConnected: false,
@@ -89,6 +89,8 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
       agent: "therapist",
     },
   ]);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [crisis, setCrisis] = useState(false);
   const [routerSuggestion, setRouterSuggestion] = useState<RouterSuggestion | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -104,6 +106,11 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
   const connectRef = useRef<(() => void) | null>(null);
 
   const urlsRef = useRef<{ wsUrl: string; httpUrl: string } | null>(null);
+  // Track the conversationId in a ref so WS messages always use latest
+  const conversationIdRef = useRef<string | null>(conversationId || null);
+  useEffect(() => {
+    conversationIdRef.current = conversationId || null;
+  }, [conversationId]);
 
   // Resolve URLs once lazily
   const getUrls = useCallback(() => {
@@ -113,11 +120,11 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
     return urlsRef.current;
   }, []);
 
-  // Load session history on mount or when sessionId changes
+  // Load session history on mount or when sessionId/conversationId changes
   useEffect(() => {
     if (!sessionId) return;
 
-    // Reset messages, history, and crisis state immediately when sessionId changes
+    // Reset messages synchronously (no setTimeout race condition)
     const defaultMessages: ChatMessage[] = [
       {
         role: "assistant",
@@ -125,11 +132,11 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
         agent: "therapist",
       },
     ];
-    const timer = setTimeout(() => {
-      setMessages(defaultMessages);
-      historyRef.current = [];
-      setCrisis(false);
-    }, 0);
+    setMessages(defaultMessages);
+    historyRef.current = [];
+    setCrisis(false);
+    setHistoryLoaded(false);
+    setHistoryError(null);
 
     let active = true;
 
@@ -137,17 +144,34 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
       const urls = getUrls();
       if (!urls) return;
       try {
-        const res = await fetch(`${urls.httpUrl}/sessions/${sessionId}/history`);
+        // Prefer conversation-based history if conversationId is available
+        let historyUrl: string;
+        if (conversationId) {
+          historyUrl = `${urls.httpUrl}/conversations/${conversationId}/messages`;
+        } else {
+          historyUrl = `${urls.httpUrl}/sessions/${sessionId}/history`;
+        }
+        const res = await fetch(historyUrl);
         if (res.ok) {
           const data = await res.json();
           if (active && data.messages && data.messages.length > 0) {
-            setMessages(data.messages);
+            const loadedMessages: ChatMessage[] = data.messages.map((m: { role: string; content: string }) => ({
+              role: m.role as "user" | "assistant",
+              content: m.content,
+              agent: m.role === "assistant" ? "therapist" as const : undefined,
+            }));
+            setMessages(loadedMessages);
             historyRef.current = data.messages.map((m: { role: string; content: string }) => ({ role: m.role, content: m.content }));
           }
         }
       } catch (err) {
         if (active) {
           console.error("[Sera WS] Failed to load session history:", err);
+          setHistoryError("Failed to load chat history. Your previous messages may not be visible.");
+        }
+      } finally {
+        if (active) {
+          setHistoryLoaded(true);
         }
       }
     };
@@ -155,9 +179,9 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
 
     return () => {
       active = false;
-      clearTimeout(timer);
     };
-  }, [sessionId, defaultGreeting, getUrls]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, conversationId]);
 
   // Clear ping interval helper
   const clearPing = useCallback(() => {
@@ -469,14 +493,17 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
       setMessages((m) => [...m, { role: "user", content }]);
       historyRef.current = [...historyRef.current, { role: "user", content }];
 
-      ws.send(
-        JSON.stringify({
-          type: "message",
-          content,
-          persona: personaId || "cbt",
-          history: historyRef.current.slice(-20), // send last 20 turns
-        })
-      );
+      const payload: Record<string, unknown> = {
+        type: "message",
+        content,
+        persona: personaId || "cbt",
+        history: historyRef.current.slice(-20), // send last 20 turns
+      };
+      if (conversationIdRef.current) {
+        payload.conversation_id = conversationIdRef.current;
+      }
+
+      ws.send(JSON.stringify(payload));
     },
     [wsState.isStreaming, crisis]
   );
@@ -506,5 +533,5 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
     }, 100);
   }, [connect, closeExistingWs]);
 
-  return { messages, wsState, crisis, routerSuggestion, sendMessage, dismissCrisis, dismissRouterSuggestion, manualReconnect };
+  return { messages, wsState, crisis, routerSuggestion, sendMessage, dismissCrisis, dismissRouterSuggestion, manualReconnect, historyLoaded, historyError };
 }

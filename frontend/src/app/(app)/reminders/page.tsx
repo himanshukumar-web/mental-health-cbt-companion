@@ -216,6 +216,20 @@ function DesktopRemindersView() {
 
       if (res.ok) {
         toast.success("Reminder schedule saved! 🔔");
+        // Trigger immediate check to generate notifications for newly enabled tasks
+        try {
+          const now = new Date();
+          const localDate = [
+            now.getFullYear(),
+            String(now.getMonth() + 1).padStart(2, "0"),
+            String(now.getDate()).padStart(2, "0"),
+          ].join("-");
+          fetch(`${API_URL}/reminders/${user.id}/generate-daily`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ local_date: localDate }),
+          }).catch(() => {});
+        } catch { /* ignore */ }
       } else {
         toast.error("Failed to save schedule");
       }
