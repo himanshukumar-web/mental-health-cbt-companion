@@ -178,7 +178,7 @@ function DesktopProgressView() {
           <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 12, fontFamily: "var(--font-display)" }}>
             📅 90-Day Mindful Consistency
           </h3>
-          <CalendarHeatmap data={heatmapData} onDayClick={() => router.push("/timeline")} />
+          <CalendarHeatmap data={heatmapData} daysToDisplay={90} onDayClick={() => router.push("/timeline")} />
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>

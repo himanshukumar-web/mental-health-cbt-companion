@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { HeatmapDay } from "@/types/heatmap";
 import { motion } from "framer-motion";
 
@@ -12,25 +13,41 @@ interface CalendarHeatmapProps {
 export default function CalendarHeatmap({
   data,
   onDayClick,
-  daysToDisplay = 30,
+  daysToDisplay = 90,
 }: CalendarHeatmapProps) {
   // Generate date array for the last N days
-  const today = new Date();
-  const daysArray = Array.from({ length: daysToDisplay }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() - (daysToDisplay - 1 - i));
-    return d.toISOString().split("T")[0];
-  });
+  const daysArray = useMemo(() => {
+    const today = new Date();
+    return Array.from({ length: daysToDisplay }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(d.getDate() - (daysToDisplay - 1 - i));
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    });
+  }, [daysToDisplay]);
 
-  const scoreMap = new Map(data.map((item) => [item.date, item.score]));
+  const scoreMap = useMemo(() => {
+    const safeData = Array.isArray(data) ? data : [];
+    return new Map(safeData.map((item) => [item.date, item.score]));
+  }, [data]);
 
   const getSquareColor = (score: number | undefined) => {
-    if (score === undefined) return "var(--bg-secondary)";
+    if (score === undefined || score === null || score === 0) return "rgba(255, 255, 255, 0.05)";
     if (score >= 80) return "#22c55e";
     if (score >= 60) return "#3b82f6";
     if (score >= 40) return "#f59e0b";
     if (score > 0) return "#ef4444";
-    return "var(--bg-secondary)";
+    return "rgba(255, 255, 255, 0.05)";
+  };
+
+  const getSquareBorder = (score: number | undefined) => {
+    if (score === undefined || score === null || score === 0) return "1px solid rgba(255, 255, 255, 0.08)";
+    if (score >= 80) return "1px solid rgba(34, 197, 94, 0.5)";
+    if (score >= 60) return "1px solid rgba(59, 130, 246, 0.5)";
+    if (score >= 40) return "1px solid rgba(245, 158, 11, 0.5)";
+    return "1px solid rgba(239, 68, 68, 0.5)";
   };
 
   return (
@@ -60,7 +77,7 @@ export default function CalendarHeatmap({
         {/* Legend */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--text-tertiary)" }}>
           <span>Less</span>
-          <div style={{ width: 12, height: 12, borderRadius: 3, background: "var(--bg-secondary)" }} />
+          <div style={{ width: 12, height: 12, borderRadius: 3, background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.08)" }} />
           <div style={{ width: 12, height: 12, borderRadius: 3, background: "#ef4444" }} />
           <div style={{ width: 12, height: 12, borderRadius: 3, background: "#f59e0b" }} />
           <div style={{ width: 12, height: 12, borderRadius: 3, background: "#3b82f6" }} />
@@ -74,16 +91,18 @@ export default function CalendarHeatmap({
         className="mobile-scroll-x"
         style={{
           display: "grid",
-          gridTemplateColumns: `repeat(auto-fill, minmax(20px, 1fr))`,
+          gridTemplateColumns: "repeat(auto-fill, minmax(20px, 1fr))",
           gap: 6,
-          padding: 8,
+          padding: 12,
           borderRadius: 14,
           background: "var(--bg-secondary)",
+          border: "1px solid var(--border-secondary)",
         }}
       >
         {daysArray.map((dateStr) => {
           const score = scoreMap.get(dateStr);
           const color = getSquareColor(score);
+          const border = getSquareBorder(score);
           const dayFormatted = new Date(dateStr).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
           return (
@@ -93,15 +112,19 @@ export default function CalendarHeatmap({
               whileTap={{ scale: 0.95 }}
               onClick={() => onDayClick(dateStr)}
               title={`${dayFormatted}: Wellness Score ${score !== undefined ? score : "No Log"}`}
+              aria-label={`${dayFormatted}: Wellness Score ${score !== undefined ? score : "No Log"}`}
               style={{
-                width: 22,
-                height: 22,
+                width: "100%",
+                minWidth: 18,
+                minHeight: 18,
+                aspectRatio: "1 / 1",
                 borderRadius: 5,
                 background: color,
-                border: "none",
+                border: border,
                 cursor: "pointer",
+                padding: 0,
                 transition: "all 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
-                boxShadow: score !== undefined ? `0 2px 8px ${color}40` : "none",
+                boxShadow: score !== undefined && score > 0 ? `0 2px 8px ${color}40` : "none",
               }}
             />
           );
