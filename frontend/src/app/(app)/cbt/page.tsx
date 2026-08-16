@@ -9,8 +9,7 @@ import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import toast from "react-hot-toast";
 import { useIsAndroid } from "@/hooks/useIsAndroid";
 import AndroidCBT from "@/components/mobile/AndroidCBT";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { API_URL } from "@/lib/config";
 
 interface CBTWorksheet {
   id: string;

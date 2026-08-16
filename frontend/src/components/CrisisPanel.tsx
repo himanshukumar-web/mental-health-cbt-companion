@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { API_URL } from "@/lib/config";
 
 const GROUNDING_TECHNIQUES = [
   { icon: "👁", title: "5 things you can SEE", desc: "Look around and name 5 objects in your environment right now." },

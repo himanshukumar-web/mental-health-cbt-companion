@@ -5,8 +5,7 @@ import { ExportCategory, ExportFormat } from "@/types/heatmap";
 import { exportDataAsJSON, exportDataAsCSV, exportReportAsPDF } from "@/utils/export";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { API_URL } from "@/lib/config";
 
 interface ExportModalProps {
   isOpen: boolean;

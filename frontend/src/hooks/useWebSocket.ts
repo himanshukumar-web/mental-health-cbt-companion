@@ -32,33 +32,12 @@ export interface WSState {
 }
 
 // ── Smart backend URL detection ─────────────────────────────────────────────
-// Handles: Web browser, Capacitor on physical device, Android emulator
+import { getApiUrl } from "@/lib/config";
 
 function getBackendUrls(): { wsUrl: string; httpUrl: string } {
-  const envUrl = process.env.NEXT_PUBLIC_API_URL || "";
-
-  // Running in a browser (Next.js dev or production)
-  if (typeof window !== "undefined") {
-    // Check if running inside Capacitor native app
-    const isCapacitor =
-      (window as unknown as { Capacitor?: unknown }).Capacitor !== undefined ||
-      window.location.protocol === "capacitor:";
-
-    if (isCapacitor) {
-      // In Capacitor, use the env URL (should point to the backend server IP)
-      // If no env URL, try common local dev addresses
-      const baseUrl = envUrl || "http://10.0.2.2:8000";
-      const wsBase = baseUrl.replace(/^http/, "ws");
-      return { wsUrl: wsBase, httpUrl: baseUrl };
-    }
-  }
-
-  // Default: use env URL or production Render backend URL
-  const baseUrl = envUrl || (typeof window !== "undefined" && window.location.hostname !== "localhost"
-    ? "https://mental-health-cbt-companion.onrender.com"
-    : "http://localhost:8000");
-  const wsBase = baseUrl.replace(/^http/, "ws");
-  return { wsUrl: wsBase, httpUrl: baseUrl };
+  const httpUrl = getApiUrl();
+  const wsUrl = httpUrl.replace(/^http/, "ws");
+  return { wsUrl, httpUrl };
 }
 
 // Ping interval to keep WebSocket alive on proxy environments (Render/Vercel)

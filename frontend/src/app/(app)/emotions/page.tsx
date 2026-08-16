@@ -8,8 +8,7 @@ import { PageSkeleton } from "@/components/ui/LoadingSkeleton";
 import toast from "react-hot-toast";
 import { useIsAndroid } from "@/hooks/useIsAndroid";
 import AndroidEmotions from "@/components/mobile/AndroidEmotions";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { API_URL } from "@/lib/config";
 
 const EMOTION_COLORS: Record<string, string> = {
   happy: "#22c55e",
