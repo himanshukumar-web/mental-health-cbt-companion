@@ -3,16 +3,5 @@
   "framework": "nextjs",
   "installCommand": "npm --prefix frontend install",
   "buildCommand": "npm --prefix frontend run build",
-  "outputDirectory": "frontend/.next",
-  "experimentalServices": {
-    "frontend": {
-      "entrypoint": "frontend",
-      "routePrefix": "/",
-      "framework": "nextjs"
-    },
-    "backend": {
-      "entrypoint": "backend",
-      "routePrefix": "/_/backend"
-    }
-  }
+  "outputDirectory": "frontend/out"
 }

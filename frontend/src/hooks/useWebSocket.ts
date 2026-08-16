@@ -31,8 +31,10 @@ export interface WSState {
   connectionError: string | null;
 }
 
-// ── Smart backend URL detection ─────────────────────────────────────────────
 import { getApiUrl } from "@/lib/config";
+
+// ── Smart backend URL detection ─────────────────────────────────────────────
+// Handles: Web browser, Capacitor on physical device, Android emulator
 
 function getBackendUrls(): { wsUrl: string; httpUrl: string } {
   const httpUrl = getApiUrl();

@@ -88,19 +88,27 @@ export default function RootLayout({
           </AuthProvider>
         </ErrorBoundary>
 
-        {/* Register Service Worker */}
+        {/* Register Service Worker (production only; unregister on localhost to prevent stale offline caching) */}
         <Script id="sw-register" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {
-              window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js')
-                  .then(function(reg) {
-                    console.log('MindMate SW registered:', reg.scope);
-                  })
-                  .catch(function(err) {
-                    console.log('MindMate SW registration failed:', err);
-                  });
-              });
+              if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                  for (var reg of regs) {
+                    reg.unregister();
+                  }
+                });
+              } else {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js')
+                    .then(function(reg) {
+                      console.log('MindMate SW registered:', reg.scope);
+                    })
+                    .catch(function(err) {
+                      console.log('MindMate SW registration failed:', err);
+                    });
+                });
+              }
             }
           `}
         </Script>
