@@ -27,7 +27,8 @@ export default function QuickMoodLogger({ userId, onMoodLogged }: QuickMoodLogge
     setSubmitting(option.label);
 
     try {
-      const todayStr = new Date().toISOString().split("T")[0];
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
       const res = await fetch(`${API_URL}/mood-entries`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -37,7 +38,6 @@ export default function QuickMoodLogger({ userId, onMoodLogged }: QuickMoodLogge
           mood_score: option.score,
           mood_emoji: option.emoji,
           stress_level: option.score <= 2 ? 4 : option.score === 3 ? 2 : 1,
-          sleep_hours: 8,
           notes: `Logged via Quick Dashboard Check-in (${option.label})`,
         }),
       });

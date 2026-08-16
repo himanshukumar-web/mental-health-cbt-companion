@@ -57,6 +57,25 @@ const MINDFUL_QUOTES = [
   { text: "Small steps every day lead to profound emotional healing.", author: "MindMate CBT" },
 ];
 
+interface HabitDef {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+}
+
+interface HabitCompletion {
+  habit_definition_id: string;
+  date: string;
+}
+
+function getLocalDateString(d: Date = new Date()): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function DesktopDashboardView() {
   const { user, userRole, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -68,6 +87,14 @@ function DesktopDashboardView() {
   const [streakDays, setStreakDays] = useState(1);
   const [insights, setInsights] = useState<PersonalizedInsight[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [habitsDefs, setHabitsDefs] = useState<HabitDef[]>([]);
+  const [habitCompletions, setHabitCompletions] = useState<HabitCompletion[]>([]);
+  const [habitsDone, setHabitsDone] = useState<{ [key: string]: boolean }>({
+    meditation: false,
+    journal: false,
+    breathing: false,
+    water: false,
+  });
   const [loading, setLoading] = useState(true);
 
   // Instant SWR cache hydration
@@ -91,13 +118,6 @@ function DesktopDashboardView() {
       }
     }
   }, [user?.id]);
-
-  const [habitsDone, setHabitsDone] = useState<{ [key: string]: boolean }>({
-    meditation: false,
-    journal: false,
-    breathing: false,
-    water: true,
-  });
 
   const [quoteIndex, setQuoteIndex] = useState(0);
 
@@ -128,9 +148,10 @@ function DesktopDashboardView() {
         fetch(`${API_URL}/gamification/xp/${user.id}`),
         fetch(`${API_URL}/insights/${user.id}`),
         fetch(`${API_URL}/appointments/user/${user.id}`),
+        fetch(`${API_URL}/habits/${user.id}/progress`),
       ]);
 
-      const [moodRes, journalRes, cbtRes, xpRes, insightsRes, apptRes] = results;
+      const [moodRes, journalRes, , xpRes, insightsRes, apptRes, habitsRes] = results;
 
       let freshEntries: MoodEntry[] = [];
       let freshJournalCount = 0;
@@ -139,6 +160,7 @@ function DesktopDashboardView() {
       let freshStreak = streakDays;
       let freshInsights: PersonalizedInsight[] = [];
       let freshAppointments: Appointment[] = [];
+      const todayStr = getLocalDateString();
 
       if (moodRes.status === "fulfilled" && moodRes.value.ok) {
         const json = await moodRes.value.json();
@@ -154,7 +176,6 @@ function DesktopDashboardView() {
         const jList = json.journal_entries || [];
         freshJournalCount = jList.length;
         setJournalCount(freshJournalCount);
-        if (jList.length > 0) setHabitsDone((prev) => ({ ...prev, journal: true }));
       }
       if (xpRes.status === "fulfilled" && xpRes.value.ok) {
         const json = await xpRes.value.json();
@@ -172,6 +193,30 @@ function DesktopDashboardView() {
         const json = await apptRes.value.json();
         freshAppointments = json.appointments || [];
         setAppointments(freshAppointments);
+      }
+      if (habitsRes.status === "fulfilled" && habitsRes.value.ok) {
+        const json = await habitsRes.value.json();
+        const defs: HabitDef[] = json.definitions || [];
+        const comps: HabitCompletion[] = json.completions || [];
+        setHabitsDefs(defs);
+        setHabitCompletions(comps);
+
+        const todayComps = comps.filter((c) => c.date === todayStr);
+        const todayCompIds = new Set(todayComps.map((c) => c.habit_definition_id));
+
+        setHabitsDone((prev) => {
+          const updated: { [key: string]: boolean } = { ...prev };
+          defs.forEach((d) => {
+            const isCompleted = todayCompIds.has(d.id);
+            const key = d.name.toLowerCase();
+            if (key.includes("meditat")) updated["meditation"] = isCompleted;
+            else if (key.includes("journal")) updated["journal"] = isCompleted;
+            else if (key.includes("breath")) updated["breathing"] = isCompleted;
+            else if (key.includes("water") || key.includes("hydrat")) updated["water"] = isCompleted;
+            else updated[d.id] = isCompleted;
+          });
+          return updated;
+        });
       }
 
       // Persist snapshot to cache for instant sub-millisecond next load
@@ -204,8 +249,52 @@ function DesktopDashboardView() {
     return () => clearTimeout(timer);
   }, [fetchData]);
 
-  const toggleHabit = (key: string) => {
-    setHabitsDone((prev) => ({ ...prev, [key]: !prev[key] }));
+  const todayDateStr = getLocalDateString();
+  const todayEntry = moodEntries.find((e) => e.date === todayDateStr) || null;
+
+  const todayCompletedHabitIds = new Set(
+    habitCompletions.filter((c) => c.date === todayDateStr).map((c) => c.habit_definition_id)
+  );
+
+  const totalHabitsCount = habitsDefs.length > 0 ? habitsDefs.length : 4;
+  const completedHabitsCount = habitsDefs.length > 0
+    ? habitsDefs.filter((h) => todayCompletedHabitIds.has(h.id)).length
+    : Object.values(habitsDone).filter(Boolean).length;
+  const habitPercentage = totalHabitsCount > 0 ? Math.round((completedHabitsCount / totalHabitsCount) * 100) : 0;
+
+  const toggleHabit = async (habitKey: string) => {
+    if (!user) return;
+    const isChecked = habitsDone[habitKey] || false;
+    const newStatus = !isChecked;
+
+    setHabitsDone((prev) => ({ ...prev, [habitKey]: newStatus }));
+
+    const def = habitsDefs.find(
+      (h) => h.id === habitKey || h.name.toLowerCase().includes(habitKey.toLowerCase())
+    );
+
+    if (def) {
+      setHabitCompletions((prev) =>
+        newStatus
+          ? [...prev, { habit_definition_id: def.id, date: todayDateStr }]
+          : prev.filter((c) => !(c.habit_definition_id === def.id && c.date === todayDateStr))
+      );
+
+      try {
+        await fetch(`${API_URL}/habits/complete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: user.id,
+            habit_definition_id: def.id,
+            date: todayDateStr,
+            completed: newStatus,
+          }),
+        });
+      } catch {
+        /* ignore */
+      }
+    }
   };
 
   if (authLoading || loading)
@@ -222,11 +311,41 @@ function DesktopDashboardView() {
   const displayName = user.user_metadata?.full_name?.split(" ")[0] || user.email?.split("@")[0] || "Friend";
   const quote = MINDFUL_QUOTES[quoteIndex];
 
-  const completedHabitsCount = Object.values(habitsDone).filter(Boolean).length;
-  const totalHabitsCount = Object.keys(habitsDone).length;
-  const habitPercentage = Math.round((completedHabitsCount / totalHabitsCount) * 100);
-
   const upcomingAppt = appointments.find((a) => a.status === "confirmed" || a.status === "pending");
+
+  const todaySleep = todayEntry?.sleep_hours !== null && todayEntry?.sleep_hours !== undefined ? todayEntry.sleep_hours : null;
+  const todayWater = (todayEntry as any)?.water_intake !== null && (todayEntry as any)?.water_intake !== undefined && (todayEntry as any)?.water_intake > 0
+    ? (todayEntry as any).water_intake
+    : habitsDone["water"]
+    ? 8
+    : null;
+  const todayMeditation = (todayEntry as any)?.meditation_done || habitsDone["meditation"] || false;
+
+  const recentActivities = [];
+  if (todayEntry) {
+    recentActivities.push({
+      icon: todayEntry.mood_emoji || "😊",
+      title: `Mood Logged: ${todayEntry.mood_score}/5`,
+      time: "Today",
+      color: "#22c55e",
+    });
+  }
+  if (journalCount > 0) {
+    recentActivities.push({
+      icon: "📝",
+      title: `Journal Entries (${journalCount} total)`,
+      time: "Active",
+      color: "#f59e0b",
+    });
+  }
+  if (upcomingAppt) {
+    recentActivities.push({
+      icon: "📅",
+      title: `Appt with Dr. ${upcomingAppt.doctor_name || "Specialist"}`,
+      time: upcomingAppt.date,
+      color: "#3b82f6",
+    });
+  }
 
   return (
     <div
@@ -243,8 +362,10 @@ function DesktopDashboardView() {
         style={{
           display: "flex",
           gap: 24,
-          maxWidth: 1380,
-          overflow: "auto",
+          maxWidth: 1400,
+          margin: "0 auto",
+          padding: "24px 24px 80px 24px",
+          minWidth: 0,
         }}
       >
         <style>{`
@@ -745,11 +866,15 @@ function DesktopDashboardView() {
 
         <div className="desktop-right-sidebar-container">
           <DesktopRightSidebar
-            moodEntries={moodEntries}
-            journalCount={journalCount}
             streakDays={streakDays}
-            userLevel={userLevel}
-            userXP={userXP}
+            todayMood={todayEntry ? { mood_score: todayEntry.mood_score, mood_emoji: todayEntry.mood_emoji } : null}
+            todaySleep={todaySleep}
+            todayWater={todayWater}
+            todayMeditation={todayMeditation}
+            completedHabitsCount={completedHabitsCount}
+            totalHabitsCount={totalHabitsCount}
+            habitPercentage={habitPercentage}
+            recentActivities={recentActivities}
           />
         </div>
       </div>
