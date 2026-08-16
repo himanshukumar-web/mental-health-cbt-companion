@@ -363,8 +363,7 @@ function DesktopDashboardView() {
           display: "flex",
           gap: 24,
           maxWidth: 1400,
-          margin: "0 auto",
-          padding: "24px 24px 80px 24px",
+          padding: "24px 20px 80px 20px",
           minWidth: 0,
         }}
       >
