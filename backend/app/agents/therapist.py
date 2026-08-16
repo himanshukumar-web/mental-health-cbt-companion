@@ -6,13 +6,13 @@ import anthropic
 from groq import AsyncGroq
 from app.config import settings
 
-logger = logging.getLogger("sera.therapist")
+logger = logging.getLogger("mindmate.therapist")
 
 
 PERSONAS = {
     "cbt": {
         "id": "cbt",
-        "name": "Sera",
+        "name": "MindMate",
         "title": "Licensed CBT Therapist",
         "avatar": "🌿",
         "color": "#22c55e",
@@ -23,7 +23,7 @@ PERSONAS = {
             "behavior activation", "cognitive restructuring", "rumination",
             "automatic thoughts", "catastrophizing", "all-or-nothing thinking",
         ],
-        "prompt": """You are Sera, a Licensed CBT Therapist and clinical mental wellness companion.
+        "prompt": """You are MindMate, a Licensed CBT Therapist and clinical mental wellness companion.
 
 CRITICAL PERSONA DIRECTIVE: You are a structured, evidence-based Cognitive Behavioral Therapy specialist. Your expertise covers:
 - **Negative Thought Patterns**: Identify and challenge automatic negative thoughts (ANTs). Help users spot the cognitive triad (negative views of self, world, future).
@@ -243,14 +243,14 @@ def _get_client():
     key = settings.anthropic_api_key
 
     if not key:
-        logger.error("[Sera] No API key configured! Set ANTHROPIC_API_KEY in .env")
+        logger.error("[MindMate] No API key configured! Set ANTHROPIC_API_KEY in .env")
         raise ValueError("No API key configured. Set ANTHROPIC_API_KEY in .env")
 
     # GROQ (Recommended)
     if key.startswith("gsk_"):
         client = AsyncGroq(api_key=key)
         model = "llama-3.3-70b-versatile"
-        logger.info("[Sera] Using Groq provider with model: %s", model)
+        logger.info("[MindMate] Using Groq provider with model: %s", model)
 
     # OpenRouter
     elif key.startswith("sk-or-"):
@@ -259,13 +259,13 @@ def _get_client():
             base_url="https://openrouter.ai/api/v1",
         )
         model = "meta-llama/llama-3.3-70b-instruct:free"
-        logger.info("[Sera] Using OpenRouter provider with model: %s", model)
+        logger.info("[MindMate] Using OpenRouter provider with model: %s", model)
 
     # Anthropic Claude
     else:
         client = anthropic.AsyncAnthropic(api_key=key)
         model = "claude-sonnet-4-20250514"
-        logger.info("[Sera] Using Anthropic provider with model: %s", model)
+        logger.info("[MindMate] Using Anthropic provider with model: %s", model)
 
     return client, model
 
@@ -303,7 +303,7 @@ async def stream_response(
             # GROQ STREAMING
             # ==========================
             if settings.anthropic_api_key.startswith("gsk_"):
-                logger.debug("[Sera] Groq streaming attempt %d, messages=%d", attempt + 1, len(messages))
+                logger.debug("[MindMate] Groq streaming attempt %d, messages=%d", attempt + 1, len(messages))
 
                 stream = await client.chat.completions.create(
                     model=model,
@@ -326,7 +326,7 @@ async def stream_response(
             # ANTHROPIC / OPENROUTER
             # ==========================
             else:
-                logger.debug("[Sera] Anthropic streaming attempt %d, messages=%d", attempt + 1, len(messages))
+                logger.debug("[MindMate] Anthropic streaming attempt %d, messages=%d", attempt + 1, len(messages))
 
                 async with client.messages.stream(
                     model=model,
@@ -345,19 +345,19 @@ async def stream_response(
             last_error = exc
             error_name = type(exc).__name__
             logger.error(
-                "[Sera] Therapist stream error (attempt %d/%d): %s: %s",
+                "[MindMate] Therapist stream error (attempt %d/%d): %s: %s",
                 attempt + 1, MAX_RETRIES + 1, error_name, str(exc)
             )
 
             # Don't retry on auth errors — they won't fix themselves
             error_msg = str(exc).lower()
             if "auth" in error_msg or "api_key" in error_msg or "invalid" in error_msg:
-                logger.error("[Sera] Authentication error — not retrying")
+                logger.error("[MindMate] Authentication error — not retrying")
                 break
 
             if attempt < MAX_RETRIES:
                 delay = RETRY_DELAY_SECONDS * (attempt + 1)
-                logger.info("[Sera] Retrying in %.1fs...", delay)
+                logger.info("[MindMate] Retrying in %.1fs...", delay)
                 await asyncio.sleep(delay)
 
     # All retries exhausted

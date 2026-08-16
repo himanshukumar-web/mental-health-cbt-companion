@@ -1,7 +1,7 @@
-// Sera PWA Service Worker
+// MindMate PWA Service Worker
 // Network-first for API, Cache-first for static assets
 
-const CACHE_NAME = "sera-pwa-v2";
+const CACHE_NAME = "mindmate-pwa-v1";
 const OFFLINE_URL = "/offline.html";
 
 // Static assets to pre-cache on install

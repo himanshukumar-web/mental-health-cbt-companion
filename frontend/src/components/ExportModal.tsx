@@ -34,9 +34,9 @@ export default function ExportModal({ isOpen, onClose, userId }: ExportModalProp
         const exportData = data.data || {};
 
         if (format === "json") {
-          exportDataAsJSON(exportData, `sera_wellness_report_${userId.slice(0, 8)}`);
+          exportDataAsJSON(exportData, `mindmate_wellness_report_${userId.slice(0, 8)}`);
         } else if (format === "csv") {
-          exportDataAsCSV(exportData.mood_entries || [], `sera_mood_history_${userId.slice(0, 8)}`);
+          exportDataAsCSV(exportData.mood_entries || [], `mindmate_mood_history_${userId.slice(0, 8)}`);
         } else {
           // PDF Report
           const contentHtml = `
@@ -55,15 +55,15 @@ export default function ExportModal({ isOpen, onClose, userId }: ExportModalProp
               </div>
             `).join('')}
           `;
-          exportReportAsPDF("Complete Wellness Report", contentHtml, `sera_report_${userId.slice(0, 8)}`);
+          exportReportAsPDF("Complete Wellness Report", contentHtml, `mindmate_report_${userId.slice(0, 8)}`);
         }
       } else if (category === "timeline") {
         const res = await fetch(`${API_URL}/timeline/${userId}`);
         const data = await res.json();
         const timeline = data.timeline || [];
 
-        if (format === "json") exportDataAsJSON(timeline, "sera_timeline");
-        else if (format === "csv") exportDataAsCSV(timeline, "sera_timeline");
+        if (format === "json") exportDataAsJSON(timeline, "mindmate_timeline");
+        else if (format === "csv") exportDataAsCSV(timeline, "mindmate_timeline");
         else {
           const html = timeline.map((item: { type: string; title: string; content: string; timestamp?: string }) => `
             <div class="card">
@@ -73,15 +73,15 @@ export default function ExportModal({ isOpen, onClose, userId }: ExportModalProp
               <small>${item.timestamp || ''}</small>
             </div>
           `).join('');
-          exportReportAsPDF("Timeline Export", html, "sera_timeline");
+          exportReportAsPDF("Timeline Export", html, "mindmate_timeline");
         }
       } else if (category === "mood") {
         const res = await fetch(`${API_URL}/mood-entries/${userId}`);
         const data = await res.json();
         const entries = data.mood_entries || [];
 
-        if (format === "json") exportDataAsJSON(entries, "sera_mood_history");
-        else if (format === "csv") exportDataAsCSV(entries, "sera_mood_history");
+        if (format === "json") exportDataAsJSON(entries, "mindmate_mood_history");
+        else if (format === "csv") exportDataAsCSV(entries, "mindmate_mood_history");
         else {
           const html = entries.map((m: { mood_score: number; note?: string; date?: string; created_at?: string }) => `
             <div class="card">
@@ -90,15 +90,15 @@ export default function ExportModal({ isOpen, onClose, userId }: ExportModalProp
               <small>${m.date || m.created_at}</small>
             </div>
           `).join('');
-          exportReportAsPDF("Mood History", html, "sera_mood_history");
+          exportReportAsPDF("Mood History", html, "mindmate_mood_history");
         }
       } else if (category === "journal") {
         const res = await fetch(`${API_URL}/journal/${userId}`);
         const data = await res.json();
         const journals = data.journal_entries || [];
 
-        if (format === "json") exportDataAsJSON(journals, "sera_journals");
-        else if (format === "csv") exportDataAsCSV(journals, "sera_journals");
+        if (format === "json") exportDataAsJSON(journals, "mindmate_journals");
+        else if (format === "csv") exportDataAsCSV(journals, "mindmate_journals");
         else {
           const html = journals.map((j: { title?: string; content: string; created_at: string }) => `
             <div class="card">
@@ -107,7 +107,7 @@ export default function ExportModal({ isOpen, onClose, userId }: ExportModalProp
               <small>${j.created_at}</small>
             </div>
           `).join('');
-          exportReportAsPDF("Journal Reflections", html, "sera_journals");
+          exportReportAsPDF("Journal Reflections", html, "mindmate_journals");
         }
       } else if (category === "assessments") {
         const [phqRes, gadRes] = await Promise.all([
@@ -117,8 +117,8 @@ export default function ExportModal({ isOpen, onClose, userId }: ExportModalProp
         const phq = (await phqRes.json()).history || [];
         const gad = (await gadRes.json()).history || [];
 
-        if (format === "json") exportDataAsJSON({ phq9: phq, gad7: gad }, "sera_assessments");
-        else if (format === "csv") exportDataAsCSV([...phq, ...gad], "sera_assessments");
+        if (format === "json") exportDataAsJSON({ phq9: phq, gad7: gad }, "mindmate_assessments");
+        else if (format === "csv") exportDataAsCSV([...phq, ...gad], "mindmate_assessments");
         else {
           const html = `
             <h2>PHQ-9 Depression History</h2>
@@ -126,7 +126,7 @@ export default function ExportModal({ isOpen, onClose, userId }: ExportModalProp
             <h2>GAD-7 Anxiety History</h2>
             ${gad.map((g: { score: number; anxiety_level?: string; created_at: string }) => `<div class="card"><strong>Score ${g.score}/21</strong> - ${g.anxiety_level} (${g.created_at})</div>`).join('')}
           `;
-          exportReportAsPDF("Clinical Assessments Report", html, "sera_assessments");
+          exportReportAsPDF("Clinical Assessments Report", html, "mindmate_assessments");
         }
       }
 

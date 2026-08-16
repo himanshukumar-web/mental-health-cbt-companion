@@ -22,10 +22,10 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "MindMate — CBT Companion",
+  title: "MindMate — AI Mental Wellness Companion",
   description:
     "A compassionate, evidence-based CBT companion powered by multi-agent AI. Talk through your thoughts, feelings, and challenges in a safe, private space.",
-  keywords: ["CBT", "mental health", "therapy companion", "AI", "cognitive behavioral therapy"],
+  keywords: ["CBT", "mental health", "therapy companion", "AI", "cognitive behavioral therapy", "MindMate"],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     title: "MindMate",
   },
   openGraph: {
-    title: "MindMate — Your CBT Companion",
+    title: "MindMate — AI Mental Wellness Companion",
     description: "Evidence-based mental health support powered by multi-agent AI.",
     type: "website",
   },

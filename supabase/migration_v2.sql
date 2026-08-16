@@ -1,5 +1,5 @@
 -- ============================================================
--- Sera CBT Companion — V2 Migration
+-- MindMate CBT Companion — V2 Migration
 -- Run this in the Supabase SQL editor AFTER schema.sql
 -- ============================================================
 

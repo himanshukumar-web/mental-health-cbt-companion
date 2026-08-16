@@ -29,7 +29,7 @@ export function sendBrowserNotification(title: string, options?: NotificationOpt
     new Notification(title, {
       icon: "/icon-192.png",
       badge: "/icon-192.png",
-      tag: "sera-notification",
+      tag: "mindmate-notification",
       ...options,
     });
   }

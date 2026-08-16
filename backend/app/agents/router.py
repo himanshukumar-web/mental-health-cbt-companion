@@ -16,7 +16,7 @@ from typing import Optional
 from app.config import settings
 from app.agents.therapist import PERSONAS
 
-logger = logging.getLogger("sera.router")
+logger = logging.getLogger("mindmate.router")
 
 # Build a lightweight topic→persona mapping from PERSONAS specializations
 PERSONA_SPECIALIZATIONS = {
@@ -27,7 +27,7 @@ PERSONA_SPECIALIZATIONS = {
 ROUTER_PROMPT_TEMPLATE = """You are an AI intent classifier for a mental health platform. Analyze the user's message and determine which therapist specialist would be BEST suited to help.
 
 Available therapists:
-- cbt (Sera): Negative thoughts, anxiety, depression, CBT, overthinking, thinking distortions, exposure therapy, behavior activation
+- cbt (MindMate): Negative thoughts, anxiety, depression, CBT, overthinking, thinking distortions, exposure therapy, behavior activation
 - compassionate (Luna): Relationships, breakups, loneliness, heartbreak, family issues, grief, emotional validation, self-worth, empathy
 - motivational (Axel): Discipline, goals, productivity, confidence, gym, career, procrastination, success mindset
 - mindfulness (Zen): Meditation, stress relief, sleep, mindfulness, breathing, relaxation, panic calming

@@ -76,7 +76,7 @@ function TypingDots() {
   );
 }
 
-function SeraAvatar() {
+function MindMateAvatar() {
   return (
     <div style={{
       width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
@@ -115,7 +115,7 @@ export default function MessageList({ messages, isStreaming }: MessageListProps)
             animation: "fadeIn 0.3s ease",
           }}
         >
-          {msg.role === "assistant" && <SeraAvatar />}
+          {msg.role === "assistant" && <MindMateAvatar />}
           <div
             style={{
               maxWidth: "72%",
@@ -154,7 +154,7 @@ export default function MessageList({ messages, isStreaming }: MessageListProps)
 
       {showTyping && (
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          <SeraAvatar />
+          <MindMateAvatar />
           <div style={{
             background: "var(--bg-secondary)",
             borderRadius: "16px 16px 16px 4px",

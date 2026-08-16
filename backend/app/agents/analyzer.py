@@ -11,7 +11,7 @@ from typing import Optional
 
 from app.config import settings
 
-logger = logging.getLogger("sera.analyzer")
+logger = logging.getLogger("mindmate.analyzer")
 
 # ── Emotion keywords for fast local detection ─────────────────────────────────
 

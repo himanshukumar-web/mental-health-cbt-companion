@@ -1,5 +1,5 @@
 -- ============================================================
--- Sera CBT Companion — Supabase Schema
+-- MindMate CBT Companion — Supabase Schema
 -- Run this in the Supabase SQL editor (Dashboard → SQL → New query)
 -- ============================================================
 

@@ -729,7 +729,7 @@ async def get_user_xp(user_id: str) -> dict:
 
 async def build_user_memory_context(user_id: str | None) -> str:
     """
-    Retrieve long-term memory context for a user to inject into Sera AI system prompt.
+    Retrieve long-term memory context for a user to inject into MindMate AI system prompt.
     Includes profile goals, recent mood average, CBT patterns, habits, and meditation minutes.
     """
     if not user_id or user_id == "anonymous":

@@ -166,7 +166,7 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
         }
       } catch (err) {
         if (active) {
-          console.error("[Sera WS] Failed to load session history:", err);
+          console.error("[MindMate WS] Failed to load session history:", err);
           setHistoryError("Failed to load chat history. Your previous messages may not be visible.");
         }
       } finally {
@@ -228,7 +228,7 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
   const connect = useCallback(() => {
     // Skip if sessionId is empty — wait for it to be set
     if (!sessionId) {
-      console.log("[Sera WS] Skipping connect — no sessionId yet");
+      console.log("[MindMate WS] Skipping connect — no sessionId yet");
       return;
     }
 
@@ -258,13 +258,13 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
 
     const queryParams = userId ? `?user_id=${userId}` : "";
     const wsUrl = `${urls.wsUrl}/ws/${sessionId}${queryParams}`;
-    console.log("[Sera WS] Connecting to:", wsUrl, `(attempt ${reconnectAttempts.current + 1})`);
+    console.log("[MindMate WS] Connecting to:", wsUrl, `(attempt ${reconnectAttempts.current + 1})`);
 
     let ws: WebSocket;
     try {
       ws = new WebSocket(wsUrl);
     } catch (err) {
-      console.error("[Sera WS] WebSocket constructor failed:", err);
+      console.error("[MindMate WS] WebSocket constructor failed:", err);
       setWsState((s) => ({
         ...s,
         connectionError: `Failed to create WebSocket connection. Make sure the backend is running at ${urls.wsUrl}.`,
@@ -276,12 +276,12 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
     ws.onopen = () => {
       // If session changed while we were connecting, discard this connection
       if (activeSessionRef.current !== sessionId) {
-        console.log("[Sera WS] Session changed during connect, closing stale WS");
+        console.log("[MindMate WS] Session changed during connect, closing stale WS");
         ws.close();
         return;
       }
 
-      console.log("[Sera WS] Connected successfully!");
+      console.log("[MindMate WS] Connected successfully!");
       reconnectAttempts.current = 0; // Reset backoff on successful connect
       setWsState((s) => ({
         ...s,
@@ -294,18 +294,18 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
     };
 
     ws.onclose = (event) => {
-      console.log("[Sera WS] Connection closed:", event.code, event.reason);
+      console.log("[MindMate WS] Connection closed:", event.code, event.reason);
       clearPing();
 
       // If we intentionally closed, don't auto-reconnect
       if (intentionalClose.current) {
-        console.log("[Sera WS] Intentional close — not reconnecting");
+        console.log("[MindMate WS] Intentional close — not reconnecting");
         return;
       }
 
       // If session changed, don't reconnect for the old session
       if (activeSessionRef.current !== sessionId) {
-        console.log("[Sera WS] Session changed — not reconnecting old session");
+        console.log("[MindMate WS] Session changed — not reconnecting old session");
         return;
       }
 
@@ -319,7 +319,7 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
 
       // Check if we've exhausted reconnect attempts
       if (reconnectAttempts.current >= MAX_RECONNECT_ATTEMPTS) {
-        console.log("[Sera WS] Max reconnect attempts reached, giving up");
+        console.log("[MindMate WS] Max reconnect attempts reached, giving up");
         setWsState((s) => ({
           ...s,
           connectionError: `Unable to connect to backend after ${MAX_RECONNECT_ATTEMPTS} attempts. Please check if the backend is running and click "Retry Connection".`,
@@ -341,14 +341,14 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
         }));
       }
 
-      console.log(`[Sera WS] Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current}/${MAX_RECONNECT_ATTEMPTS})`);
+      console.log(`[MindMate WS] Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current}/${MAX_RECONNECT_ATTEMPTS})`);
       reconnectTimer.current = setTimeout(() => {
         connectRef.current?.();
       }, delay);
     };
 
     ws.onerror = (event) => {
-      console.error("[Sera WS] WebSocket error:", event);
+      console.error("[MindMate WS] WebSocket error:", event);
       // Don't manually close — let the browser fire onclose naturally after onerror
       // This prevents double-reconnect issues
     };
@@ -519,7 +519,7 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
 
   // Manual reconnect — allows user to retry from the UI
   const manualReconnect = useCallback(() => {
-    console.log("[Sera WS] Manual reconnect triggered");
+    console.log("[MindMate WS] Manual reconnect triggered");
     reconnectAttempts.current = 0;
     closeExistingWs();
     // Clear error state before reconnecting

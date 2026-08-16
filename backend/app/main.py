@@ -29,7 +29,7 @@ from app.database import crud
 
 from typing import Dict, Tuple
 
-logger = logging.getLogger("sera.api")
+logger = logging.getLogger("mindmate.api")
 logging.basicConfig(level=logging.INFO)
 
 # In-memory online presence tracker: { user_id: last_heartbeat_timestamp }
@@ -42,9 +42,9 @@ typing_users: Dict[Tuple[str, str], float] = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("[Sera] CBT Companion API starting...")
+    print("[MindMate] CBT Companion API starting...")
     yield
-    print("[Sera] CBT Companion API shutting down...")
+    print("[MindMate] CBT Companion API shutting down...")
 
 
 app = FastAPI(

@@ -1,5 +1,5 @@
 -- ============================================================
--- Sera CBT Companion — V3 Migration: Chat Conversations & Therapist Memories
+-- MindMate CBT Companion — V3 Migration: Chat Conversations & Therapist Memories
 -- Run this in the Supabase SQL editor AFTER migration_v2.sql
 -- ============================================================
 

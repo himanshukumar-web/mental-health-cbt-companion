@@ -1,10 +1,10 @@
-# 🌿 Sera — AI CBT Mental Health Companion
+# 🌿 MindMate — AI CBT Mental Health Companion
 
 <div align="center">
 
-<img width="1774" height="887" alt="sera-banner" src="https://github.com/user-attachments/assets/4b173ec8-ac91-4add-928b-f603364de606" />
+<img width="1774" height="887" alt="mindmate-banner" src="https://github.com/user-attachments/assets/4b173ec8-ac91-4add-928b-f603364de606" />
 
-# 🧠 Sera — Live Agentic AI CBT Companion & Appointment System
+# 🧠 MindMate — Live Agentic AI CBT Companion & Appointment System
 
 **A production-grade AI-powered CBT (Cognitive Behavioral Therapy) companion and appointment booking platform built with Multi-Agent Architecture, LangGraph, FastAPI, WebSockets, Next.js, and Supabase.**
 
@@ -51,7 +51,7 @@ Designed to provide a **safe, private, and real-time mental wellness experience*
 ## 👥 Multi-Role User Portals (Auth-Protected)
 Upon signup or login, users are routed to a **Role Selection** screen where they choose their profile type:
 * **Patient Portal**:
-  * Chat with **Sera**, the AI CBT wellness therapist.
+  * Chat with **MindMate**, the AI CBT wellness therapist.
   * Search, view, and book appointment slots with mental health professionals.
   * Direct Messaging (DM) panel to chat live with assigned doctors.
   * View booked sessions and status tracking (Pending, Confirmed, Completed, Cancelled).
@@ -179,7 +179,7 @@ Open `http://localhost:3000` to interact with your application!
 ---
 
 # ⚠️ Mental Health Disclaimer
-**Sera is NOT a licensed therapist, clinical doctor, or emergency response service.**
+**MindMate is NOT a licensed therapist, clinical doctor, or emergency response service.**
 This system is created for **informational support, educational wellness, and CBT reference utility**.
 
 If you are experiencing severe emotional distress or self-harm concerns, contact a professional helpline immediately.
