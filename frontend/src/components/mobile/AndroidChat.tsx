@@ -15,6 +15,406 @@ const SUGGESTIONS = [
   "I need help managing my anxiety.",
 ];
 
+function formatInline(text: string): React.ReactNode {
+  if (!text) return "";
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
+      return (
+        <strong key={i} style={{ fontWeight: 700, color: "inherit" }}>
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
+      return (
+        <code
+          key={i}
+          style={{
+            background: "rgba(255, 255, 255, 0.12)",
+            color: "#86efac",
+            padding: "2px 6px",
+            borderRadius: "6px",
+            fontSize: "0.88em",
+            fontFamily: "monospace",
+          }}
+        >
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    if (part.startsWith("*") && part.endsWith("*") && part.length >= 2) {
+      return (
+        <em key={i} style={{ fontStyle: "italic" }}>
+          {part.slice(1, -1)}
+        </em>
+      );
+    }
+    return part;
+  });
+}
+
+function renderMobileMarkdown(text: string) {
+  if (!text) return null;
+  const lines = text.split("\n");
+  const elements: React.ReactNode[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      i++;
+      continue;
+    }
+
+    // 1. Fenced Code Block: ```lang ... ```
+    if (trimmed.startsWith("```")) {
+      const lang = trimmed.slice(3).trim();
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith("```")) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length) i++; // skip closing ```
+      const codeStr = codeLines.join("\n");
+      elements.push(
+        <div
+          key={`code-${i}`}
+          style={{
+            margin: "10px 0",
+            borderRadius: "12px",
+            overflow: "hidden",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            background: "#0f172a",
+          }}
+        >
+          {lang && (
+            <div
+              style={{
+                padding: "6px 12px",
+                background: "rgba(255, 255, 255, 0.05)",
+                borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+                fontSize: "11px",
+                color: "#94a3b8",
+                fontWeight: 600,
+              }}
+            >
+              {lang}
+            </div>
+          )}
+          <pre
+            style={{
+              margin: 0,
+              padding: "12px",
+              overflowX: "auto",
+              fontSize: "12px",
+              color: "#e2e8f0",
+              fontFamily: "monospace",
+              lineHeight: 1.45,
+            }}
+          >
+            <code>{codeStr}</code>
+          </pre>
+        </div>
+      );
+      continue;
+    }
+
+    // 2. Markdown Table: | Col 1 | Col 2 | -> converted to Mobile Cards
+    if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+      const tableRows: string[][] = [];
+      while (i < lines.length && lines[i].trim().startsWith("|")) {
+        const rowLine = lines[i].trim();
+        // Skip separator row like |---|---|
+        if (!rowLine.match(/^\|[\s:-]+(?:\|[\s:-]+)*\|$/)) {
+          const cells = rowLine
+            .split("|")
+            .slice(1, -1)
+            .map((c) => c.trim());
+          tableRows.push(cells);
+        }
+        i++;
+      }
+
+      if (tableRows.length > 0) {
+        const headers = tableRows[0];
+        const dataRows = tableRows.slice(1);
+
+        elements.push(
+          <div
+            key={`table-cards-${i}`}
+            style={{
+              margin: "10px 0",
+              display: "flex",
+              flexDirection: "column",
+              gap: "8px",
+            }}
+          >
+            {dataRows.length > 0 ? (
+              dataRows.map((row, rIdx) => (
+                <div
+                  key={rIdx}
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: "12px",
+                    background: "rgba(255, 255, 255, 0.04)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                  }}
+                >
+                  {row.map((cell, cIdx) => (
+                    <div
+                      key={cIdx}
+                      style={{
+                        fontSize: "13.5px",
+                        lineHeight: 1.45,
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "4px",
+                      }}
+                    >
+                      {headers[cIdx] && (
+                        <span
+                          style={{
+                            color: "#86efac",
+                            fontWeight: 700,
+                            marginRight: "4px",
+                          }}
+                        >
+                          {headers[cIdx]}:
+                        </span>
+                      )}
+                      <span style={{ color: "#e8edf5" }}>{formatInline(cell)}</span>
+                    </div>
+                  ))}
+                </div>
+              ))
+            ) : (
+              <div
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: "12px",
+                  background: "rgba(255, 255, 255, 0.04)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                }}
+              >
+                {headers.map((cell, cIdx) => (
+                  <div key={cIdx} style={{ fontSize: "13.5px", color: "#86efac", fontWeight: 700 }}>
+                    {formatInline(cell)}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      }
+      continue;
+    }
+
+    // 3. Blockquotes: > text
+    if (trimmed.startsWith(">")) {
+      elements.push(
+        <div
+          key={`quote-${i}`}
+          style={{
+            margin: "8px 0",
+            padding: "8px 12px",
+            borderLeft: "3px solid #22c55e",
+            background: "rgba(34, 197, 94, 0.08)",
+            borderRadius: "0 10px 10px 0",
+            fontStyle: "italic",
+            fontSize: "14px",
+            color: "#d1fae5",
+            lineHeight: 1.5,
+          }}
+        >
+          {formatInline(trimmed.slice(1).trim())}
+        </div>
+      );
+      i++;
+      continue;
+    }
+
+    // 4. Headings: #, ##, ###
+    if (trimmed.startsWith("### ")) {
+      elements.push(
+        <div
+          key={`h3-${i}`}
+          style={{
+            margin: "12px 0 4px",
+            fontSize: "15px",
+            fontWeight: 800,
+            color: "#86efac",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          {formatInline(trimmed.slice(4))}
+        </div>
+      );
+      i++;
+      continue;
+    }
+    if (trimmed.startsWith("## ")) {
+      elements.push(
+        <div
+          key={`h2-${i}`}
+          style={{
+            margin: "14px 0 6px",
+            fontSize: "16px",
+            fontWeight: 800,
+            color: "#ffffff",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          {formatInline(trimmed.slice(3))}
+        </div>
+      );
+      i++;
+      continue;
+    }
+    if (trimmed.startsWith("# ")) {
+      elements.push(
+        <div
+          key={`h1-${i}`}
+          style={{
+            margin: "16px 0 8px",
+            fontSize: "17px",
+            fontWeight: 800,
+            color: "#ffffff",
+          }}
+        >
+          {formatInline(trimmed.slice(2))}
+        </div>
+      );
+      i++;
+      continue;
+    }
+
+    // 5. Numbered list: 1. Item
+    const numMatch = trimmed.match(/^(\d+)[.)\-]\s+(.+)/);
+    if (numMatch) {
+      const listItems: { num: string; text: string }[] = [];
+      while (i < lines.length) {
+        const cur = lines[i].trim();
+        const m = cur.match(/^(\d+)[.)\-]\s+(.+)/);
+        if (!m) break;
+        listItems.push({ num: m[1], text: m[2] });
+        i++;
+      }
+      elements.push(
+        <div
+          key={`ol-${i}`}
+          style={{
+            margin: "6px 0",
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px",
+          }}
+        >
+          {listItems.map((item, idx) => (
+            <div
+              key={idx}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "8px",
+                fontSize: "14.5px",
+                lineHeight: 1.5,
+              }}
+            >
+              <span
+                style={{
+                  color: "#86efac",
+                  fontWeight: 700,
+                  fontSize: "13px",
+                  minWidth: "18px",
+                  paddingTop: "1px",
+                }}
+              >
+                {item.num}.
+              </span>
+              <div style={{ flex: 1 }}>{formatInline(item.text)}</div>
+            </div>
+          ))}
+        </div>
+      );
+      continue;
+    }
+
+    // 6. Bullet lists: - Item, * Item, • Item
+    const bulletMatch = trimmed.match(/^[-*•]\s+(.+)/);
+    if (bulletMatch) {
+      const listItems: string[] = [];
+      while (i < lines.length) {
+        const cur = lines[i].trim();
+        const m = cur.match(/^[-*•]\s+(.+)/);
+        if (!m) break;
+        listItems.push(m[1]);
+        i++;
+      }
+      elements.push(
+        <div
+          key={`ul-${i}`}
+          style={{
+            margin: "6px 0",
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px",
+          }}
+        >
+          {listItems.map((item, idx) => (
+            <div
+              key={idx}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "8px",
+                fontSize: "14.5px",
+                lineHeight: 1.5,
+              }}
+            >
+              <span
+                style={{
+                  color: "#4ade80",
+                  fontSize: "16px",
+                  lineHeight: "1",
+                  marginTop: "2px",
+                }}
+              >
+                •
+              </span>
+              <div style={{ flex: 1 }}>{formatInline(item)}</div>
+            </div>
+          ))}
+        </div>
+      );
+      continue;
+    }
+
+    // 7. Regular paragraph
+    elements.push(
+      <p
+        key={`p-${i}`}
+        style={{
+          margin: "4px 0",
+          lineHeight: 1.55,
+          fontSize: "14.5px",
+        }}
+      >
+        {formatInline(trimmed)}
+      </p>
+    );
+    i++;
+  }
+
+  return <>{elements}</>;
+}
+
 export default function AndroidChat() {
   const { user } = useAuth();
   const { personas, activePersona, selectPersona, selectedPersonaId } = usePersona(user?.id);
@@ -319,11 +719,11 @@ export default function AndroidChat() {
                     fontSize: "15px",
                     lineHeight: 1.5,
                     boxShadow: isUser ? "0 4px 12px rgba(34, 197, 94, 0.25)" : "none",
-                    whiteSpace: "pre-wrap",
+                    whiteSpace: isUser ? "pre-wrap" : "normal",
                     wordBreak: "break-word",
                   }}
                 >
-                  {m.content}
+                  {isUser ? m.content : renderMobileMarkdown(m.content)}
                 </div>
               </div>
             );
