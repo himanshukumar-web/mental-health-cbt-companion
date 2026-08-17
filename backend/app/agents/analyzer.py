@@ -330,7 +330,7 @@ def _get_ai_client():
     try:
         if key.startswith("gsk_"):
             from groq import AsyncGroq
-            return AsyncGroq(api_key=key), "llama-3.3-70b-versatile"
+            return AsyncGroq(api_key=key), "groq/compound-mini"
         else:
             import anthropic
             return anthropic.AsyncAnthropic(api_key=key), "claude-sonnet-4-20250514"

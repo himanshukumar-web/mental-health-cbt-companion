@@ -234,7 +234,11 @@ MAX_RETRIES = 2
 RETRY_DELAY_SECONDS = 1.0
 
 
-def _get_client():
+# Groq model priorities for robust uptime
+GROQ_MODELS = ["groq/compound-mini", "openai/gpt-oss-120b", "openai/gpt-oss-20b"]
+
+
+def _get_client(attempt: int = 0):
     """
     Return (client, model_name)
     Supports Groq + OpenRouter + Anthropic
@@ -249,7 +253,7 @@ def _get_client():
     # GROQ (Recommended)
     if key.startswith("gsk_"):
         client = AsyncGroq(api_key=key)
-        model = "llama-3.3-70b-versatile"
+        model = GROQ_MODELS[attempt % len(GROQ_MODELS)]
         logger.info("[MindMate] Provider selected: Groq | Model: %s", model)
 
     # OpenRouter
@@ -297,7 +301,7 @@ async def stream_response(
 
     for attempt in range(MAX_RETRIES + 1):
         try:
-            client, model = _get_client()
+            client, model = _get_client(attempt=attempt)
             provider_name = "Groq" if settings.anthropic_api_key.startswith("gsk_") else ("OpenRouter" if settings.anthropic_api_key.startswith("sk-or-") else "Anthropic")
             logger.info(
                 "[MindMate] Request started: provider=%s, model=%s, persona=%s, attempt=%d/%d, messages_count=%d",
@@ -322,8 +326,9 @@ async def stream_response(
                 )
 
                 async for chunk in stream:
-                    if chunk.choices:
-                        content = chunk.choices[0].delta.content
+                    if chunk.choices and chunk.choices[0].delta:
+                        delta = chunk.choices[0].delta
+                        content = delta.content or getattr(delta, "reasoning_content", "") or ""
                         if content:
                             token_count += 1
                             yield content
@@ -358,9 +363,9 @@ async def stream_response(
                 attempt + 1, MAX_RETRIES + 1, error_name, str(exc)
             )
 
-            # Don't retry on auth errors — they won't fix themselves
+            # Don't retry on auth errors (401 / invalid api key)
             error_msg = str(exc).lower()
-            if "auth" in error_msg or "api_key" in error_msg or "invalid" in error_msg:
+            if "invalid_api_key" in error_msg or "authentication_error" in error_msg or "401" in error_msg or "unauthorized" in error_msg:
                 logger.error("[MindMate] Authentication error — not retrying")
                 break
 

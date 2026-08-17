@@ -135,7 +135,7 @@ async def _ai_classify(message: str, current_persona_id: str) -> Optional[dict]:
             from groq import AsyncGroq
             client = AsyncGroq(api_key=key)
             response = await client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model="groq/compound-mini",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.1,
                 max_tokens=150,
