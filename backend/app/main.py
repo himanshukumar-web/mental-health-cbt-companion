@@ -651,9 +651,28 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str
             except Exception as router_err:
                 logger.debug("[WS] Router classification skipped: %s", router_err)
 
-            user_memory = await crud.build_user_memory_context(user_id)
-            therapist_memory = await crud.build_therapist_memory_context(user_id, persona_id)
-            messages = history + [{"role": "user", "content": content}]
+            try:
+                user_memory = await crud.build_user_memory_context(user_id)
+            except Exception as mem_err:
+                logger.warning("[WS] build_user_memory_context failed for session=%s: %s", session_id, mem_err)
+                user_memory = ""
+
+            try:
+                therapist_memory = await crud.build_therapist_memory_context(user_id, persona_id)
+            except Exception as mem_err:
+                logger.warning("[WS] build_therapist_memory_context failed for session=%s: %s", session_id, mem_err)
+                therapist_memory = ""
+
+            # Ensure valid history format and avoid duplicate final user message
+            cleaned_history = [
+                m for m in history
+                if isinstance(m, dict) and "role" in m and "content" in m
+            ]
+            if cleaned_history and cleaned_history[-1].get("role") == "user" and cleaned_history[-1].get("content") == content:
+                messages = cleaned_history
+            else:
+                messages = cleaned_history + [{"role": "user", "content": content}]
+
             full_response = ""
 
             try:

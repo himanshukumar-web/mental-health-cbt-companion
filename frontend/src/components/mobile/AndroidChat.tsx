@@ -76,7 +76,7 @@ export default function AndroidChat() {
 
   const handleSend = () => {
     if (!input.trim() || isStreaming) return;
-    sendMessage(input.trim());
+    sendMessage(input.trim(), selectedPersonaId);
     setInput("");
   };
 
@@ -277,7 +277,7 @@ export default function AndroidChat() {
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s}
-                  onClick={() => sendMessage(s)}
+                  onClick={() => sendMessage(s, selectedPersonaId)}
                   style={{
                     padding: "12px 16px",
                     borderRadius: "14px",

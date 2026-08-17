@@ -250,7 +250,7 @@ def _get_client():
     if key.startswith("gsk_"):
         client = AsyncGroq(api_key=key)
         model = "llama-3.3-70b-versatile"
-        logger.info("[MindMate] Using Groq provider with model: %s", model)
+        logger.info("[MindMate] Provider selected: Groq | Model: %s", model)
 
     # OpenRouter
     elif key.startswith("sk-or-"):
@@ -259,13 +259,13 @@ def _get_client():
             base_url="https://openrouter.ai/api/v1",
         )
         model = "meta-llama/llama-3.3-70b-instruct:free"
-        logger.info("[MindMate] Using OpenRouter provider with model: %s", model)
+        logger.info("[MindMate] Provider selected: OpenRouter | Model: %s", model)
 
     # Anthropic Claude
     else:
         client = anthropic.AsyncAnthropic(api_key=key)
         model = "claude-sonnet-4-20250514"
-        logger.info("[MindMate] Using Anthropic provider with model: %s", model)
+        logger.info("[MindMate] Provider selected: Anthropic | Model: %s", model)
 
     return client, model
 
@@ -298,13 +298,18 @@ async def stream_response(
     for attempt in range(MAX_RETRIES + 1):
         try:
             client, model = _get_client()
+            provider_name = "Groq" if settings.anthropic_api_key.startswith("gsk_") else ("OpenRouter" if settings.anthropic_api_key.startswith("sk-or-") else "Anthropic")
+            logger.info(
+                "[MindMate] Request started: provider=%s, model=%s, persona=%s, attempt=%d/%d, messages_count=%d",
+                provider_name, model, persona_id, attempt + 1, MAX_RETRIES + 1, len(messages)
+            )
+
+            token_count = 0
 
             # ==========================
             # GROQ STREAMING
             # ==========================
             if settings.anthropic_api_key.startswith("gsk_"):
-                logger.debug("[MindMate] Groq streaming attempt %d, messages=%d", attempt + 1, len(messages))
-
                 stream = await client.chat.completions.create(
                     model=model,
                     messages=[
@@ -320,14 +325,13 @@ async def stream_response(
                     if chunk.choices:
                         content = chunk.choices[0].delta.content
                         if content:
+                            token_count += 1
                             yield content
 
             # ==========================
             # ANTHROPIC / OPENROUTER
             # ==========================
             else:
-                logger.debug("[MindMate] Anthropic streaming attempt %d, messages=%d", attempt + 1, len(messages))
-
                 async with client.messages.stream(
                     model=model,
                     max_tokens=1000,
@@ -336,8 +340,13 @@ async def stream_response(
                 ) as stream:
 
                     async for text in stream.text_stream:
+                        token_count += 1
                         yield text
 
+            logger.info(
+                "[MindMate] Request completed successfully: provider=%s, model=%s, tokens_yielded=%d",
+                provider_name, model, token_count
+            )
             # If we got here without error, streaming was successful
             return
 
@@ -345,7 +354,7 @@ async def stream_response(
             last_error = exc
             error_name = type(exc).__name__
             logger.error(
-                "[MindMate] Therapist stream error (attempt %d/%d): %s: %s",
+                "[MindMate] Therapist stream error: attempt=%d/%d, exception_type=%s, message=%s",
                 attempt + 1, MAX_RETRIES + 1, error_name, str(exc)
             )
 
@@ -357,7 +366,7 @@ async def stream_response(
 
             if attempt < MAX_RETRIES:
                 delay = RETRY_DELAY_SECONDS * (attempt + 1)
-                logger.info("[MindMate] Retrying in %.1fs...", delay)
+                logger.info("[MindMate] Retrying request in %.1fs...", delay)
                 await asyncio.sleep(delay)
 
     # All retries exhausted

@@ -470,6 +470,8 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
       const ws = wsRef.current;
       if (!ws || ws.readyState !== WebSocket.OPEN || wsState.isStreaming || crisis) return;
 
+      const historyToSend = historyRef.current.slice(-20);
+
       // Optimistically add user message
       setMessages((m) => [...m, { role: "user", content }]);
       historyRef.current = [...historyRef.current, { role: "user", content }];
@@ -478,7 +480,7 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
         type: "message",
         content,
         persona: personaId || "cbt",
-        history: historyRef.current.slice(-20), // send last 20 turns
+        history: historyToSend,
       };
       if (conversationIdRef.current) {
         payload.conversation_id = conversationIdRef.current;

@@ -3274,7 +3274,14 @@ async def generate_and_save_memory_summary(user_id: str) -> dict:
 
 # ── Chat Messages & Sessions Persistence ───────────────────────────────────────
 
-async def save_message(session_id: str, role: str, content: str, threat_level: str = "normal", user_id: str | None = None) -> dict | None:
+async def save_message(
+    session_id: str,
+    role: str,
+    content: str,
+    threat_level: str = "normal",
+    user_id: str | None = None,
+    conversation_id: str | None = None,
+) -> dict | None:
     """Save a chat message to Supabase / SQLite datastore."""
     if not session_id or not content:
         return None
@@ -3294,17 +3301,20 @@ async def save_message(session_id: str, role: str, content: str, threat_level: s
                     sess_payload["user_id"] = user_id
                 supabase.table("sessions").insert(sess_payload).execute()
             
-            # Save message
+            encrypted = encrypt_message(content, settings.encryption_key)
             msg_payload = {
                 "id": msg_id,
                 "session_id": session_id,
                 "role": role,
                 "content": content,
+                "content_encrypted": encrypted,
                 "threat_level": threat_level,
                 "timestamp": now,
             }
             if user_id:
                 msg_payload["user_id"] = user_id
+            if conversation_id:
+                msg_payload["conversation_id"] = conversation_id
 
             res = supabase.table("messages").insert(msg_payload).execute()
             if res.data:
@@ -3312,25 +3322,9 @@ async def save_message(session_id: str, role: str, content: str, threat_level: s
         except Exception as e:
             print("Supabase save_message error:", e)
 
-    # SQLite Fallback
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    try:
-        # Ensure session exists
-        cursor.execute("SELECT id FROM sessions WHERE id = ?", (session_id,))
-        if not cursor.fetchone():
-            cursor.execute(
-                "INSERT INTO sessions (id, user_id, started_at) VALUES (?, ?, ?)",
-                (session_id, user_id, now)
-            )
-        
-        # Save message
-        cursor.execute("""
-        INSERT INTO messages (id, session_id, user_id, role, content, threat_level, timestamp)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (msg_id, session_id, user_id, role, content, threat_level, now))
-        conn.commit()
-
+    # SQLite Fallback with encryption
+    success = sqlite_save_message(session_id, role, content, threat_level, user_id, conversation_id)
+    if success:
         return {
             "id": msg_id,
             "session_id": session_id,
@@ -3338,13 +3332,10 @@ async def save_message(session_id: str, role: str, content: str, threat_level: s
             "role": role,
             "content": content,
             "threat_level": threat_level,
-            "timestamp": now
+            "timestamp": now,
+            "conversation_id": conversation_id,
         }
-    except Exception as e:
-        print("SQLite save_message error:", e)
-        return None
-    finally:
-        conn.close()
+    return None
 
 
 async def get_session_history(session_id: str, limit: int = 100) -> list[dict]:
