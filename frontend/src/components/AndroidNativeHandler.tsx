@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 export default function AndroidNativeHandler() {
-  const pathname = usePathname();
   const router = useRouter();
   const lastBackPressRef = useRef<number>(0);
+  const routerRef = useRef(router);
+
+  useEffect(() => {
+    routerRef.current = router;
+  }, [router]);
 
   useEffect(() => {
     let appListener: any;
@@ -54,11 +58,11 @@ export default function AndroidNativeHandler() {
           document.body.classList.remove("keyboard-open");
         });
 
-        // 4. Hardware Back Button Listener
-        appListener = await App.addListener("backButton", ({ canGoBack }) => {
+        // 4. Hardware Back Button Listener — natural SPA back navigation without reloads
+        appListener = await App.addListener("backButton", () => {
           const path = window.location.pathname;
 
-          // Critical top-level pages -> Press twice to exit
+          // Critical top-level pages -> Press twice within 2s to exit
           const isTopLevel = ["/dashboard", "/login", "/"].includes(path);
 
           if (isTopLevel) {
@@ -76,17 +80,11 @@ export default function AndroidNativeHandler() {
             return;
           }
 
-          // Special case: AI Chat -> Go back to Dashboard
-          if (path === "/chat") {
-            router.push("/dashboard");
-            return;
-          }
-
-          // Navigate back
-          if (canGoBack) {
-            router.back();
+          // Natural SPA back navigation without page reload
+          if (typeof window !== "undefined" && window.history.length > 1) {
+            routerRef.current.back();
           } else {
-            router.push("/dashboard");
+            routerRef.current.push("/dashboard");
           }
         });
       } catch (err) {
@@ -102,7 +100,7 @@ export default function AndroidNativeHandler() {
       if (keyboardShowListener && typeof keyboardShowListener.remove === "function") keyboardShowListener.remove();
       if (keyboardHideListener && typeof keyboardHideListener.remove === "function") keyboardHideListener.remove();
     };
-  }, [pathname, router]);
+  }, []);
 
   return null;
 }

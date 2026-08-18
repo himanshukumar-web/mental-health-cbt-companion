@@ -6,6 +6,7 @@ interface VoiceControllerProps {
   onTranscript: (text: string) => void;
   lastAssistantMessage?: string;
   isStreaming?: boolean;
+  compact?: boolean;
 }
 
 // Global declaration for Web Speech API
@@ -41,6 +42,7 @@ export default function VoiceController({
   onTranscript,
   lastAssistantMessage,
   isStreaming,
+  compact = false,
 }: VoiceControllerProps) {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -165,42 +167,46 @@ export default function VoiceController({
       )}
 
       {/* Language Selector */}
-      <select
-        value={language}
-        onChange={(e) => setLanguage(e.target.value)}
-        style={{
-          padding: "6px 8px",
-          borderRadius: 8,
-          background: "var(--bg-secondary)",
-          border: "0.5px solid var(--border-secondary)",
-          color: "var(--text-secondary)",
-          fontSize: 11,
-          outline: "none",
-        }}
-      >
-        <option value="en-US">🇺🇸 EN</option>
-        <option value="hi-IN">🇮🇳 HI</option>
-        <option value="es-ES">🇪🇸 ES</option>
-        <option value="fr-FR">🇫🇷 FR</option>
-        <option value="de-DE">🇩🇪 DE</option>
-      </select>
+      {!compact && (
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          style={{
+            padding: "6px 8px",
+            borderRadius: 8,
+            background: "var(--bg-secondary)",
+            border: "0.5px solid var(--border-secondary)",
+            color: "var(--text-secondary)",
+            fontSize: 11,
+            outline: "none",
+          }}
+        >
+          <option value="en-US">🇺🇸 EN</option>
+          <option value="hi-IN">🇮🇳 HI</option>
+          <option value="es-ES">🇪🇸 ES</option>
+          <option value="fr-FR">🇫🇷 FR</option>
+          <option value="de-DE">🇩🇪 DE</option>
+        </select>
+      )}
 
       {/* Auto TTS Toggle */}
-      <button
-        onClick={() => setAutoSpeak(!autoSpeak)}
-        title={autoSpeak ? "AI Voice Auto-Speak ON" : "AI Voice Auto-Speak OFF"}
-        style={{
-          padding: "6px 10px",
-          borderRadius: 8,
-          background: autoSpeak ? "rgba(34,197,94,0.12)" : "var(--bg-secondary)",
-          border: autoSpeak ? "0.5px solid rgba(34,197,94,0.3)" : "0.5px solid var(--border-secondary)",
-          color: autoSpeak ? "#22c55e" : "var(--text-tertiary)",
-          fontSize: 13,
-          cursor: "pointer",
-        }}
-      >
-        {autoSpeak ? "🔊" : "🔇"}
-      </button>
+      {!compact && (
+        <button
+          onClick={() => setAutoSpeak(!autoSpeak)}
+          title={autoSpeak ? "AI Voice Auto-Speak ON" : "AI Voice Auto-Speak OFF"}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 8,
+            background: autoSpeak ? "rgba(34,197,94,0.12)" : "var(--bg-secondary)",
+            border: autoSpeak ? "0.5px solid rgba(34,197,94,0.3)" : "0.5px solid var(--border-secondary)",
+            color: autoSpeak ? "#22c55e" : "var(--text-tertiary)",
+            fontSize: 13,
+            cursor: "pointer",
+          }}
+        >
+          {autoSpeak ? "🔊" : "🔇"}
+        </button>
+      )}
 
       {/* Stop Speaking Button if currently speaking */}
       {isSpeaking && (

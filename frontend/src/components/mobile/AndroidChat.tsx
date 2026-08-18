@@ -464,6 +464,7 @@ export default function AndroidChat() {
 
   const [input, setInput] = useState("");
   const [showPersonaPicker, setShowPersonaPicker] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -474,14 +475,26 @@ export default function AndroidChat() {
     scrollToBottom();
   }, [messages, isStreaming]);
 
+  // Auto-grow textarea height
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+    }
+  }, [input]);
+
   const handleSend = () => {
-    if (!input.trim() || isStreaming) return;
-    sendMessage(input.trim(), selectedPersonaId);
+    const text = input.trim();
+    if (!text || isStreaming) return;
+    sendMessage(text, selectedPersonaId);
     setInput("");
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
@@ -768,9 +781,9 @@ export default function AndroidChat() {
           zIndex: 1100,
           background: "#0b0f1a",
           borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-          padding: "10px 16px",
+          padding: "8px 14px 10px",
           display: "flex",
-          alignItems: "center",
+          alignItems: "flex-end",
           gap: "8px",
           flexShrink: 0,
         }}
@@ -781,13 +794,16 @@ export default function AndroidChat() {
             display: "flex",
             alignItems: "center",
             background: "rgba(255, 255, 255, 0.06)",
-            borderRadius: "24px",
+            borderRadius: "22px",
             border: "1px solid rgba(255, 255, 255, 0.12)",
-            padding: "4px 14px",
+            padding: "4px 12px",
+            minHeight: "44px",
+            boxSizing: "border-box",
           }}
         >
-          <input
-            type="text"
+          <textarea
+            ref={textareaRef}
+            rows={1}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -800,17 +816,25 @@ export default function AndroidChat() {
               outline: "none",
               color: "#e8edf5",
               fontSize: "15px",
-              padding: "10px 0",
+              lineHeight: 1.4,
+              resize: "none",
+              padding: "8px 0",
+              maxHeight: "120px",
               fontFamily: "inherit",
+              boxSizing: "border-box",
             }}
           />
 
           <VoiceController
+            compact={true}
             onTranscript={(text) => setInput((prev) => (prev ? `${prev} ${text}` : text))}
           />
         </div>
 
         <button
+          type="button"
+          id="android-chat-send-btn"
+          aria-label="Send message"
           onClick={handleSend}
           disabled={!input.trim() || isStreaming}
           style={{
@@ -818,19 +842,36 @@ export default function AndroidChat() {
             height: "44px",
             borderRadius: "50%",
             border: "none",
-            background: input.trim() && !isStreaming ? "linear-gradient(135deg, #22c55e, #16a34a)" : "rgba(255,255,255,0.08)",
-            color: "#ffffff",
+            background: input.trim() && !isStreaming
+              ? "linear-gradient(135deg, #22c55e, #16a34a)"
+              : "rgba(255, 255, 255, 0.08)",
+            color: input.trim() && !isStreaming ? "#ffffff" : "rgba(255, 255, 255, 0.35)",
             fontSize: "18px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             cursor: input.trim() && !isStreaming ? "pointer" : "default",
-            opacity: input.trim() && !isStreaming ? 1 : 0.4,
+            opacity: input.trim() && !isStreaming ? 1 : 0.45,
             transition: "all 0.2s ease",
             flexShrink: 0,
+            WebkitTapHighlightColor: "transparent",
+            boxShadow: input.trim() && !isStreaming ? "0 2px 10px rgba(34, 197, 94, 0.35)" : "none",
           }}
         >
-          ➔
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ transform: "translateX(1px)" }}
+          >
+            <line x1="22" y1="2" x2="11" y2="13" />
+            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+          </svg>
         </button>
       </div>
 
