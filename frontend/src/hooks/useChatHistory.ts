@@ -16,18 +16,33 @@ export interface Conversation {
   updated_at: string;
 }
 
+const conversationsMemoryCache = new Map<string, Conversation[]>();
+let lastActiveConversationId: string | null = null;
+
 export function useChatHistory(userId?: string, activePersonaId?: string) {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const cacheKey = `${userId || "guest"}_${activePersonaId || "all"}`;
+  const cachedList = conversationsMemoryCache.get(cacheKey) || [];
+
+  const [conversations, setConversations] = useState<Conversation[]>(() => cachedList);
+  const [activeConversationId, setActiveConversationIdState] = useState<string | null>(
+    () => lastActiveConversationId || (cachedList[0]?.id ?? null)
+  );
+  const [loading, setLoading] = useState<boolean>(() => cachedList.length === 0 && Boolean(userId));
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [showArchived, setShowArchived] = useState<boolean>(false);
+
+  const setActiveConversationId = useCallback((id: string | null) => {
+    lastActiveConversationId = id;
+    setActiveConversationIdState(id);
+  }, []);
 
   const API_URL = getApiUrl();
 
   const fetchConversations = useCallback(async () => {
     if (!userId) return;
-    setLoading(true);
+    if (!conversationsMemoryCache.has(cacheKey)) {
+      setLoading(true);
+    }
     try {
       const params = new URLSearchParams();
       if (activePersonaId) params.set("persona_id", activePersonaId);
@@ -37,14 +52,20 @@ export function useChatHistory(userId?: string, activePersonaId?: string) {
       const res = await fetch(`${API_URL}/conversations/${userId}?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
-        setConversations(data.conversations || []);
+        const list = data.conversations || [];
+        setConversations(list);
+        conversationsMemoryCache.set(cacheKey, list);
+        if (!lastActiveConversationId && list.length > 0) {
+          lastActiveConversationId = list[0].id;
+          setActiveConversationIdState(list[0].id);
+        }
       }
     } catch (err) {
       console.error("[useChatHistory] Error fetching conversations:", err);
     } finally {
       setLoading(false);
     }
-  }, [userId, activePersonaId, showArchived, searchQuery, API_URL]);
+  }, [userId, activePersonaId, showArchived, searchQuery, API_URL, cacheKey]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

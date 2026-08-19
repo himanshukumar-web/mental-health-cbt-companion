@@ -50,6 +50,8 @@ const RECONNECT_BASE_MS = 2_000;
 const RECONNECT_MAX_MS = 30_000;
 const MAX_RECONNECT_ATTEMPTS = 10;
 
+const messagesMemoryCache = new Map<string, ChatMessage[]>();
+
 export function useWebSocket(sessionId: string, userId?: string, activeGreeting?: string, conversationId?: string | null) {
   const wsRef = useRef<WebSocket | null>(null);
   const [wsState, setWsState] = useState<WSState>({
@@ -63,14 +65,22 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
 
   const defaultGreeting = activeGreeting || "Hi, I'm MindMate — your CBT companion. 🌿 This is a safe space to talk through whatever's on your mind. I use evidence-based CBT techniques to help you explore your thoughts and feelings. How are you doing today?";
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      content: defaultGreeting,
-      agent: "therapist",
-    },
-  ]);
-  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const sessionKey = conversationId || sessionId;
+  const cachedMessages = sessionKey ? messagesMemoryCache.get(sessionKey) : null;
+
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (cachedMessages && cachedMessages.length > 0) {
+      return cachedMessages;
+    }
+    return [
+      {
+        role: "assistant",
+        content: defaultGreeting,
+        agent: "therapist",
+      },
+    ];
+  });
+  const [historyLoaded, setHistoryLoaded] = useState(() => Boolean(cachedMessages && cachedMessages.length > 0));
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [crisis, setCrisis] = useState(false);
   const [routerSuggestion, setRouterSuggestion] = useState<RouterSuggestion | null>(null);
@@ -83,7 +93,11 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
   const activeSessionRef = useRef<string>("");
 
   // History ref so sendMessage always reads latest
-  const historyRef = useRef<{ role: string; content: string }[]>([]);
+  const historyRef = useRef<{ role: string; content: string }[]>(
+    cachedMessages && cachedMessages.length > 0
+      ? cachedMessages.map((m) => ({ role: m.role, content: m.content }))
+      : []
+  );
   const connectRef = useRef<(() => void) | null>(null);
 
   const urlsRef = useRef<{ wsUrl: string; httpUrl: string } | null>(null);
@@ -105,18 +119,27 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
   useEffect(() => {
     if (!sessionId) return;
 
-    // Reset messages synchronously (no setTimeout race condition)
-    const defaultMessages: ChatMessage[] = [
-      {
-        role: "assistant",
-        content: defaultGreeting,
-        agent: "therapist",
-      },
-    ];
-    setMessages(defaultMessages);
-    historyRef.current = [];
+    const currentKey = conversationId || sessionId;
+    const existingCache = messagesMemoryCache.get(currentKey);
+
+    if (existingCache && existingCache.length > 0) {
+      setMessages(existingCache);
+      historyRef.current = existingCache.map((m) => ({ role: m.role, content: m.content }));
+      setHistoryLoaded(true);
+    } else {
+      const defaultMessages: ChatMessage[] = [
+        {
+          role: "assistant",
+          content: defaultGreeting,
+          agent: "therapist",
+        },
+      ];
+      setMessages(defaultMessages);
+      historyRef.current = [];
+      setHistoryLoaded(false);
+    }
+
     setCrisis(false);
-    setHistoryLoaded(false);
     setHistoryError(null);
 
     let active = true;
@@ -125,7 +148,6 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
       const urls = getUrls();
       if (!urls) return;
       try {
-        // Prefer conversation-based history if conversationId is available
         let historyUrl: string;
         if (conversationId) {
           historyUrl = `${urls.httpUrl}/conversations/${conversationId}/messages`;
@@ -139,9 +161,10 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
             const loadedMessages: ChatMessage[] = data.messages.map((m: { role: string; content: string }) => ({
               role: m.role as "user" | "assistant",
               content: m.content,
-              agent: m.role === "assistant" ? "therapist" as const : undefined,
+              agent: m.role === "assistant" ? ("therapist" as const) : undefined,
             }));
             setMessages(loadedMessages);
+            messagesMemoryCache.set(currentKey, loadedMessages);
             historyRef.current = data.messages.map((m: { role: string; content: string }) => ({ role: m.role, content: m.content }));
           }
         }
@@ -409,6 +432,10 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
               ];
               copy[copy.length - 1] = { ...last, streaming: false, threatLevel: data.threat_level };
             }
+            if (activeSessionRef.current) {
+              const currentKey = conversationIdRef.current || activeSessionRef.current;
+              messagesMemoryCache.set(currentKey, copy);
+            }
             return copy;
           });
           setWsState((s) => ({ ...s, isStreaming: false, therapistStatus: "active" }));
@@ -473,7 +500,14 @@ export function useWebSocket(sessionId: string, userId?: string, activeGreeting?
       const historyToSend = historyRef.current.slice(-20);
 
       // Optimistically add user message
-      setMessages((m) => [...m, { role: "user", content }]);
+      setMessages((m) => {
+        const next = [...m, { role: "user" as const, content }];
+        const currentKey = conversationIdRef.current || sessionId;
+        if (currentKey) {
+          messagesMemoryCache.set(currentKey, next);
+        }
+        return next;
+      });
       historyRef.current = [...historyRef.current, { role: "user", content }];
 
       const payload: Record<string, unknown> = {

@@ -59,11 +59,19 @@ export default function AndroidNativeHandler() {
         });
 
         // 4. Hardware Back Button Listener — natural SPA back navigation without reloads
-        appListener = await App.addListener("backButton", () => {
-          const path = window.location.pathname;
+        appListener = await App.addListener("backButton", ({ canGoBack }: { canGoBack: boolean }) => {
+          // Dismiss any modal/overlay marked with data-dismiss-on-back
+          const dismissible = document.querySelector<HTMLElement>("[data-dismiss-on-back='true']");
+          if (dismissible) {
+            dismissible.click();
+            return;
+          }
 
-          // Critical top-level pages -> Press twice within 2s to exit
-          const isTopLevel = ["/dashboard", "/login", "/"].includes(path);
+          const rawPath = (typeof window !== "undefined" ? window.location.pathname : "") || "/";
+          const cleanPath = rawPath.replace(/\/index\.html$|\.html$|\/$/, "") || "/";
+
+          // Critical top-level pages -> Press twice within 2s to exit app
+          const isTopLevel = ["/", "/dashboard", "/login", "/role-select"].includes(cleanPath);
 
           if (isTopLevel) {
             const now = Date.now();
@@ -81,10 +89,10 @@ export default function AndroidNativeHandler() {
           }
 
           // Natural SPA back navigation without page reload
-          if (typeof window !== "undefined" && window.history.length > 1) {
+          if (canGoBack || (typeof window !== "undefined" && window.history.length > 1)) {
             routerRef.current.back();
           } else {
-            routerRef.current.push("/dashboard");
+            routerRef.current.replace("/dashboard");
           }
         });
       } catch (err) {

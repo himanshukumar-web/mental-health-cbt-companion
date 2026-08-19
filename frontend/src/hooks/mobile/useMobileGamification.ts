@@ -3,41 +3,50 @@
 import { useState, useEffect, useCallback } from "react";
 import { API_URL } from "@/lib/config";
 
+const gamificationCache = new Map<string, { xp: number; level: number }>();
+
 export function useMobileGamification(userId?: string) {
-  const [xp, setXp] = useState<number>(350);
-  const [level, setLevel] = useState<number>(3);
-  const [loading, setLoading] = useState<boolean>(true);
+  const cacheKey = userId || "guest";
+  const cached = gamificationCache.get(cacheKey);
+
+  const [xp, setXp] = useState<number>(() => cached?.xp ?? 350);
+  const [level, setLevel] = useState<number>(() => cached?.level ?? 3);
+  const [loading, setLoading] = useState<boolean>(() => !cached && Boolean(userId));
 
   const fetchGamification = useCallback(async () => {
     if (!userId) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!gamificationCache.has(cacheKey)) {
+      setLoading(true);
+    }
     try {
       const res = await fetch(`${API_URL}/gamification/xp/${userId}`);
       if (res.ok) {
         const json = await res.json();
+        let newXp = 350;
+        let newLevel = 3;
         if (json.xp && typeof json.xp === "object") {
-          setXp(Number(json.xp.total_xp ?? json.xp.xp ?? 350));
-          setLevel(Number(json.xp.level ?? 3));
+          newXp = Number(json.xp.total_xp ?? json.xp.xp ?? 350);
+          newLevel = Number(json.xp.level ?? 3);
         } else if (typeof json.xp === "number") {
-          setXp(json.xp);
-          setLevel(Number(json.level ?? 3));
+          newXp = json.xp;
+          newLevel = Number(json.level ?? 3);
         } else if (typeof json.total_xp === "number") {
-          setXp(json.total_xp);
-          setLevel(Number(json.level ?? 3));
-        } else {
-          setXp(350);
-          setLevel(3);
+          newXp = json.total_xp;
+          newLevel = Number(json.level ?? 3);
         }
+        setXp(newXp);
+        setLevel(newLevel);
+        gamificationCache.set(cacheKey, { xp: newXp, level: newLevel });
       }
     } catch (err) {
       console.error("Error fetching gamification XP:", err);
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, cacheKey]);
 
   useEffect(() => {
     fetchGamification();

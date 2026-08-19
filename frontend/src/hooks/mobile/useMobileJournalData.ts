@@ -13,7 +13,9 @@ export function useMobileJournalData(userId?: string) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (useJournalStore.getState().entries.length === 0) {
+      setLoading(true);
+    }
     try {
       const res = await fetch(`${API_URL}/journal/${userId}`);
       if (res.ok) {

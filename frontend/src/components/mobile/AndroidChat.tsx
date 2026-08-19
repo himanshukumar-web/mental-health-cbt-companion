@@ -415,6 +415,43 @@ function renderMobileMarkdown(text: string) {
   return <>{elements}</>;
 }
 
+const AndroidChatMessageBubble = React.memo(function AndroidChatMessageBubble({
+  message,
+}: {
+  message: { role: string; content: string };
+}) {
+  const isUser = message.role === "user";
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: isUser ? "flex-end" : "flex-start",
+        width: "100%",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: "85%",
+          padding: "14px 18px",
+          borderRadius: isUser ? "22px 22px 4px 22px" : "22px 22px 22px 4px",
+          background: isUser
+            ? "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)"
+            : "rgba(255, 255, 255, 0.06)",
+          border: isUser ? "none" : "1px solid rgba(255, 255, 255, 0.08)",
+          color: isUser ? "#ffffff" : "#e8edf5",
+          fontSize: "15px",
+          lineHeight: 1.5,
+          boxShadow: isUser ? "0 4px 12px rgba(34, 197, 94, 0.25)" : "none",
+          whiteSpace: isUser ? "pre-wrap" : "normal",
+          wordBreak: "break-word",
+        }}
+      >
+        {isUser ? message.content : renderMobileMarkdown(message.content)}
+      </div>
+    </div>
+  );
+});
+
 export default function AndroidChat() {
   const { user } = useAuth();
   const { personas, activePersona, selectPersona, selectedPersonaId } = usePersona(user?.id);
@@ -708,39 +745,9 @@ export default function AndroidChat() {
             </div>
           </div>
         ) : (
-          messages.map((m, idx) => {
-            const isUser = m.role === "user";
-            return (
-              <div
-                key={idx}
-                style={{
-                  display: "flex",
-                  justifyContent: isUser ? "flex-end" : "flex-start",
-                  width: "100%",
-                }}
-              >
-                <div
-                  style={{
-                    maxWidth: "85%",
-                    padding: "14px 18px",
-                    borderRadius: isUser ? "22px 22px 4px 22px" : "22px 22px 22px 4px",
-                    background: isUser
-                      ? "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)"
-                      : "rgba(255, 255, 255, 0.06)",
-                    border: isUser ? "none" : "1px solid rgba(255, 255, 255, 0.08)",
-                    color: isUser ? "#ffffff" : "#e8edf5",
-                    fontSize: "15px",
-                    lineHeight: 1.5,
-                    boxShadow: isUser ? "0 4px 12px rgba(34, 197, 94, 0.25)" : "none",
-                    whiteSpace: isUser ? "pre-wrap" : "normal",
-                    wordBreak: "break-word",
-                  }}
-                >
-                  {isUser ? m.content : renderMobileMarkdown(m.content)}
-                </div>
-              </div>
-            );
-          })
+          messages.map((m, idx) => (
+            <AndroidChatMessageBubble key={idx} message={m} />
+          ))
         )}
 
         {isStreaming && (

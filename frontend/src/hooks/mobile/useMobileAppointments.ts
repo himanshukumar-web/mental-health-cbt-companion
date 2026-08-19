@@ -13,7 +13,9 @@ export function useMobileAppointments(userId?: string) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (useAppointmentStore.getState().appointments.length === 0) {
+      setLoading(true);
+    }
     try {
       const res = await fetch(`${API_URL}/appointments/user/${userId}`);
       if (res.ok) {

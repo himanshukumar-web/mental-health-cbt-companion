@@ -13,7 +13,10 @@ export function useMobileMoodData(userId?: string) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    // Only set loading to true if we do not already have mood entries in the store
+    if (useMoodStore.getState().moodEntries.length === 0) {
+      setLoading(true);
+    }
     try {
       const res = await fetch(`${API_URL}/mood-entries/${userId}`);
       if (res.ok) {

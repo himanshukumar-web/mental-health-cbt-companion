@@ -1,6 +1,7 @@
 "use client";
 
-import React, { memo } from "react";
+import React, { memo, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 
 interface AndroidMobileLayoutProps {
   children: React.ReactNode;
@@ -9,14 +10,36 @@ interface AndroidMobileLayoutProps {
   style?: React.CSSProperties;
 }
 
+const scrollPositionMap = new Map<string, number>();
+
 export default memo(function AndroidMobileLayout({
   children,
   hasBottomNav = true,
   className = "",
   style,
 }: AndroidMobileLayoutProps) {
+  const pathname = usePathname();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (containerRef.current && pathname) {
+      const saved = scrollPositionMap.get(pathname);
+      if (typeof saved === "number" && saved > 0) {
+        containerRef.current.scrollTop = saved;
+      }
+    }
+  }, [pathname]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (pathname) {
+      scrollPositionMap.set(pathname, e.currentTarget.scrollTop);
+    }
+  };
+
   return (
     <div
+      ref={containerRef}
+      onScroll={handleScroll}
       className={`android-mobile-root ${className}`}
       style={{
         height: "100dvh",
