@@ -49,18 +49,57 @@ const FEATURES = [
   },
 ];
 
+import { isCapacitorNative } from "@/lib/platform";
+
 export default function LandingPage() {
   const router = useRouter();
   const { user, userRole, signOut, loading } = useAuth();
+  const [isNative, setIsNative] = useState<boolean>(() => isCapacitorNative());
 
-  // Redirect logged-in users to their main dashboard
   useEffect(() => {
-    if (!loading && user) {
-      router.replace("/dashboard");
-    } else {
-      router.prefetch("/chat");
+    if (isCapacitorNative()) {
+      setIsNative(true);
     }
-  }, [user, loading, router]);
+  }, []);
+
+  // Handle routing for both Android Native and Web
+  useEffect(() => {
+    if (loading) return;
+
+    if (isNative) {
+      // Android Capacitor Native: Direct to login if not authenticated, or dashboard if authenticated
+      if (user) {
+        router.replace(userRole === "admin" ? "/admin" : "/dashboard");
+      } else {
+        router.replace("/login");
+      }
+    } else {
+      // Web / Desktop: Redirect logged-in users to dashboard, otherwise prefetch chat
+      if (user) {
+        router.replace(userRole === "admin" ? "/admin" : "/dashboard");
+      } else {
+        router.prefetch("/chat");
+      }
+    }
+  }, [user, userRole, loading, isNative, router]);
+
+  // If on Android Capacitor native, prevent flashing the marketing landing page
+  if (isNative) {
+    return (
+      <main style={{ minHeight: "100vh", background: "var(--bg-primary, #0b0f1a)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: "50%",
+            background: "linear-gradient(135deg, #22c55e, #16a34a)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 20, margin: "0 auto 16px",
+            boxShadow: "0 4px 20px rgba(34,197,94,0.35)",
+          }}>🌿</div>
+          <div style={{ fontSize: 13, color: "var(--text-secondary, #8b95a7)" }}>Opening MindMate…</div>
+        </div>
+      </main>
+    );
+  }
 
   const startSession = () => {
     if (user) {

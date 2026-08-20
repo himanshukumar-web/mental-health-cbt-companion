@@ -24,7 +24,7 @@ from pydantic import BaseModel
 from app.config import settings
 from app.agents.monitor import analyze_threat_level
 from app.agents.therapist import stream_response, PERSONAS
-from app.agents.router import classify_intent
+from app.agents.router import classify_intent, route_message_intent
 from app.database import crud
 
 from typing import Dict, Tuple
@@ -630,14 +630,15 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: str
                 await crud.save_message(session_id, "user", content, "crisis", user_id)
                 continue
 
-            # ── Agent 1: Therapist (streaming with memory context & persona) ────────────
-            await websocket.send_json({"type": "stream_start", "agent": "therapist"})
+            # ── Agent 1: Therapist (streaming with memory context & smart auto-routing) ────────────
+            incoming_persona = data.get("persona") or data.get("persona_id") or "cbt"
+            persona_id = route_message_intent(content, history, current_persona_id=incoming_persona)
 
-            persona_id = data.get("persona") or data.get("persona_id") or "cbt"
+            await websocket.send_json({"type": "stream_start", "agent": "therapist", "persona": persona_id})
 
-            # ── AI Intent Router (non-blocking suggestion) ────────────────────
+            # ── AI Intent Router (non-blocking suggestion metadata) ────────────────────
             try:
-                router_result = await classify_intent(content, persona_id)
+                router_result = await classify_intent(content, persona_id, history)
                 if router_result:
                     await websocket.send_json({
                         "type": "router_suggestion",

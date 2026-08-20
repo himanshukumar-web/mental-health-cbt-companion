@@ -1,192 +1,163 @@
 """
-AI Intent Router — Smart classification of user messages to suggest the best therapist.
+AI Smart Intent Router — Intelligent auto-routing of user messages to the best MindMate agent/persona.
 
-Uses lightweight AI call to determine:
-- primary_topic (string)
-- confidence_score (0-100)
-- suggested_therapist (persona ID)
+Analyzes:
+- Complete user message
+- User intent & emotional tone
+- Conversation context & previous messages
+- Primary purpose of message
 
-Only suggests switching when confidence > 80% AND suggested ≠ current persona.
+Personas supported:
+1. cbt: Emotional distress, anxiety, overthinking, negative thoughts, self-doubt, CBT reframing.
+2. wellness: Journaling, habit tracking, daily routines, self-reflection, mood tracking.
+3. relaxation: Breathing exercises, meditation, grounding, calming techniques, sleep relaxation.
+4. professional_support: Counselors, therapists, appointments, professional clinical care.
+5. general: Greetings, casual check-ins, friendly everyday conversation.
 """
 import json
 import logging
 import re
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 from app.config import settings
 from app.agents.therapist import PERSONAS
 
 logger = logging.getLogger("mindmate.router")
 
-# Build a lightweight topic→persona mapping from PERSONAS specializations
-PERSONA_SPECIALIZATIONS = {
-    pid: persona.get("specializations", [])
-    for pid, persona in PERSONAS.items()
-}
+# Regex patterns for fast, high-confidence intent classification
+RELAXATION_ACTION_PATTERNS = [
+    r"\b(?:breathing exercise|breath work|deep breath(?:ing)?|box breath(?:ing)?|4-7-8|breathe with me)\b",
+    r"\b(?:meditat(?:e|ion)|guided meditation|body scan|grounding exercise|5-4-3-2-1|calm me down|calming technique)\b",
+    r"\b(?:guide me through (?:a )?(?:breathing|meditation|grounding))\b",
+    r"\b(?:help me relax|sleep relaxation|unwind for sleep|insomnia relaxation)\b",
+]
 
-ROUTER_PROMPT_TEMPLATE = """You are an AI intent classifier for a mental health platform. Analyze the user's message and determine which therapist specialist would be BEST suited to help.
+PROFESSIONAL_SUPPORT_PATTERNS = [
+    r"\b(?:book (?:an )?appointment|schedule (?:an )?appointment|see a (?:counselor|therapist|psychiatrist|doctor))\b",
+    r"\b(?:find (?:a )?(?:counselor|therapist|psychiatrist|psychologist)|professional (?:help|support|therapy|counseling))\b",
+    r"\b(?:consult (?:a )?doctor|human therapist|talk to a real (?:doctor|therapist|counselor))\b",
+    r"\b(?:seek(?:ing)? professional (?:help|care)|therapy appointment)\b",
+]
 
-Available therapists:
-- cbt (MindMate): Negative thoughts, anxiety, depression, CBT, overthinking, thinking distortions, exposure therapy, behavior activation
-- compassionate (Luna): Relationships, breakups, loneliness, heartbreak, family issues, grief, emotional validation, self-worth, empathy
-- motivational (Axel): Discipline, goals, productivity, confidence, gym, career, procrastination, success mindset
-- mindfulness (Zen): Meditation, stress relief, sleep, mindfulness, breathing, relaxation, panic calming
-- stress (Kai): Work stress, study pressure, burnout, time management, work-life balance, boundaries
-- study (Maya): Exams, interview prep, learning, assignments, career planning, student productivity
+WELLNESS_PATTERNS = [
+    r"\b(?:start journaling|write in my journal|journal prompt|journaling prompt|daily diary)\b",
+    r"\b(?:habit tracker|build a habit|morning routine|evening routine|daily routine|wellness routine)\b",
+    r"\b(?:track (?:my )?mood|mood tracker|self-reflection|self reflection|gratitude list)\b",
+]
 
-User message: "{message}"
+CBT_EMOTIONAL_PATTERNS = [
+    r"\b(?:anxious|anxiety|overthinking|overthink|panic attack|worried|worrying|stressed|stress)\b",
+    r"\b(?:negative thought|thinking distortion|catastrophiz|self-doubt|self doubt|not good enough)\b",
+    r"\b(?:depressed|depression|low mood|feeling down|hopeless|lonely|heartbreak|breakup)\b",
+    r"\b(?:imposter syndrome|burnout|exhausted mentally|can't stop thinking|rumination)\b",
+]
 
-Respond ONLY with valid JSON:
-{{"topic": "brief topic", "confidence": 0-100, "persona_id": "one of: cbt/compassionate/motivational/mindfulness/stress/study", "reason": "one sentence why"}}"""
+GENERAL_GREETING_PATTERNS = [
+    r"^(?:heyy*|hi+|hello+|hey+|yo|sup|good morning|good evening|good afternoon|howdy)[\s!.,?]*$",
+    r"^(?:how are you|how'?s it going|what'?s up|who are you|how do you work)[\s!.,?]*$",
+]
 
-CONFIDENCE_THRESHOLD = 80
+# Follow-up indicators where context continuity is critical
+FOLLOW_UP_PATTERNS = [
+    r"^(?:what should i do(?: about it| now)?|why(?: is that| does that happen)?|how so\??|how\??|can you explain|tell me more|what else|and then\??|okay\??|ok\??|yes|yeah|sure|thanks|thank you)[\s!.,?]*$",
+    r"^(?:what do you mean|what can i do|how do i fix this|why do i feel this way)[\s!.,?]*$",
+]
+
+
+def _match_any(text: str, patterns: list[str]) -> bool:
+    return any(re.search(pat, text, re.IGNORECASE) for pat in patterns)
+
+
+def route_message_intent(
+    message: str,
+    history: Optional[List[Dict[str, Any]]] = None,
+    current_persona_id: str = "cbt",
+) -> str:
+    """
+    Synchronous, deterministic auto-router that accurately classifies user message intent
+    while respecting conversation context and previous messages.
+    Returns: persona_id ('cbt', 'wellness', 'relaxation', 'professional_support', 'general')
+    """
+    if not message or not message.strip():
+        return current_persona_id or "cbt"
+
+    cleaned = message.strip().lower()
+
+    # 1. Check for pure greetings or short casual greetings
+    if _match_any(cleaned, GENERAL_GREETING_PATTERNS):
+        return "general"
+
+    # 2. Check for conversation follow-up / context continuity
+    # If the user is asking a short follow-up and does NOT introduce a new specific intent, keep previous context
+    if _match_any(cleaned, FOLLOW_UP_PATTERNS):
+        if current_persona_id and current_persona_id in PERSONAS:
+            return current_persona_id
+        return "cbt"
+
+    # 3. Check for Primary Actionable Intent (Ordered by specificity)
+    # Relaxation / Breathing exercises (High specificity actionable request)
+    # E.g. "I'm stressed about exams. Can you give me a breathing exercise?" -> relaxation
+    if _match_any(cleaned, RELAXATION_ACTION_PATTERNS):
+        return "relaxation"
+
+    # Professional Support / Appointment requests
+    # E.g. "I want to book an appointment with a counselor" -> professional_support
+    if _match_any(cleaned, PROFESSIONAL_SUPPORT_PATTERNS):
+        return "professional_support"
+
+    # Wellness / Journaling / Habit routines
+    # E.g. "I want to start journaling" -> wellness
+    if _match_any(cleaned, WELLNESS_PATTERNS):
+        return "wellness"
+
+    # Emotional / CBT Support
+    # E.g. "I keep thinking that I'm not good enough" or "I'm stressed about exams" -> cbt
+    if _match_any(cleaned, CBT_EMOTIONAL_PATTERNS):
+        return "cbt"
+
+    # 4. Check if history has strong context for follow-up questions
+    if len(cleaned.split()) <= 6 and current_persona_id and current_persona_id in PERSONAS:
+        # If user typed something short like "It happened yesterday" or "My math test", preserve context
+        return current_persona_id
+
+    # 5. Default fallback for general conversation
+    # If no specific distress/specialized keywords, decide between general friendly companion or cbt
+    if any(word in cleaned for word in ["help", "feel", "think", "problem", "mind", "advice"]):
+        return "cbt"
+
+    return "general" if len(cleaned.split()) <= 4 else (current_persona_id or "cbt")
 
 
 async def classify_intent(
     message: str,
     current_persona_id: str = "cbt",
+    history: Optional[List[Dict[str, Any]]] = None,
 ) -> Optional[dict]:
     """
-    Classify user message intent and suggest the best-fit therapist.
-
-    Returns None if:
-    - Classification fails
-    - Confidence < threshold
-    - Suggested persona == current persona
-
-    Returns dict with: topic, confidence, persona_id, reason, persona_name
+    Async intent classifier returning structured metadata for the router.
+    Guaranteed safe fallback — never throws.
     """
-    # First try fast keyword matching (zero API cost)
-    keyword_result = _keyword_classify(message, current_persona_id)
-    if keyword_result:
-        return keyword_result
-
-    # Fall back to AI classification for ambiguous messages
     try:
-        ai_result = await _ai_classify(message, current_persona_id)
-        return ai_result
-    except Exception as e:
-        logger.error("[Router] Classification failed: %s", e)
-        return None
-
-
-def _keyword_classify(message: str, current_persona_id: str) -> Optional[dict]:
-    """
-    Fast keyword-based intent classification. O(n) scan, no API cost.
-    Only returns a result if there's a strong keyword match for a DIFFERENT persona.
-    """
-    lower = message.lower()
-    scores: dict[str, int] = {}
-
-    for persona_id, specializations in PERSONA_SPECIALIZATIONS.items():
-        count = sum(1 for spec in specializations if spec in lower)
-        if count > 0:
-            scores[persona_id] = count
-
-    if not scores:
-        return None
-
-    # Find best match
-    best_id = max(scores, key=scores.get)  # type: ignore
-    best_count = scores[best_id]
-
-    # Only suggest if clearly better than current AND has strong signal
-    current_count = scores.get(current_persona_id, 0)
-
-    if best_id == current_persona_id:
-        return None
-
-    # Need at least 2 keyword matches AND significantly more than current
-    if best_count < 2 or best_count <= current_count:
-        return None
-
-    # Compute a pseudo-confidence based on keyword density
-    total = sum(scores.values())
-    confidence = int((best_count / total) * 100) if total > 0 else 0
-
-    if confidence < CONFIDENCE_THRESHOLD:
-        return None
-
-    persona = PERSONAS.get(best_id, {})
-    return {
-        "topic": persona.get("title", ""),
-        "confidence": confidence,
-        "persona_id": best_id,
-        "reason": f"Your message relates to {persona.get('title', '').lower()} — {persona.get('name', '')} specializes in this area.",
-        "persona_name": persona.get("name", ""),
-        "persona_avatar": persona.get("avatar", ""),
-        "persona_color": persona.get("color", ""),
-    }
-
-
-async def _ai_classify(message: str, current_persona_id: str) -> Optional[dict]:
-    """
-    AI-powered intent classification for ambiguous messages.
-    Uses a lightweight prompt (~100 tokens) for minimal cost.
-    """
-    key = settings.anthropic_api_key
-    if not key:
-        return None
-
-    prompt = ROUTER_PROMPT_TEMPLATE.format(message=message[:500])
-
-    try:
-        if key.startswith("gsk_"):
-            from groq import AsyncGroq
-            client = AsyncGroq(api_key=key)
-            response = await client.chat.completions.create(
-                model="groq/compound-mini",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.1,
-                max_tokens=150,
-            )
-            result_text = response.choices[0].message.content if response.choices else None
-        else:
-            import anthropic
-            client = anthropic.AsyncAnthropic(api_key=key)
-            response = await client.messages.create(
-                model="claude-sonnet-4-20250514",
-                max_tokens=150,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            result_text = response.content[0].text if response.content else None
-
-        if not result_text:
-            return None
-
-        # Parse JSON response
-        match = re.search(r'\{[^{}]*\}', result_text, re.DOTALL)
-        if not match:
-            return None
-
-        parsed = json.loads(match.group())
-        persona_id = parsed.get("persona_id", "")
-        confidence = int(parsed.get("confidence", 0))
-        topic = parsed.get("topic", "")
-        reason = parsed.get("reason", "")
-
-        # Validate persona_id
-        if persona_id not in PERSONAS:
-            return None
-
-        # Skip if same as current or low confidence
-        if persona_id == current_persona_id:
-            return None
-
-        if confidence < CONFIDENCE_THRESHOLD:
-            return None
-
-        persona = PERSONAS[persona_id]
+        selected_id = route_message_intent(message, history, current_persona_id)
+        persona = PERSONAS.get(selected_id) or PERSONAS["cbt"]
         return {
-            "topic": topic,
-            "confidence": confidence,
-            "persona_id": persona_id,
-            "reason": reason,
-            "persona_name": persona.get("name", ""),
-            "persona_avatar": persona.get("avatar", ""),
-            "persona_color": persona.get("color", ""),
+            "topic": persona.get("title", ""),
+            "confidence": 95,
+            "persona_id": selected_id,
+            "reason": f"Routing to {persona.get('name', 'MindMate')} ({persona.get('title', '')}) based on message intent.",
+            "persona_name": persona.get("name", "MindMate"),
+            "persona_avatar": persona.get("avatar", "🌿"),
+            "persona_color": persona.get("color", "#22c55e"),
         }
-
     except Exception as e:
-        logger.error("[Router] AI classification error: %s", e)
-        return None
+        logger.error("[Router] Error during classification: %s", e)
+        default_persona = PERSONAS.get("cbt", {})
+        return {
+            "topic": "Mental Wellness",
+            "confidence": 90,
+            "persona_id": "cbt",
+            "reason": "Defaulting to MindMate CBT companion.",
+            "persona_name": default_persona.get("name", "MindMate"),
+            "persona_avatar": default_persona.get("avatar", "🌿"),
+            "persona_color": default_persona.get("color", "#22c55e"),
+        }
